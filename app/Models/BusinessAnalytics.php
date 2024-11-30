@@ -19,7 +19,8 @@ class BusinessAnalytics extends Model
         'search_keywords',
         'user_locations',
         'devices',
-        'date'
+        'date',
+        'rating'  // Add this line
     ];
 
     protected $casts = [

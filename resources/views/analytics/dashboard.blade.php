@@ -99,418 +99,267 @@
                 </x-metric-card>
 
                 <x-metric-card
-                    title="Chamadas"
-                    :value="number_format(end($calls))"
-                    :growth="$growth['calls'] ?? null"
-                    color="purple"
-                >
-                    <x-slot name="icon">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                        </svg>
-                    </x-slot>
-                </x-metric-card>
+    title="Taxa de Conversão"
+    :value="number_format($currentConversion, 1) . '%'"
+    :growth="$growth['conversion'] ?? null"
+    color="purple"
+>
+    <x-slot name="icon">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2"/>
+        </svg>
+    </x-slot>
+</x-metric-card>
 
                 <x-metric-card
-                    title="Total no Período"
-                    :value="number_format(array_sum($views))"
-                    color="orange"
+                    title="Avaliação Média"
+                    :value="number_format($averageRating, 1)"
+                    :growth="$growth['rating'] ?? null"
+                    color="yellow"
                 >
                     <x-slot name="icon">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
                         </svg>
                     </x-slot>
                 </x-metric-card>
             </div>
-            <!-- Gráfico Principal -->
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
-                <div id="main-chart" class="h-80"></div>
-            </div>
 
-            <!-- Gráficos Secundários -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <!-- Dispositivos -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Dispositivos</h3>
-                    <div id="devices-chart" class="h-64"></div>
+            <!-- Gráficos -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- Gráfico de Visualizações e Cliques -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h3 class="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">Visualizações e Cliques</h3>
+                    <div id="views-clicks-chart" class="h-80"></div>
                 </div>
 
-                <!-- Localização -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Localização</h3>
-                    <div id="locations-chart" class="h-64"></div>
-                </div>
-
-                <!-- Palavras-chave -->
-                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Palavras-chave</h3>
-                    <div id="keywords-chart" class="h-64"></div>
+                <!-- Gráfico de Taxa de Conversão -->
+                <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                    <h3 class="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">Taxa de Conversão</h3>
+                    <div id="conversion-chart" class="h-80"></div>
                 </div>
             </div>
 
-            <!-- Insights -->
-            @if(!empty($insights))
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6">
-                <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Insights</h3>
-                <div class="space-y-4" id="insights-container">
-                    @foreach($insights as $insight)
-                    <div class="flex items-start space-x-3">
-                        <div class="flex-shrink-0">
-                            <svg class="h-6 w-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-gray-900 dark:text-gray-100">{{ $insight }}</p>
-                        </div>
+            <!-- Insights e Recomendações -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+                <div class="p-6">
+                    <h3 class="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">Insights e Recomendações</h3>
+                    <div class="space-y-4">
+                        @foreach($insights as $insight)
+                            <div class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <div class="flex-shrink-0">
+                                    @if($insight->type === 'success')
+                                        <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    @elseif($insight->type === 'warning')
+                                        <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                        </svg>
+                                    @else
+                                        <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    @endif
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $insight->title }}</p>
+                                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ $insight->description }}</p>
+                                </div>
+                                @if($insight->action)
+                                    <div class="flex-shrink-0">
+                                        <button class="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-5 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:border-indigo-700 focus:ring focus:ring-indigo-200 active:bg-indigo-700 transition duration-150 ease-in-out">
+                                            {{ $insight->action }}
+                                        </button>
+                                    </div>
+                                @endif
+                            </div>
+                        @endforeach
                     </div>
-                    @endforeach
                 </div>
             </div>
-            @endif
+
+            <!-- Tabela de Ações -->
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+                <div class="p-6">
+                    <h3 class="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">Histórico de Ações</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead>
+                                <tr>
+                                    <th class="px-6 py-3 bg-gray-50 dark:bg-gray-700 text-left text-xs leading-4 font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Data</th>
+                                    <th class="px-6 py-3 bg-gray-50 dark:bg-gray-700 text-left text-xs leading-4 font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ação</th>
+                                    <th class="px-6 py-3 bg-gray-50 dark:bg-gray-700 text-left text-xs leading-4 font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Resultado</th>
+                                    <th class="px-6 py-3 bg-gray-50 dark:bg-gray-700 text-left text-xs leading-4 font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                @foreach($actions as $action)
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-no-wrap text-sm leading-5 text-gray-900 dark:text-gray-100">
+                                            {{ $action->created_at->format('d/m/Y H:i') }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-no-wrap text-sm leading-5 text-gray-900 dark:text-gray-100">
+                                            {{ $action->description }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-no-wrap text-sm leading-5 text-gray-900 dark:text-gray-100">
+                                            {{ $action->result }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-no-wrap text-sm leading-5">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                                {{ $action->status === 'success' ? 'bg-green-100 text-green-800' : '' }}
+                                                {{ $action->status === 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
+                                                {{ $action->status === 'failed' ? 'bg-red-100 text-red-800' : '' }}">
+                                                {{ ucfirst($action->status) }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
     @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script>
-        // Configurações dos gráficos
-        const isDarkMode = document.documentElement.classList.contains('dark');
-        const textColor = isDarkMode ? '#D1D5DB' : '#374151';
-        const gridColor = isDarkMode ? '#374151' : '#E5E7EB';
-
-        // Gráfico Principal
-        const mainChartOptions = {
+        // Configuração do gráfico de Visualizações e Cliques
+        const viewsClicksChart = new ApexCharts(document.querySelector("#views-clicks-chart"), {
             series: [{
                 name: 'Visualizações',
                 data: @json($views)
             }, {
                 name: 'Cliques',
                 data: @json($clicks)
-            }, {
-                name: 'Chamadas',
-                data: @json($calls)
             }],
             chart: {
-                type: 'area',
-                height: 350,
+                type: 'line',
+                height: 320,
                 toolbar: {
                     show: false
                 },
-                fontFamily: 'Inter, sans-serif',
-                foreColor: textColor
-            },
-            dataLabels: {
-                enabled: false
+                background: 'transparent'
             },
             stroke: {
                 curve: 'smooth',
                 width: 2
             },
+            colors: ['#3B82F6', '#10B981'],
             xaxis: {
                 categories: @json($dates),
                 labels: {
                     style: {
-                        colors: textColor
+                        colors: '#6B7280'
                     }
                 }
             },
             yaxis: {
                 labels: {
                     style: {
-                        colors: textColor
+                        colors: '#6B7280'
                     }
                 }
             },
-            tooltip: {
-                theme: isDarkMode ? 'dark' : 'light'
+            legend: {
+                labels: {
+                    colors: '#6B7280'
+                }
             },
             grid: {
-                borderColor: gridColor
-            },
-            legend: {
-                labels: {
-                    colors: textColor
-                }
-            },
-            colors: ['#60A5FA', '#34D399', '#A78BFA']
-        };
-
-        const mainChart = new ApexCharts(document.querySelector("#main-chart"), mainChartOptions);
-        mainChart.render();
-        // Gráfico de Dispositivos
-        const devicesChartOptions = {
-            series: Object.values(@json($devices)),
-            labels: Object.keys(@json($devices)),
-            chart: {
-                type: 'donut',
-                height: 250,
-                fontFamily: 'Inter, sans-serif',
-                foreColor: textColor
-            },
-            colors: ['#60A5FA', '#34D399', '#A78BFA'],
-            legend: {
-                position: 'bottom',
-                labels: {
-                    colors: textColor
-                }
-            },
-            dataLabels: {
-                formatter: function(val) {
-                    return Math.round(val) + '%'
-                }
+                borderColor: '#E5E7EB'
             },
             theme: {
-                mode: isDarkMode ? 'dark' : 'light'
+                mode: document.documentElement.classList.contains('dark') ? 'dark' : 'light'
             }
-        };
+        });
+        viewsClicksChart.render();
 
-        const devicesChart = new ApexCharts(document.querySelector("#devices-chart"), devicesChartOptions);
-        devicesChart.render();
-
-        // Gráfico de Localização
-        const locationsChartOptions = {
-            series: Object.values(@json($locations)),
-            labels: Object.keys(@json($locations)),
-            chart: {
-                type: 'pie',
-                height: 250,
-                fontFamily: 'Inter, sans-serif',
-                foreColor: textColor
-            },
-            colors: ['#F472B6', '#60A5FA', '#34D399'],
-            legend: {
-                position: 'bottom',
-                labels: {
-                    colors: textColor
-                }
-            },
-            dataLabels: {
-                formatter: function(val) {
-                    return Math.round(val) + '%'
-                }
-            },
-            theme: {
-                mode: isDarkMode ? 'dark' : 'light'
-            }
-        };
-
-        const locationsChart = new ApexCharts(document.querySelector("#locations-chart"), locationsChartOptions);
-        locationsChart.render();
-
-        // Gráfico de Palavras-chave
-        const keywordsChartOptions = {
+        // Configuração do gráfico de Taxa de Conversão
+        const conversionChart = new ApexCharts(document.querySelector("#conversion-chart"), {
             series: [{
-                data: Object.values(@json($keywords))
+                name: 'Taxa de Conversão',
+                data: @json($conversionRates)
             }],
             chart: {
-                type: 'bar',
-                height: 250,
-                fontFamily: 'Inter, sans-serif',
-                foreColor: textColor,
+                type: 'area',
+                height: 320,
                 toolbar: {
                     show: false
-                }
+                },
+                background: 'transparent'
             },
-            plotOptions: {
-                bar: {
-                    borderRadius: 4,
-                    horizontal: true,
-                    distributed: true,
-                    dataLabels: {
-                        position: 'top'
-                    }
-                }
+            stroke: {
+                curve: 'smooth',
+                width: 2
             },
-            dataLabels: {
-                enabled: true,
-                style: {
-                    colors: [textColor]
+            colors: ['#8B5CF6'],
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.7,
+                    opacityTo: 0.3
                 }
             },
             xaxis: {
-                categories: Object.keys(@json($keywords)),
+                categories: @json($dates),
                 labels: {
                     style: {
-                        colors: textColor
+                        colors: '#6B7280'
                     }
                 }
             },
             yaxis: {
                 labels: {
                     style: {
-                        colors: textColor
+                        colors: '#6B7280'
+                    },
+                    formatter: function(value) {
+                        return value.toFixed(1) + '%'
                     }
                 }
             },
+            legend: {
+                labels: {
+                    colors: '#6B7280'
+                }
+            },
             grid: {
-                borderColor: gridColor
+                borderColor: '#E5E7EB'
             },
             theme: {
-                mode: isDarkMode ? 'dark' : 'light'
-            },
-            colors: ['#60A5FA', '#34D399', '#A78BFA', '#F472B6']
-        };
-
-        const keywordsChart = new ApexCharts(document.querySelector("#keywords-chart"), keywordsChartOptions);
-        keywordsChart.render();
-
-        // Event Listeners
-        document.getElementById('business-selector').addEventListener('change', function() {
-            window.location.href = `/analytics/${this.value}`;
-        });
-
-        document.getElementById('period-selector').addEventListener('change', function() {
-            if (this.value === 'custom') {
-                // Abre o modal de período personalizado
-                document.querySelector('[x-data="{ open: false }"]').__x.$data.open = true;
-            } else {
-                updateData(this.value);
+                mode: document.documentElement.classList.contains('dark') ? 'dark' : 'light'
             }
         });
+        conversionChart.render();
 
-        // Função para atualizar os dados
-        function updateData(period) {
-            fetch(`/analytics/data/${document.getElementById('business-selector').value}?period=${period}`)
-                .then(response => response.json())
-                .then(data => {
-                    // Atualiza o gráfico principal
-                    mainChart.updateSeries([{
-                        name: 'Visualizações',
-                        data: data.views
-                    }, {
-                        name: 'Cliques',
-                        data: data.clicks
-                    }, {
-                        name: 'Chamadas',
-                        data: data.calls
-                    }]);
-
-                    // Atualiza gráfico de dispositivos
-                    devicesChart.updateSeries(Object.values(data.devices));
-                    devicesChart.updateOptions({
-                        labels: Object.keys(data.devices)
-                    });
-
-                    // Atualiza gráfico de localização
-                    locationsChart.updateSeries(Object.values(data.locations));
-                    locationsChart.updateOptions({
-                        labels: Object.keys(data.locations)
-                    });
-
-                    // Atualiza gráfico de palavras-chave
-                    keywordsChart.updateSeries([{
-                        data: Object.values(data.keywords)
-                    }]);
-                    keywordsChart.updateOptions({
-                        xaxis: {
-                            categories: Object.keys(data.keywords)
-                        }
-                    });
-
-                    // Atualiza os cards de métricas
-                    updateMetricCards(data);
-
-                    // Atualiza insights
-                    updateInsights(data.insights);
+        // Atualização dos gráficos quando mudar o tema
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.addEventListener('dark-mode', function(e) {
+                viewsClicksChart.updateOptions({
+                    theme: {
+                        mode: e.detail ? 'dark' : 'light'
+                    }
                 });
-        }
-
-        // Função para atualizar os cards de métricas
-        function updateMetricCards(data) {
-            document.querySelector('[data-metric="visualizacoes"]').textContent = 
-                number_format(data.views[data.views.length - 1]);
-            document.querySelector('[data-metric="cliques"]').textContent = 
-                number_format(data.clicks[data.clicks.length - 1]);
-            document.querySelector('[data-metric="chamadas"]').textContent = 
-                number_format(data.calls[data.calls.length - 1]);
-            document.querySelector('[data-metric="total-no-periodo"]').textContent = 
-                number_format(data.views.reduce((a, b) => a + b, 0));
-
-            // Atualiza crescimento se disponível
-            if (data.growth) {
-                updateGrowthIndicators(data.growth);
-            }
-        }
-
-        // Função para atualizar indicadores de crescimento
-        function updateGrowthIndicators(growth) {
-            const metrics = ['visualizacoes', 'cliques', 'chamadas'];
-            metrics.forEach(metric => {
-                const element = document.querySelector(`[data-growth="${metric}"]`);
-                if (element && growth[metric] !== undefined) {
-                    const value = growth[metric];
-                    element.textContent = `${value >= 0 ? '+' : ''}${value}%`;
-                    element.className = `mt-1 text-sm ${
-                        value >= 0 
-                            ? 'text-green-600 dark:text-green-400' 
-                            : 'text-red-600 dark:text-red-400'
-                    }`;
-                }
+                conversionChart.updateOptions({
+                    theme: {
+                        mode: e.detail ? 'dark' : 'light'
+                    }
+                });
             });
         }
 
-        // Função para atualizar insights
-        function updateInsights(insights) {
-            const container = document.querySelector('#insights-container');
-            if (container && insights) {
-                container.innerHTML = insights.map(insight => `
-                    <div class="flex items-start space-x-3">
-                        <div class="flex-shrink-0">
-                            <svg class="h-6 w-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <div>
-                            <p class="text-gray-900 dark:text-gray-100">${insight}</p>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
-
-        // Função auxiliar para formatação de números
-        function number_format(number) {
-            return new Intl.NumberFormat('pt-BR').format(number);
-        }
-
-        // Observer para modo escuro
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.attributeName === 'class') {
-                    const isDark = document.documentElement.classList.contains('dark');
-                    updateChartsTheme(isDark);
-                }
-            });
+        // Manipuladores de eventos para os seletores
+        document.getElementById('period-selector').addEventListener('change', function(e) {
+            // Implementar lógica de mudança de período
         });
 
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ['class']
+        document.getElementById('business-selector').addEventListener('change', function(e) {
+            window.location.href = `/analytics/dashboard/${e.target.value}`;
         });
-
-        // Função para atualizar tema dos gráficos
-        function updateChartsTheme(isDark) {
-            const textColor = isDark ? '#D1D5DB' : '#374151';
-            const gridColor = isDark ? '#374151' : '#E5E7EB';
-
-            const commonOptions = {
-                theme: {
-                    mode: isDark ? 'dark' : 'light'
-                },
-                chart: {
-                    foreColor: textColor
-                },
-                grid: {
-                    borderColor: gridColor
-                }
-            };
-
-            [mainChart, devicesChart, locationsChart, keywordsChart].forEach(chart => {
-                chart.updateOptions(commonOptions);
-            });
-        }
     </script>
     @endpush
 </x-app-layout>

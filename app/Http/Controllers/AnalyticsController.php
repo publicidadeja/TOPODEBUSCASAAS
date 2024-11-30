@@ -320,93 +320,110 @@ class AnalyticsController extends Controller
     }
 
     private function getAnalyticsData($businessId, $startDate, $endDate)
-    {
-        $analytics = BusinessAnalytics::where('business_id', $businessId)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->orderBy('date')
-            ->get();
+{
+    $analytics = BusinessAnalytics::where('business_id', $businessId)
+        ->whereBetween('date', [$startDate, $endDate])
+        ->orderBy('date')
+        ->get();
 
-        $previousStartDate = $startDate->copy()->subDays($startDate->diffInDays($endDate));
-        $previousEndDate = $startDate->copy()->subDay();
-        
-        $previousAnalytics = BusinessAnalytics::where('business_id', $businessId)
-            ->whereBetween('date', [$previousStartDate, $previousEndDate])
-            ->orderBy('date')
-            ->get();
+    $previousStartDate = $startDate->copy()->subDays($startDate->diffInDays($endDate));
+    $previousEndDate = $startDate->copy()->subDay();
+    
+    $previousAnalytics = BusinessAnalytics::where('business_id', $businessId)
+        ->whereBetween('date', [$previousStartDate, $previousEndDate])
+        ->orderBy('date')
+        ->get();
 
-        $dates = $analytics->pluck('date')->map(fn($date) => $date->format('d/m'))->toArray();
-        $views = $analytics->pluck('views')->toArray();
-        $clicks = $analytics->pluck('clicks')->toArray();
-        $calls = $analytics->pluck('calls')->toArray();
+    $dates = $analytics->pluck('date')->map(fn($date) => $date->format('d/m'))->toArray();
+    $views = $analytics->pluck('views')->toArray();
+    $clicks = $analytics->pluck('clicks')->toArray();
+    $calls = $analytics->pluck('calls')->toArray();
 
-        $currentTotal = [
-            'views' => array_sum($views),
-            'clicks' => array_sum($clicks),
-            'calls' => array_sum($calls)
-        ];
+    $currentTotal = [
+        'views' => array_sum($views),
+        'clicks' => array_sum($clicks),
+        'calls' => array_sum($calls)
+    ];
 
-        $previousTotal = [
-            'views' => $previousAnalytics->sum('views'),
-            'clicks' => $previousAnalytics->sum('clicks'),
-            'calls' => $previousAnalytics->sum('calls')
-        ];
+    $previousTotal = [
+        'views' => $previousAnalytics->sum('views'),
+        'clicks' => $previousAnalytics->sum('clicks'),
+        'calls' => $previousAnalytics->sum('calls')
+    ];
 
-        $growth = $this->calculateGrowth($currentTotal, $previousTotal);
+    // Calculate current conversion rate
+    $currentConversion = $currentTotal['views'] > 0 
+        ? round((($currentTotal['clicks'] + $currentTotal['calls']) / $currentTotal['views']) * 100, 1)
+        : 0;
 
-        $lastAnalytics = $analytics->last();
-        $devices = $lastAnalytics ? $lastAnalytics->devices : [];
-        $locations = $lastAnalytics ? $lastAnalytics->user_locations : [];
-        $keywords = $lastAnalytics ? $lastAnalytics->search_keywords : [];
+    // Calculate average rating (you may need to adjust this based on your data source)
+    $averageRating = $lastAnalytics && isset($lastAnalytics->rating) 
+        ? $lastAnalytics->rating 
+        : 0;
 
-        $insights = $this->generateInsights($growth, $devices, $locations, $keywords);
+    $growth = $this->calculateGrowth($currentTotal, $previousTotal);
 
-        return compact(
-            'dates',
-            'views',
-            'clicks',
-            'calls',
-            'devices',
-            'locations',
-            'keywords',
-            'growth',
-            'insights',
-            'currentTotal',
-            'previousTotal'
-        );
+    // ... rest of the existing code ...
+
+    return compact(
+        'dates',
+        'views',
+        'clicks',
+        'calls',
+        'devices',
+        'locations',
+        'keywords',
+        'growth',
+        'insights',
+        'currentTotal',
+        'previousTotal',
+        'currentConversion',
+        'averageRating'  // Add this line
+    );
+}
+
+private function calculateGrowth($current, $previous)
+{
+    $growth = [];
+
+    foreach ($current as $metric => $value) {
+        $previousValue = $previous[$metric];
+        $growth[$metric] = $previousValue > 0 
+            ? round(($value - $previousValue) / $previousValue * 100, 1) 
+            : 0;
     }
 
-    private function calculateGrowth($current, $previous)
-    {
-        $growth = [];
+    // Add conversion rate growth
+    $growth['conversion'] = $previousConversion > 0
+        ? round(($currentConversion - $previousConversion) / $previousConversion * 100, 1)
+        : 0;
 
-        foreach ($current as $metric => $value) {
-            $previousValue = $previous[$metric];
-            $growth[$metric] = $previousValue > 0 
-                ? round(($value - $previousValue) / $previousValue * 100, 1) 
-                : 0;
+    // Add rating growth (if applicable)
+    $growth['rating'] = 0; // You may want to calculate this based on your rating data
+
+    return $growth;
+}
+
+private function generateInsights($growth, $devices, $locations, $keywords)
+{
+    $insights = [];
+
+    // Insights de crescimento
+    foreach ($growth as $metric => $value) {
+        $metricName = [
+            'views' => 'visualizações',
+            'clicks' => 'cliques',
+            'calls' => 'chamadas',
+            'conversion' => 'taxa de conversão'
+        ][$metric] ?? $metric;
+
+        if ($value > 0) {
+            $insights[] = "Aumento de {$value}% em {$metricName} comparado ao período anterior.";
+        } elseif ($value < 0) {
+            $insights[] = "Redução de " . abs($value) . "% em {$metricName} comparado ao período anterior.";
         }
-
-        return $growth;
     }
 
-    private function generateInsights($growth, $devices, $locations, $keywords)
-    {
-        $insights = [];
-        
-        // Insights de crescimento
-        foreach ($growth as $metric => $value) {
-            $metricName = [
-                'views' => 'visualizações',
-                'clicks' => 'cliques',
-                'calls' => 'chamadas'
-            ][$metric];
-
-            if ($value > 0) {
-                $insights[] = "Aumento de {$value}% em {$metricName} comparado ao período anterior.";
-            } elseif ($value < 0) {
-                $insights[] = "Redução de " . abs($value) . "% em {$metricName} comparado ao período anterior.";
-            }
-        }
 
         // Insight de dispositivos
         if (!empty($devices)) {
