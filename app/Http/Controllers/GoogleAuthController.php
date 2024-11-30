@@ -29,32 +29,33 @@ class GoogleAuthController extends Controller
     }
 
     public function callback(Request $request)
-    {
-        try {
-            if ($request->has('error')) {
-                return redirect()
-                    ->route('business.index')
-                    ->with('error', 'Autorização do Google negada.');
-            }
-
-            $token = $this->googleAuth->handleCallback($request->code);
-            
-            // Salva o token no usuário
-            auth()->user()->update([
-                'google_token' => json_encode($token)
-            ]);
-
-            // Importa os negócios
-            $this->googleBusiness->importBusinesses(auth()->user());
-
+{
+    try {
+        if ($request->has('error')) {
             return redirect()
                 ->route('business.index')
-                ->with('success', 'Negócios importados com sucesso!');
-
-        } catch (\Exception $e) {
-            return redirect()
-                ->route('business.index')
-                ->with('error', 'Erro ao importar negócios: ' . $e->getMessage());
+                ->with('error', 'Autorização do Google negada.');
         }
+
+        $token = $this->googleAuth->handleCallback($request->code);
+        
+        // Salva o token no usuário
+        auth()->user()->update([
+            'google_token' => json_encode($token)
+        ]);
+
+        // Dispara o job de importação
+        ImportGoogleBusinesses::dispatch(auth()->user())
+            ->delay(now()->addSeconds(5));
+
+        return redirect()
+            ->route('business.index')
+            ->with('success', 'Autenticação realizada com sucesso! A importação dos negócios começará em breve.');
+
+    } catch (\Exception $e) {
+        return redirect()
+            ->route('business.index')
+            ->with('error', 'Erro ao importar negócios: ' . $e->getMessage());
     }
+}
 }

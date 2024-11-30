@@ -32,4 +32,11 @@ return [
         'https://www.googleapis.com/auth/userinfo.profile'
     ]
 ],
+'rate_limit' => [
+    'max_requests_per_minute' => 60,
+    'retry_attempts' => 3,
+    'retry_delay' => 60
+]
+
+
 ];
