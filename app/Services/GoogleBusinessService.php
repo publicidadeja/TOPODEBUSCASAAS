@@ -12,8 +12,18 @@ use Exception;
 
 class GoogleBusinessService
 {
+    protected $client;
+    protected $service;
     protected $retryAttempts = 3;
     protected $retryDelay = 60; // segundos
+
+    public function __construct()
+    {
+        $this->client = new Client();
+        $this->client->setApplicationName(config('services.google.application_name'));
+        $this->client->setClientId(config('services.google.client_id'));
+        $this->client->setClientSecret(config('services.google.client_secret'));
+    }
 
     public function importBusinesses($user)
     {
@@ -69,40 +79,33 @@ class GoogleBusinessService
     {
         Log::info('Iniciando importação de negócios', ['user_id' => $user->id]);
 
-        // Configura o cliente Google
-        $client = new Client();
-        $client->setApplicationName(config('services.google.application_name'));
-        $client->setClientId(config('services.google.client_id'));
-        $client->setClientSecret(config('services.google.client_secret'));
-        $client->setAccessToken(json_decode($user->google_token, true));
-
-        // Verifica se o token precisa ser atualizado
-        if ($client->isAccessTokenExpired()) {
-            Log::info('Token expirado, renovando...', ['user_id' => $user->id]);
-            
-            if ($client->getRefreshToken()) {
-                $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
-                // Atualiza o token do usuário no banco
-                $user->update(['google_token' => json_encode($client->getAccessToken())]);
-            } else {
-                throw new Exception('Refresh token não disponível. Necessário reautenticar.');
-            }
-        }
-
-        // Cria o serviço do Google My Business
-        $mybusinessService = new MyBusinessBusinessInformation($client);
-        
         try {
-            // Lista as contas do usuário
-            $accounts = $mybusinessService->accounts->listAccounts();
+            // Configura o token de acesso
+            $accessToken = json_decode($user->google_token, true);
+            $this->client->setAccessToken($accessToken);
+
+            // Verifica se o token precisa ser atualizado
+            if ($this->client->isAccessTokenExpired()) {
+                Log::info('Token expirado, renovando...', ['user_id' => $user->id]);
+                
+                if ($this->client->getRefreshToken()) {
+                    $this->client->fetchAccessTokenWithRefreshToken($this->client->getRefreshToken());
+                    $user->update(['google_token' => json_encode($this->client->getAccessToken())]);
+                } else {
+                    throw new Exception('Refresh token não disponível. Necessário reautenticar.');
+                }
+            }
+
+            // Inicializa o serviço
+            $this->service = new MyBusinessBusinessInformation($this->client);
+            
+            // Obtém a lista de contas
+            $accountName = 'accounts/';
+            $locations = $this->service->accounts_locations->listAccountsLocations($accountName);
+            
             $importedCount = 0;
 
-            foreach ($accounts->getAccounts() as $account) {
-                // Lista os locais/negócios para cada conta
-                $locations = $mybusinessService->accounts_locations->listAccountsLocations(
-                    $account->name
-                );
-
+            if ($locations->getLocations()) {
                 foreach ($locations->getLocations() as $location) {
                     // Cria ou atualiza o negócio
                     $business = Business::updateOrCreate(
@@ -153,11 +156,8 @@ class GoogleBusinessService
 
     public function updateAnalytics(Business $business)
     {
-        // Implementação do método de atualização de analytics
-        // Este método seria responsável por atualizar as métricas do negócio
         try {
-            // Aqui você implementaria a lógica real de busca de analytics
-            // Por enquanto, vamos criar dados simulados
+            // Simulação de dados de analytics
             $analytics = new BusinessAnalytics([
                 'business_id' => $business->id,
                 'views' => rand(100, 1000),
