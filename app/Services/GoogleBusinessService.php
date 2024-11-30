@@ -16,6 +16,7 @@ class GoogleBusinessService
     protected $service;
     protected $retryAttempts = 3;
     protected $retryDelay = 60; // segundos
+    protected $rateLimitDelay = 61; // segundos (slightly over 1 minute for safety)
 
     public function __construct()
     {
@@ -51,13 +52,13 @@ class GoogleBusinessService
                 $attempts++;
                 
                 if ($this->isRateLimitError($e)) {
+                    Log::warning('Rate limit atingido, aguardando antes de tentar novamente...', [
+                        'attempt' => $attempts,
+                        'delay' => $this->rateLimitDelay
+                    ]);
+                    
                     if ($attempts < $this->retryAttempts) {
-                        Log::warning('Rate limit atingido, aguardando antes de tentar novamente...', [
-                            'attempt' => $attempts,
-                            'delay' => $this->retryDelay
-                        ]);
-                        
-                        sleep($this->retryDelay);
+                        sleep($this->rateLimitDelay);
                         continue;
                     }
                 }
@@ -69,9 +70,18 @@ class GoogleBusinessService
 
     protected function isRateLimitError($exception)
     {
+        // Check for rate limit error (HTTP 429)
         if (method_exists($exception, 'getCode')) {
             return $exception->getCode() === 429;
         }
+        
+        // Check error message content
+        if (method_exists($exception, 'getMessage')) {
+            $message = $exception->getMessage();
+            return strpos($message, 'RATE_LIMIT_EXCEEDED') !== false 
+                || strpos($message, 'Quota exceeded') !== false;
+        }
+        
         return false;
     }
 
@@ -99,44 +109,48 @@ class GoogleBusinessService
             // Inicializa o serviço
             $this->service = new MyBusinessBusinessInformation($this->client);
             
-            // Obtém a lista de contas
-            $accountName = 'accounts/';
-            $locations = $this->service->accounts_locations->listAccountsLocations($accountName);
-            
+            // Lista as contas do usuário com tratamento de rate limit
+            $accounts = $this->executeWithRetry(function() {
+                return $this->service->accounts->listAccounts();
+            });
+
             $importedCount = 0;
 
-            if ($locations->getLocations()) {
-                foreach ($locations->getLocations() as $location) {
-                    // Cria ou atualiza o negócio
-                    $business = Business::updateOrCreate(
-                        ['google_business_id' => $location->name],
-                        [
-                            'user_id' => $user->id,
-                            'name' => $location->locationName,
-                            'address' => $location->address->addressLines[0] ?? '',
-                            'city' => $location->address->locality ?? '',
-                            'state' => $location->address->administrativeArea ?? '',
-                            'postal_code' => $location->address->postalCode ?? '',
-                            'phone' => $location->phoneNumbers->primaryPhone ?? '',
-                            'website' => $location->websiteUri ?? '',
-                            'status' => 'active',
-                            'last_sync' => now(),
-                        ]
-                    );
+            foreach ($accounts->getAccounts() as $account) {
+                // Adiciona delay entre requisições para evitar rate limit
+                sleep(1);
 
-                    $importedCount++;
-                    
-                    Log::info('Negócio importado/atualizado', [
-                        'business_id' => $business->id,
-                        'name' => $business->name
-                    ]);
+                // Lista os locais/negócios para cada conta com tratamento de rate limit
+                $locations = $this->executeWithRetry(function() use ($account) {
+                    return $this->service->accounts_locations->listAccountsLocations($account->name);
+                });
+
+                if ($locations && $locations->getLocations()) {
+                    foreach ($locations->getLocations() as $location) {
+                        $business = Business::updateOrCreate(
+                            ['google_business_id' => $location->name],
+                            [
+                                'user_id' => $user->id,
+                                'name' => $location->locationName,
+                                'address' => $location->address->addressLines[0] ?? '',
+                                'city' => $location->address->locality ?? '',
+                                'state' => $location->address->administrativeArea ?? '',
+                                'postal_code' => $location->address->postalCode ?? '',
+                                'phone' => $location->phoneNumbers->primaryPhone ?? '',
+                                'website' => $location->websiteUri ?? '',
+                                'status' => 'active',
+                                'last_sync' => now(),
+                            ]
+                        );
+
+                        $importedCount++;
+                        Log::info('Negócio importado/atualizado', [
+                            'business_id' => $business->id,
+                            'name' => $business->name
+                        ]);
+                    }
                 }
             }
-
-            Log::info('Importação concluída com sucesso', [
-                'user_id' => $user->id,
-                'total_imported' => $importedCount
-            ]);
 
             return [
                 'success' => true,
@@ -151,30 +165,6 @@ class GoogleBusinessService
             ]);
             
             throw new Exception('Erro ao importar negócios: ' . $e->getMessage());
-        }
-    }
-
-    public function updateAnalytics(Business $business)
-    {
-        try {
-            // Simulação de dados de analytics
-            $analytics = new BusinessAnalytics([
-                'business_id' => $business->id,
-                'views' => rand(100, 1000),
-                'clicks' => rand(50, 500),
-                'calls' => rand(10, 100),
-                'date' => Carbon::now()->format('Y-m-d'),
-            ]);
-
-            $analytics->save();
-
-            return $analytics;
-        } catch (Exception $e) {
-            Log::error('Erro ao atualizar analytics:', [
-                'business_id' => $business->id,
-                'error' => $e->getMessage()
-            ]);
-            throw $e;
         }
     }
 }
