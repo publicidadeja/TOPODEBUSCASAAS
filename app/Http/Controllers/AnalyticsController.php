@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Response;
 use App\Exports\AnalyticsExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\Action; // Ajuste o namespace conforme necessário
 
 class AnalyticsController extends Controller
 {
@@ -27,33 +28,36 @@ class AnalyticsController extends Controller
     }
 
     public function dashboard(Business $business)
-    {
-        if ($business->user_id !== auth()->id()) {
-            return redirect()->route('dashboard')
-                ->with('error', 'Você não tem permissão para acessar este negócio.');
-        }
-
-        $period = request()->input('period', 30);
-        $endDate = Carbon::now();
-        $startDate = Carbon::now()->subDays($period);
-
-        if (request()->has('start_date') && request()->has('end_date')) {
-            $startDate = Carbon::parse(request()->start_date);
-            $endDate = Carbon::parse(request()->end_date);
-        }
-
-        $analyticsData = $this->getAnalyticsData($business->id, $startDate, $endDate);
-        $businesses = auth()->user()->businesses;
-
-        return view('analytics.dashboard', array_merge(
-            $analyticsData,
-            [
-                'businesses' => $businesses,
-                'selectedBusiness' => $business,
-            ]
-        ));
+{
+    if ($business->user_id !== auth()->id()) {
+        return redirect()->route('dashboard')
+            ->with('error', 'Você não tem permissão para acessar este negócio.');
     }
 
+    $period = request()->input('period', 30);
+    $endDate = Carbon::now();
+    $startDate = Carbon::now()->subDays($period);
+
+    if (request()->has('start_date') && request()->has('end_date')) {
+        $startDate = Carbon::parse(request()->start_date);
+        $endDate = Carbon::parse(request()->end_date);
+    }
+
+    $analyticsData = $this->getAnalyticsData($business->id, $startDate, $endDate);
+    $businesses = auth()->user()->businesses;
+
+    // Adicione esta linha para definir $actions
+    $actions = []; // Você deve substituir isso pela lógica real de busca das ações
+
+    return view('analytics.dashboard', array_merge(
+        $analyticsData,
+        [
+            'businesses' => $businesses,
+            'selectedBusiness' => $business,
+            'actions' => $actions // Adicione actions ao array de dados
+        ]
+    ));
+}
     public function getData(Request $request, Business $business)
     {
         if ($business->user_id !== auth()->id()) {
@@ -334,10 +338,33 @@ class AnalyticsController extends Controller
         ->orderBy('date')
         ->get();
 
+    // Get last analytics record
+    $lastAnalytics = BusinessAnalytics::where('business_id', $businessId)
+        ->orderBy('date', 'desc')
+        ->first();
+
     $dates = $analytics->pluck('date')->map(fn($date) => $date->format('d/m'))->toArray();
     $views = $analytics->pluck('views')->toArray();
     $clicks = $analytics->pluck('clicks')->toArray();
     $calls = $analytics->pluck('calls')->toArray();
+
+    // Calculate conversion rates for each day
+    $conversionRates = [];
+    foreach ($analytics as $record) {
+        $totalInteractions = $record->clicks + $record->calls;
+        $conversionRates[] = $record->views > 0 
+            ? round(($totalInteractions / $record->views) * 100, 1)
+            : 0;
+    }
+
+    $devices = $lastAnalytics ? $lastAnalytics->devices : [
+        'desktop' => 0,
+        'mobile' => 0,
+        'tablet' => 0
+    ];
+
+    $locations = $lastAnalytics ? $lastAnalytics->locations : [];
+    $keywords = $lastAnalytics ? $lastAnalytics->keywords : [];
 
     $currentTotal = [
         'views' => array_sum($views),
@@ -356,14 +383,18 @@ class AnalyticsController extends Controller
         ? round((($currentTotal['clicks'] + $currentTotal['calls']) / $currentTotal['views']) * 100, 1)
         : 0;
 
-    // Calculate average rating (you may need to adjust this based on your data source)
+    // Calculate previous conversion rate
+    $previousConversion = $previousTotal['views'] > 0
+        ? round((($previousTotal['clicks'] + $previousTotal['calls']) / $previousTotal['views']) * 100, 1)
+        : 0;
+
+    // Calculate average rating
     $averageRating = $lastAnalytics && isset($lastAnalytics->rating) 
         ? $lastAnalytics->rating 
         : 0;
 
-    $growth = $this->calculateGrowth($currentTotal, $previousTotal);
-
-    // ... rest of the existing code ...
+    $growth = $this->calculateGrowth($currentTotal, $previousTotal, $currentConversion, $previousConversion);
+    $insights = $this->generateInsights($growth, $devices, $locations, $keywords);
 
     return compact(
         'dates',
@@ -378,101 +409,101 @@ class AnalyticsController extends Controller
         'currentTotal',
         'previousTotal',
         'currentConversion',
-        'averageRating'  // Add this line
+        'averageRating',
+        'conversionRates' // Add this line
     );
 }
 
-private function calculateGrowth($current, $previous)
-{
-    $growth = [];
+    private function calculateGrowth($current, $previous, $currentConversion, $previousConversion)
+    {
+        $growth = [];
 
-    foreach ($current as $metric => $value) {
-        $previousValue = $previous[$metric];
-        $growth[$metric] = $previousValue > 0 
-            ? round(($value - $previousValue) / $previousValue * 100, 1) 
-            : 0;
-    }
-
-    // Add conversion rate growth
-    $growth['conversion'] = $previousConversion > 0
-        ? round(($currentConversion - $previousConversion) / $previousConversion * 100, 1)
-        : 0;
-
-    // Add rating growth (if applicable)
-    $growth['rating'] = 0; // You may want to calculate this based on your rating data
-
-    return $growth;
-}
-
-private function generateInsights($growth, $devices, $locations, $keywords)
-{
-    $insights = [];
-
-    // Insights de crescimento
-    foreach ($growth as $metric => $value) {
-        $metricName = [
-            'views' => 'visualizações',
-            'clicks' => 'cliques',
-            'calls' => 'chamadas',
-            'conversion' => 'taxa de conversão'
-        ][$metric] ?? $metric;
-
-        if ($value > 0) {
-            $insights[] = "Aumento de {$value}% em {$metricName} comparado ao período anterior.";
-        } elseif ($value < 0) {
-            $insights[] = "Redução de " . abs($value) . "% em {$metricName} comparado ao período anterior.";
+        foreach ($current as $metric => $value) {
+            $previousValue = $previous[$metric];
+            $growth[$metric] = $previousValue > 0 
+                ? round(($value - $previousValue) / $previousValue * 100, 1) 
+                : 0;
         }
+
+        // Adiciona crescimento da taxa de conversão
+        $growth['conversion'] = $previousConversion > 0
+            ? round(($currentConversion - $previousConversion) / $previousConversion * 100, 1)
+            : 0;
+
+        // Adiciona crescimento da avaliação
+        $growth['rating'] = 0;
+
+        return $growth;
     }
 
-
+    private function generateInsights($growth, $devices, $locations, $keywords)
+    {
+        $insights = [];
+    
+        // Insights de crescimento
+        foreach ($growth as $metric => $value) {
+            $metricName = [
+                'views' => 'visualizações',
+                'clicks' => 'cliques',
+                'calls' => 'chamadas',
+                'conversion' => 'taxa de conversão'
+            ][$metric] ?? $metric;
+    
+            if ($value > 0) {
+                $insights[] = "Aumento de {$value}% em {$metricName} comparado ao período anterior.";
+            } elseif ($value < 0) {
+                $insights[] = "Redução de " . abs($value) . "% em {$metricName} comparado ao período anterior.";
+            }
+        }
+    
         // Insight de dispositivos
-        if (!empty($devices)) {
+        if (!empty($devices) && array_sum($devices) > 0) {
             arsort($devices);
             $topDevice = key($devices);
-            $topDevicePercentage = round($devices[$topDevice] / array_sum($devices) * 100, 1);
+            $deviceSum = array_sum($devices);
             
-            $deviceNames = [
-                'desktop' => 'Desktop',
-                'mobile' => 'Mobile',
-                'tablet' => 'Tablet'
-            ];
-            
-            $deviceName = $deviceNames[$topDevice] ?? $topDevice;
-            $insights[] = "{$deviceName} é o dispositivo mais usado, representando {$topDevicePercentage}% dos acessos.";
+            if ($deviceSum > 0) {
+                $topDevicePercentage = round($devices[$topDevice] / $deviceSum * 100, 1);
+    
+                $deviceNames = [
+                    'desktop' => 'Desktop',
+                    'mobile' => 'Mobile',
+                    'tablet' => 'Tablet'
+                ];
+    
+                $deviceName = $deviceNames[$topDevice] ?? $topDevice;
+                $insights[] = "{$deviceName} é o dispositivo mais usado, representando {$topDevicePercentage}% dos acessos.";
+            }
         }
-
+    
         // Insight de localização
-        if (!empty($locations)) {
+        if (!empty($locations) && array_sum($locations) > 0) {
             arsort($locations);
-            $topLocations = array_slice($locations, 0, 3, true);
+            $topLocations = $locations;
+            $topLocation = key($topLocations);
+            $locationSum = array_sum($locations);
             
-            if (count($topLocations) > 0) {
-                $topLocation = key($topLocations);
-                $topLocationPercentage = round($topLocations[$topLocation] / array_sum($locations) * 100, 1);
+            if ($locationSum > 0) {
+                $topLocationPercentage = round($topLocations[$topLocation] / $locationSum * 100, 1);
                 $insights[] = "{$topLocation} é a principal origem dos acessos, com {$topLocationPercentage}% do total.";
-                
+    
                 if (count($topLocations) > 1) {
                     $otherLocations = array_keys(array_slice($topLocations, 1, 2));
-                    $insights[] = "Outras cidades relevantes: " . implode(' e ', $otherLocations) . ".";
+                    $insights[] = "Outras regiões relevantes: " . implode(', ', $otherLocations) . ".";
                 }
             }
         }
-
+    
         // Insight de palavras-chave
         if (!empty($keywords)) {
             arsort($keywords);
-            $topKeywords = array_slice($keywords, 0, 3, true);
+            $topKeywords = array_slice($keywords, 0, 3);
             
-            if (count($topKeywords) > 0) {
-                $keywordsList = implode(', ', array_keys($topKeywords));
-                $insights[] = "Principais termos de busca: {$keywordsList}.";
-                
-                $topKeyword = key($topKeywords);
-                $topKeywordPercentage = round($topKeywords[$topKeyword] / array_sum($keywords) * 100, 1);
-                $insights[] = "O termo \"{$topKeyword}\" representa {$topKeywordPercentage}% das buscas.";
+            if (!empty($topKeywords)) {
+                $insights[] = "Principais termos de busca: " . implode(', ', array_keys($topKeywords)) . ".";
             }
         }
-
+    
         return $insights;
     }
 
