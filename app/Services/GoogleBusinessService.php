@@ -14,9 +14,11 @@ class GoogleBusinessService
 {
     protected $client;
     protected $service;
-    protected $retryAttempts = 3;
-    protected $retryDelay = 60; // segundos
-    protected $rateLimitDelay = 61; // segundos (slightly over 1 minute for safety)
+    protected $retryAttempts = 5;
+    protected $retryDelay = 60;
+    protected $rateLimitDelay = 61;
+    protected $requestDelay = 2;
+    protected $maxBackoffDelay = 300; // 5 minutos
 
     public function __construct()
     {
@@ -41,130 +43,192 @@ class GoogleBusinessService
         }
     }
 
+    protected function doImportBusinesses($user)
+    {
+        Log::info('Iniciando importação de negócios', ['user_id' => $user->id]);
+
+        try {
+            $this->setupClientToken($user);
+            $this->service = new MyBusinessBusinessInformation($this->client);
+            
+            // Obtém as contas com retry
+            $accounts = $this->executeWithRetry(function() {
+                sleep($this->requestDelay);
+                return $this->service->accounts->listAccounts();
+            });
+
+            if (!$accounts || !$accounts->getAccounts()) {
+                Log::warning('Nenhuma conta encontrada', ['user_id' => $user->id]);
+                return $this->createResponse(0, "Nenhuma conta encontrada.");
+            }
+
+            $importedCount = 0;
+            $errors = [];
+
+            foreach ($accounts->getAccounts() as $account) {
+                try {
+                    $importedCount += $this->processAccount($account, $user);
+                } catch (Exception $e) {
+                    $errors[] = "Erro na conta {$account->name}: {$e->getMessage()}";
+                    Log::error('Erro ao processar conta', [
+                        'account' => $account->name,
+                        'error' => $e->getMessage()
+                    ]);
+                    continue;
+                }
+            }
+
+            $message = $this->createResponseMessage($importedCount, $errors);
+            return $this->createResponse($importedCount, $message, !empty($errors));
+
+        } catch (Exception $e) {
+            Log::error('Erro fatal na importação', [
+                'error' => $e->getMessage(),
+                'user_id' => $user->id
+            ]);
+            throw new Exception('Erro ao importar negócios: ' . $e->getMessage());
+        }
+    }
+
+    protected function processAccount($account, $user)
+    {
+        sleep($this->requestDelay);
+        
+        $locations = $this->executeWithRetry(function() use ($account) {
+            return $this->service->accounts_locations->listAccountsLocations($account->name);
+        });
+
+        if (!$locations || !$locations->getLocations()) {
+            return 0;
+        }
+
+        $importedCount = 0;
+
+        foreach ($locations->getLocations() as $location) {
+            try {
+                if ($this->processLocation($location, $user)) {
+                    $importedCount++;
+                }
+            } catch (Exception $e) {
+                Log::error('Erro ao processar location', [
+                    'location' => $location->name,
+                    'error' => $e->getMessage()
+                ]);
+                continue;
+            }
+        }
+
+        return $importedCount;
+    }
+
+    protected function processLocation($location, $user)
+    {
+        $business = Business::updateOrCreate(
+            ['google_business_id' => $location->name],
+            [
+                'user_id' => $user->id,
+                'name' => $location->locationName,
+                'address' => $location->address->addressLines[0] ?? '',
+                'city' => $location->address->locality ?? '',
+                'state' => $location->address->administrativeArea ?? '',
+                'postal_code' => $location->address->postalCode ?? '',
+                'phone' => $location->primaryPhone ?? '',
+                'website' => $location->websiteUri ?? '',
+                'status' => 'active',
+                'last_sync' => now(),
+            ]
+        );
+
+        Log::info('Negócio importado/atualizado', [
+            'business_id' => $business->id,
+            'name' => $business->name
+        ]);
+
+        return true;
+    }
+
+    protected function setupClientToken($user)
+    {
+        $accessToken = json_decode($user->google_token, true);
+        $this->client->setAccessToken($accessToken);
+
+        if ($this->client->isAccessTokenExpired()) {
+            Log::info('Token expirado, renovando...', ['user_id' => $user->id]);
+            
+            if (!$this->client->getRefreshToken()) {
+                throw new Exception('Refresh token não disponível. Necessário reautenticar.');
+            }
+
+            $this->client->fetchAccessTokenWithRefreshToken($this->client->getRefreshToken());
+            $user->update(['google_token' => json_encode($this->client->getAccessToken())]);
+        }
+    }
+
     protected function executeWithRetry($callback)
     {
         $attempts = 0;
+        $lastError = null;
         
         while ($attempts < $this->retryAttempts) {
             try {
                 return $callback();
             } catch (Exception $e) {
                 $attempts++;
+                $lastError = $e;
                 
                 if ($this->isRateLimitError($e)) {
-                    Log::warning('Rate limit atingido, aguardando antes de tentar novamente...', [
+                    $delay = $this->calculateBackoff($attempts);
+                    
+                    Log::warning('Rate limit atingido, aguardando...', [
                         'attempt' => $attempts,
-                        'delay' => $this->rateLimitDelay
+                        'delay' => $delay
                     ]);
                     
                     if ($attempts < $this->retryAttempts) {
-                        sleep($this->rateLimitDelay);
+                        sleep($delay);
                         continue;
                     }
                 }
                 
-                throw $e;
+                if ($attempts >= $this->retryAttempts) {
+                    throw $lastError;
+                }
             }
         }
     }
 
-    protected function isRateLimitError($exception)
+    protected function isRateLimitError($e)
     {
-        // Check for rate limit error (HTTP 429)
-        if (method_exists($exception, 'getCode')) {
-            return $exception->getCode() === 429;
-        }
-        
-        // Check error message content
-        if (method_exists($exception, 'getMessage')) {
-            $message = $exception->getMessage();
-            return strpos($message, 'RATE_LIMIT_EXCEEDED') !== false 
-                || strpos($message, 'Quota exceeded') !== false;
-        }
-        
-        return false;
+        return (method_exists($e, 'getCode') && $e->getCode() === 429) ||
+               (method_exists($e, 'getMessage') && (
+                   strpos($e->getMessage(), 'RATE_LIMIT_EXCEEDED') !== false ||
+                   strpos($e->getMessage(), 'Quota exceeded') !== false
+               ));
     }
 
-    protected function doImportBusinesses($user)
+    protected function calculateBackoff($attempt)
     {
-        Log::info('Iniciando importação de negócios', ['user_id' => $user->id]);
+        $baseDelay = $this->rateLimitDelay;
+        $delay = min($this->maxBackoffDelay, $baseDelay * pow(2, $attempt - 1));
+        $jitter = $delay * 0.3;
+        return $delay + rand(-$jitter * 100, $jitter * 100) / 100;
+    }
 
-        try {
-            // Configura o token de acesso
-            $accessToken = json_decode($user->google_token, true);
-            $this->client->setAccessToken($accessToken);
+    protected function createResponse($count, $message, $hasErrors = false)
+    {
+        return [
+            'success' => !$hasErrors,
+            'imported_count' => $count,
+            'message' => $message
+        ];
+    }
 
-            // Verifica se o token precisa ser atualizado
-            if ($this->client->isAccessTokenExpired()) {
-                Log::info('Token expirado, renovando...', ['user_id' => $user->id]);
-                
-                if ($this->client->getRefreshToken()) {
-                    $this->client->fetchAccessTokenWithRefreshToken($this->client->getRefreshToken());
-                    $user->update(['google_token' => json_encode($this->client->getAccessToken())]);
-                } else {
-                    throw new Exception('Refresh token não disponível. Necessário reautenticar.');
-                }
-            }
-
-            // Inicializa o serviço
-            $this->service = new MyBusinessBusinessInformation($this->client);
-            
-            // Lista as contas do usuário com tratamento de rate limit
-            $accounts = $this->executeWithRetry(function() {
-                return $this->service->accounts->listAccounts();
-            });
-
-            $importedCount = 0;
-
-            foreach ($accounts->getAccounts() as $account) {
-                // Adiciona delay entre requisições para evitar rate limit
-                sleep(1);
-
-                // Lista os locais/negócios para cada conta com tratamento de rate limit
-                $locations = $this->executeWithRetry(function() use ($account) {
-                    return $this->service->accounts_locations->listAccountsLocations($account->name);
-                });
-
-                if ($locations && $locations->getLocations()) {
-                    foreach ($locations->getLocations() as $location) {
-                        $business = Business::updateOrCreate(
-                            ['google_business_id' => $location->name],
-                            [
-                                'user_id' => $user->id,
-                                'name' => $location->locationName,
-                                'address' => $location->address->addressLines[0] ?? '',
-                                'city' => $location->address->locality ?? '',
-                                'state' => $location->address->administrativeArea ?? '',
-                                'postal_code' => $location->address->postalCode ?? '',
-                                'phone' => $location->phoneNumbers->primaryPhone ?? '',
-                                'website' => $location->websiteUri ?? '',
-                                'status' => 'active',
-                                'last_sync' => now(),
-                            ]
-                        );
-
-                        $importedCount++;
-                        Log::info('Negócio importado/atualizado', [
-                            'business_id' => $business->id,
-                            'name' => $business->name
-                        ]);
-                    }
-                }
-            }
-
-            return [
-                'success' => true,
-                'imported_count' => $importedCount,
-                'message' => "Importação concluída. {$importedCount} negócios importados."
-            ];
-
-        } catch (Exception $e) {
-            Log::error('Erro ao importar negócios do Google', [
-                'error' => $e->getMessage(),
-                'user_id' => $user->id
-            ]);
-            
-            throw new Exception('Erro ao importar negócios: ' . $e->getMessage());
+    protected function createResponseMessage($count, $errors = [])
+    {
+        $message = "Importação concluída. {$count} negócios importados.";
+        if (!empty($errors)) {
+            $message .= " Alguns erros ocorreram: " . implode("; ", $errors);
         }
+        return $message;
     }
 }
