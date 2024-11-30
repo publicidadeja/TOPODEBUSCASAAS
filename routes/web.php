@@ -8,6 +8,14 @@ use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\GoogleAuthController;
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])
+        ->name('google.auth');
+    Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
+        ->name('google.callback');
+});
 
 // Rota principal (pública)
 Route::get('/', function () {
@@ -60,6 +68,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/update-hours', [AutomationController::class, 'updateHours'])->name('update-hours');
         Route::post('/respond-review', [AutomationController::class, 'respondReview'])->name('respond-review');
     });
+
     
     // Rotas de Perfil
     Route::prefix('profile')->name('profile.')->group(function () {
@@ -70,7 +79,15 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/notifications', [ProfileController::class, 'updateNotifications'])->name('notifications.update');
         Route::get('/api-tokens', [ProfileController::class, 'apiTokens'])->name('api-tokens');
     });
+
+// Rotas do Google Auth
+Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])
+->name('google.auth');
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
+->name('google.callback');
 });
+
+
 
 // Rotas de autenticação
 require __DIR__.'/auth.php';

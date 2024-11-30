@@ -19,6 +19,17 @@ return [
     ],
 
     'gemini' => [
-        'api_key' => env('GEMINI_API_KEY'),
+        'api_key' => env('AIzaSyBG9jYXBYGMe3ZTuaDDNJgT-gyGi4FgmYM'),
     ],
+
+  'google' => [
+    'client_id' => env('GOOGLE_CLIENT_ID'),
+    'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+    'redirect' => env('GOOGLE_REDIRECT_URI'),
+    'gmb_scope' => [
+        'https://www.googleapis.com/auth/business.manage',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile'
+    ]
+],
 ];
