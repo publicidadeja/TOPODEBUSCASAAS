@@ -64,7 +64,14 @@
                                     </div>
                                     @if($business->google_business_id)
                                         <span class="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Google</span>
-                                    @endif
+                                        <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
+        <strong class="font-bold">Debug:</strong>
+        <span class="block sm:inline">
+            Usuário ID: {{ auth()->id() }} |
+            Token Google: {{ auth()->user()->google_token ? 'Presente' : 'Ausente' }}
+        </span>
+    </div>
+@endif
                                 </div>
                                 
                                 <div class="space-y-2 mb-4">

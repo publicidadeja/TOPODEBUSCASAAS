@@ -27,7 +27,13 @@ class ImportGoogleBusinesses implements ShouldQueue
      * Execute the job.
      */
     public function handle(GoogleBusinessService $service)
-    {
-        $service->importBusinesses($this->user);
+{
+    \Log::info('Iniciando importação de negócios para o usuário: ' . $this->user->id);
+    try {
+        $result = $service->importBusinesses($this->user);
+        \Log::info('Importação concluída', ['result' => $result]);
+    } catch (\Exception $e) {
+        \Log::error('Erro na importação', ['error' => $e->getMessage()]);
+        throw $e;
     }
-}
+} }

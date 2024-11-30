@@ -7,22 +7,20 @@ use Illuminate\Http\Request;
 
 class BusinessController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        $businesses = auth()->user()->businesses;
+        $user = auth()->user();
+        $businesses = $user->businesses()->latest()->get();
+        
+        \Log::info('Listando negócios', [
+            'user_id' => $user->id,
+            'count' => $businesses->count(),
+            'businesses' => $businesses->toArray()
+        ]);
+
         return view('business.index', compact('businesses'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return view('business.create');
-    }
 
     /**
      * Store a newly created resource in storage.
