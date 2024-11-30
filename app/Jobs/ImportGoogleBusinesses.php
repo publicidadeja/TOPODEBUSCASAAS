@@ -15,11 +15,17 @@ class ImportGoogleBusinesses implements ShouldQueue
 
     protected $user;
 
+    /**
+     * Create a new job instance.
+     */
     public function __construct($user)
     {
         $this->user = $user;
     }
 
+    /**
+     * Execute the job.
+     */
     public function handle(GoogleBusinessService $service)
     {
         $service->importBusinesses($this->user);

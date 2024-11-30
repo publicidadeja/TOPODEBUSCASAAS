@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\GoogleAuthService;
 use App\Services\GoogleBusinessService;
 use Illuminate\Http\Request;
+use App\Jobs\ImportGoogleBusinesses;
 
 class GoogleAuthController extends Controller
 {
