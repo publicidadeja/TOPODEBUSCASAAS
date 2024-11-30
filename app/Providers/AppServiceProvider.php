@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\GoogleAuthService;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Blade;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -14,8 +15,8 @@ class AppServiceProvider extends ServiceProvider
         });
     }
 
-    public function boot(): void
-    {
-        //
-    }
+    public function boot()
+{
+    Blade::component('toggle-switch', \App\View\Components\ToggleSwitch::class);
+}
 }

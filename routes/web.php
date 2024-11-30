@@ -9,8 +9,16 @@ use App\Http\Controllers\GoalController;
 use App\Http\Controllers\NotificationController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GoogleAuthController;
+use App\Http\Controllers\GoogleController;
+
+
+Route::get('/google/auth', [GoogleController::class, 'auth'])->name('google.auth');
+Route::get('/google/callback', [GoogleController::class, 'callback'])->name('google.callback');
 
 Route::middleware(['auth'])->group(function () {
+    Route::get('/business/{business}/automation', [BusinessController::class, 'automation'])
+        ->name('business.automation');
+        
     Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])
         ->name('google.auth');
     Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])

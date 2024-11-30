@@ -23,39 +23,45 @@ class GoogleBusinessService
     public function __construct()
     {
         $this->client = new Client();
-        $this->client->setApplicationName(config('services.google.application_name'));
-        $this->client->setClientId(config('services.google.client_id'));
-        $this->client->setClientSecret(config('services.google.client_secret'));
+    $this->client->setApplicationName(config('services.google.application_name'));
+    $this->client->setClientId(config('services.google.client_id'));
+    $this->client->setClientSecret(config('services.google.client_secret'));
+    $this->client->addScope('https://www.googleapis.com/auth/business.manage');
     }
 
     public function importBusinesses($user)
-    {
-        try {
-            return $this->executeWithRetry(function () use ($user) {
-                return $this->doImportBusinesses($user);
-            });
-        } catch (Exception $e) {
-            Log::error('Erro na importação de negócios do Google:', [
-                'error' => $e->getMessage(),
-                'user_id' => $user->id
-            ]);
-            throw $e;
-        }
+{
+    Log::info('Iniciando importação de negócios', [
+        'user_id' => $user->id,
+        'has_token' => !empty($user->google_token)
+    ]);
+
+    try {
+        return $this->executeWithRetry(function () use ($user) {
+            return $this->doImportBusinesses($user);
+        });
+    } catch (Exception $e) {
+        Log::error('Erro na importação de negócios do Google:', [
+            'error' => $e->getMessage(),
+            'user_id' => $user->id,
+            'trace' => $e->getTraceAsString()
+        ]);
+        throw $e;
     }
+}
+protected function doImportBusinesses($user)
+{
+    Log::info('Iniciando importação de negócios', ['user_id' => $user->id]);
 
-    protected function doImportBusinesses($user)
-    {
-        Log::info('Iniciando importação de negócios', ['user_id' => $user->id]);
-
-        try {
-            $this->setupClientToken($user);
-            $this->service = new MyBusinessBusinessInformation($this->client);
-            
-            // Obtém as contas com retry
-            $accounts = $this->executeWithRetry(function() {
-                sleep($this->requestDelay);
-                return $this->service->accounts->listAccounts();
-            });
+    try {
+        $this->setupClientToken($user);
+        $this->service = new MyBusinessBusinessInformation($this->client);
+        
+        // Obtém as contas com retry
+        $accounts = $this->executeWithRetry(function() {
+            sleep($this->requestDelay);
+            return $this->service->accounts->list(); // Changed from listAccounts() to list()
+        });
 
             if (!$accounts || !$accounts->getAccounts()) {
                 Log::warning('Nenhuma conta encontrada', ['user_id' => $user->id]);
