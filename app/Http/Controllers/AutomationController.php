@@ -201,6 +201,17 @@ public function getSmartCalendarSuggestions(Request $request)
     $suggestions = $this->generateSegmentSuggestions($business->segment);
 
     return response()->json(['suggestions' => $suggestions]);
+
+    $business = Business::where('user_id', auth()->id())->first();
+    
+    if (!$business) {
+        return response()->json(['error' => 'Negócio não encontrado'], 404);
+    }
+
+    // Gerar sugestões baseadas no tipo de negócio
+    $suggestions = $this->generateCalendarSuggestions($business);
+
+    return response()->json(['suggestions' => $suggestions]);
 }
 
 private function generateSegmentSuggestions($segment)
@@ -254,6 +265,70 @@ public function smartCalendar()
                       ->get();
 
     return view('automation.smart-calendar', compact('business', 'events'));
+    $business = Business::where('user_id', auth()->id())->first();
+    
+    if (!$business) {
+        return redirect()->route('business.create')->with('warning', 'Primeiro crie um negócio.');
+    }
+
+    return view('automation.smart-calendar', compact('business'));
+
+    
+}
+
+public function createCalendarEvent(Request $request)
+{
+    $business = Business::where('user_id', auth()->id())->first();
+    
+    if (!$business) {
+        return response()->json(['error' => 'Negócio não encontrado'], 404);
+    }
+
+    $validated = $request->validate([
+        'event_type' => 'required|string',
+        'title' => 'required|string',
+        'suggestion' => 'required|string',
+        'start_date' => 'required|date',
+        'end_date' => 'required|date|after:start_date'
+    ]);
+
+    $event = $business->smartCalendar()->create([
+        'event_type' => $validated['event_type'],
+        'title' => $validated['title'],
+        'suggestion' => $validated['suggestion'],
+        'start_date' => $validated['start_date'],
+        'end_date' => $validated['end_date'],
+        'status' => 'pending'
+    ]);
+
+    return response()->json([
+        'message' => 'Evento criado com sucesso!',
+        'event' => $event
+    ]);
+}
+
+private function generateCalendarSuggestions($business)
+{
+    // Exemplo de sugestões baseadas no segmento do negócio
+    $suggestions = [
+        [
+            'title' => 'Promoção Sazonal',
+            'message' => 'Que tal criar uma promoção especial para aumentar as vendas neste período?',
+            'type' => 'promotion'
+        ],
+        [
+            'title' => 'Evento de Engajamento',
+            'message' => 'Organize um evento para interagir com seus clientes e aumentar o engajamento.',
+            'type' => 'engagement'
+        ],
+        [
+            'title' => 'Postagem de Conteúdo',
+            'message' => 'Programe postagens de conteúdo relevante para sua audiência.',
+            'type' => 'content'
+        ]
+    ];
+
+    return $suggestions;
 }
 
 }

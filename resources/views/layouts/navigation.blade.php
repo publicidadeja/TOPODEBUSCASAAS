@@ -24,6 +24,9 @@
     {{ __('Automação') }}
 </x-nav-link>
 
+<x-nav-link :href="route('automation.smart-calendar')" :active="request()->routeIs('automation.smart-calendar')">
+    {{ __('Calendário Inteligente') }}
+</x-nav-link>
 
 @php
     $currentBusinessId = auth()->user()->businesses->first()->id ?? null;

@@ -1,4 +1,39 @@
 <x-app-layout>
+    @push('styles')
+    <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.css' rel='stylesheet' />
+    <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.css' rel='stylesheet' />
+    <style>
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            color: white;
+            z-index: 1000;
+            animation: fadeIn 0.3s ease-in;
+        }
+
+        .notification.success {
+            background-color: #4CAF50;
+        }
+
+        .notification.error {
+            background-color: #f44336;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        #calendar-container {
+            height: 800px;
+            margin-top: 20px;
+        }
+    </style>
+    @endpush
+
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
             {{ __('Calendário Inteligente') }}
@@ -30,6 +65,8 @@
     </div>
 
     @push('scripts')
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.js'></script>
     <script>
         // Função para carregar sugestões
         function loadSuggestions() {
@@ -54,8 +91,101 @@
                 });
         }
 
-        // Carregar sugestões quando a página carregar
-        document.addEventListener('DOMContentLoaded', loadSuggestions);
+        document.addEventListener('DOMContentLoaded', function() {
+            // Carregar sugestões
+            loadSuggestions();
+
+            // Inicializar o calendário
+            var calendarEl = document.getElementById('calendar-container');
+            var calendar = new FullCalendar.Calendar(calendarEl, {
+                plugins: ['dayGrid'],
+                initialView: 'dayGridMonth',
+                locale: 'pt-br',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                events: '/automation/calendar-events',
+                editable: true,
+                selectable: true,
+                select: function(info) {
+                    handleNewEvent(info);
+                }
+            });
+            calendar.render();
+
+            // Função para criar novo evento
+            window.handleNewEvent = function(info) {
+                const title = prompt('Digite o título do evento:');
+                if (title) {
+                    fetch('/automation/calendar-event', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        },
+                        body: JSON.stringify({
+                            title: title,
+                            event_type: 'custom',
+                            suggestion: 'Evento personalizado',
+                            start_date: info.startStr,
+                            end_date: info.endStr
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        calendar.addEvent({
+                            title: title,
+                            start: info.startStr,
+                            end: info.endStr
+                        });
+                        showNotification('Evento criado com sucesso!', 'success');
+                    })
+                    .catch(error => {
+                        showNotification('Erro ao criar evento', 'error');
+                    });
+                }
+            }
+
+            // Função para lidar com sugestões
+            window.handleSuggestion = function(type) {
+                fetch('/automation/calendar-event', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({
+                        event_type: type,
+                        title: 'Evento Sugerido',
+                        suggestion: 'Sugestão automática',
+                        start_date: new Date().toISOString(),
+                        end_date: new Date(Date.now() + 86400000).toISOString()
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    calendar.refetchEvents();
+                    showNotification('Sugestão aplicada com sucesso!', 'success');
+                })
+                .catch(error => {
+                    showNotification('Erro ao aplicar sugestão', 'error');
+                });
+            }
+
+            // Função para mostrar notificações
+            window.showNotification = function(message, type) {
+                const notification = document.createElement('div');
+                notification.className = `notification ${type}`;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+        });
     </script>
     @endpush
 </x-app-layout>
