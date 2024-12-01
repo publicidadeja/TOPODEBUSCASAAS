@@ -11,7 +11,10 @@ class CalendarEvent extends Model
         'event_type',
         'start_date',
         'end_date',
-        'suggestion'
+        'suggestion',
+        'status',
+        'color',
+        'description'
     ];
 
     protected $casts = [

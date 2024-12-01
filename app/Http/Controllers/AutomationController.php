@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Business;
 use App\Models\AutomatedPost;
 use App\Services\GeminiService;
+use App\Models\CalendarEvent;
 
 class AutomationController extends Controller
 {
@@ -53,10 +54,12 @@ class AutomationController extends Controller
         }
 
         $validated = $request->validate([
-            'type' => 'required|string',
-            'scheduled_for' => 'required|date',
-            'customPrompt' => 'nullable|string'
-        ]);
+            'event_type' => 'required|string',
+    'title' => 'required|string',
+    'suggestion' => 'nullable|string', // Changed from 'required' to 'nullable'
+    'start_date' => 'required|date',
+    'end_date' => 'required|date|after:start_date'
+]);
 
         // Gerar conteúdo com Gemini
         $prompt = $validated['customPrompt'] ?? $this->getDefaultPrompt($business, $validated['type']);
@@ -265,33 +268,41 @@ public function smartCalendar()
 
 public function createCalendarEvent(Request $request)
 {
-    $business = Business::where('user_id', auth()->id())->first();
-    
-    if (!$business) {
-        return response()->json(['error' => 'Negócio não encontrado'], 404);
+    try {
+        $validated = $request->validate([
+            'event_type' => 'required|string',
+            'title' => 'required|string',
+            'suggestion' => 'nullable|string',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after:start_date',
+            'status' => 'nullable|string'
+        ]);
+
+        // Get business ID from session or current business
+        $businessId = session('current_business_id');
+        
+        if (!$businessId) {
+            $currentBusiness = auth()->user()->businesses()->first();
+            if (!$currentBusiness) {
+                return response()->json(['message' => 'No business found for this user'], 404);
+            }
+            $businessId = $currentBusiness->id;
+        }
+
+        $event = CalendarEvent::create([
+            'business_id' => $businessId,
+            'event_type' => $validated['event_type'],
+            'title' => $validated['title'],
+            'suggestion' => $validated['suggestion'] ?? null,
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'],
+            'status' => $validated['status'] ?? 'active'
+        ]);
+
+        return response()->json($event, 201);
+    } catch (\Exception $e) {
+        return response()->json(['message' => 'Erro ao criar evento: ' . $e->getMessage()], 500);
     }
-
-    $validated = $request->validate([
-        'event_type' => 'required|string',
-        'title' => 'required|string',
-        'suggestion' => 'required|string',
-        'start_date' => 'required|date',
-        'end_date' => 'required|date|after:start_date'
-    ]);
-
-    $event = $business->smartCalendar()->create([
-        'event_type' => $validated['event_type'],
-        'title' => $validated['title'],
-        'suggestion' => $validated['suggestion'],
-        'start_date' => $validated['start_date'],
-        'end_date' => $validated['end_date'],
-        'status' => 'pending'
-    ]);
-
-    return response()->json([
-        'message' => 'Evento criado com sucesso!',
-        'event' => $event
-    ]);
 }
 
 private function generateCalendarSuggestions($business)
@@ -370,25 +381,22 @@ public function getCalendarEvents()
 public function getCalendarSuggestions()
 {
     try {
-        $business = Business::where('user_id', auth()->id())->firstOrFail();
-        
-        // Exemplo de sugestões - você pode personalizar conforme necessário
-        $suggestions = [
-            [
-                'title' => 'Promoção Sazonal',
-                'message' => 'Que tal criar uma promoção para o próximo feriado?',
-                'type' => 'promotion'
-            ],
-            [
-                'title' => 'Postagem nas Redes Sociais',
-                'message' => 'Aumente seu engajamento com uma nova postagem',
-                'type' => 'social'
-            ]
-        ];
+        // Recupera sugestões do banco de dados
+        $suggestions = CalendarEvent::where('business_id', auth()->user()->current_business_id)
+            ->where('status', 'suggested')
+            ->get()
+            ->map(function($event) {
+                return [
+                    'type' => $event->event_type,
+                    'title' => $event->title,
+                    'message' => $event->suggestion,
+                    'id' => $event->id
+                ];
+            });
 
         return response()->json(['suggestions' => $suggestions]);
     } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
+        return response()->json(['message' => 'Erro ao carregar sugestões'], 500);
     }
 }
 
@@ -738,6 +746,171 @@ private function compareServices($business)
         'service_gaps' => [
             ['service' => 'reserva online', 'demand' => 'high'],
             ['service' => 'pagamento por QR code', 'demand' => 'medium']
+        ]
+    ];
+}
+
+// Em AutomationController.php
+
+public function generateAdvancedReport(Request $request)
+{
+    $business = Business::where('user_id', auth()->id())->first();
+    
+    if (!$business) {
+        return response()->json(['error' => 'Negócio não encontrado'], 404);
+    }
+
+    $validated = $request->validate([
+        'start_date' => 'required|date',
+        'end_date' => 'required|date|after:start_date',
+        'report_type' => 'required|string|in:performance,competitors,engagement,full'
+    ]);
+
+    $reportData = $this->collectReportData($business, $validated);
+    
+    // Gerar insights baseados nos dados
+    $insights = $this->generateReportInsights($reportData);
+
+    // Preparar dados para exportação
+    $exportData = [
+        'business' => $business,
+        'period' => [
+            'start' => $validated['start_date'],
+            'end' => $validated['end_date']
+        ],
+        'metrics' => $reportData,
+        'insights' => $insights
+    ];
+
+    // Retornar dados baseado no formato solicitado
+    switch ($request->format ?? 'html') {
+        case 'pdf':
+            return $this->generatePDFReport($exportData);
+        case 'excel':
+            return $this->generateExcelReport($exportData);
+        default:
+            return view('automation.reports.advanced', $exportData);
+    }
+}
+
+private function collectReportData($business, $params)
+{
+    $data = [
+        'performance' => [
+            'views' => $this->getViewsData($business, $params),
+            'clicks' => $this->getClicksData($business, $params),
+            'conversions' => $this->getConversionsData($business, $params)
+        ],
+        'engagement' => [
+            'reviews' => $this->getReviewsData($business, $params),
+            'responses' => $this->getResponsesData($business, $params),
+            'interaction_rate' => $this->calculateInteractionRate($business, $params)
+        ],
+        'competitors' => [
+            'market_share' => $this->getMarketShareData($business, $params),
+            'ranking_position' => $this->getRankingPosition($business, $params),
+            'competitive_analysis' => $this->getCompetitiveAnalysis($business, $params)
+        ],
+        'automation' => [
+            'posts' => $this->getAutomatedPostsData($business, $params),
+            'responses' => $this->getAutomatedResponsesData($business, $params),
+            'efficiency' => $this->calculateAutomationEfficiency($business, $params)
+        ]
+    ];
+
+    return $data;
+}
+
+private function generateReportInsights($data)
+{
+    $insights = [];
+
+    // Análise de Performance
+    if ($data['performance']['views']['growth'] > 10) {
+        $insights[] = [
+            'type' => 'success',
+            'message' => 'Crescimento significativo nas visualizações: ' . 
+                        $data['performance']['views']['growth'] . '%'
+        ];
+    }
+
+    // Análise de Engajamento
+    $avgResponseTime = $data['engagement']['responses']['average_time'];
+    if ($avgResponseTime < 120) { // menos de 2 horas
+        $insights[] = [
+            'type' => 'success',
+            'message' => 'Excelente tempo médio de resposta: ' . 
+                        round($avgResponseTime/60, 1) . ' horas'
+        ];
+    }
+
+    // Análise Competitiva
+    if ($data['competitors']['ranking_position']['current'] < 
+        $data['competitors']['ranking_position']['previous']) {
+        $insights[] = [
+            'type' => 'warning',
+            'message' => 'Queda na posição do ranking. Ação recomendada.'
+        ];
+    }
+
+    // Análise de Automação
+    $automationEfficiency = $data['automation']['efficiency'];
+    if ($automationEfficiency > 85) {
+        $insights[] = [
+            'type' => 'success',
+            'message' => 'Alta eficiência na automação: ' . $automationEfficiency . '%'
+        ];
+    }
+
+    return $insights;
+}
+
+private function generatePDFReport($data)
+{
+    $pdf = PDF::loadView('automation.reports.pdf', $data);
+    
+    return $pdf->download('relatorio-' . now()->format('Y-m-d') . '.pdf');
+}
+
+private function generateExcelReport($data)
+{
+    return Excel::download(new ReportExport($data), 
+                          'relatorio-' . now()->format('Y-m-d') . '.xlsx');
+}
+
+// Métodos auxiliares para coleta de dados
+private function getViewsData($business, $params)
+{
+    // Implementar lógica de coleta de dados de visualizações
+    return [
+        'total' => 1000,
+        'growth' => 15,
+        'daily_average' => 33.3,
+        'peak_day' => '2024-01-15'
+    ];
+}
+
+private function getClicksData($business, $params)
+{
+    // Implementar lógica de coleta de dados de cliques
+    return [
+        'total' => 500,
+        'growth' => 10,
+        'daily_average' => 16.7,
+        'peak_day' => '2024-01-16'
+    ];
+}
+
+private function getConversionsData($business, $params)
+{
+    // Implementar lógica de coleta de dados de conversões
+    return [
+        'total' => 50,
+        'rate' => 10,
+        'growth' => 5,
+        'by_source' => [
+            'organic' => 30,
+            'paid' => 20
         ]
     ];
 }

@@ -12,19 +12,24 @@ class ShareCurrentBusiness
         if (auth()->check()) {
             $currentBusiness = null;
             
-            // Tenta pegar o ID do negócio da rota ou query string
+            // Try to get business ID from route or query string
             $businessId = $request->route('businessId') ?? $request->query('businessId');
             
             if ($businessId) {
                 $currentBusiness = auth()->user()->businesses()->find($businessId);
             }
             
-            // Se não encontrou, pega o primeiro negócio do usuário
+            // If not found, get user's first business
             if (!$currentBusiness) {
                 $currentBusiness = auth()->user()->businesses()->first();
             }
             
-            // Compartilha com todas as views
+            if ($currentBusiness) {
+                // Store the current business ID in session
+                session(['current_business_id' => $currentBusiness->id]);
+            }
+            
+            // Share with all views
             view()->share('currentBusiness', $currentBusiness);
         }
 

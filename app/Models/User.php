@@ -32,4 +32,13 @@ class User extends Authenticatable
     {
         return $this->hasMany(Business::class);
     }
+
+    public function getCurrentBusiness()
+{
+    $businessId = session('current_business_id');
+    if ($businessId) {
+        return $this->businesses()->find($businessId);
+    }
+    return $this->businesses()->first();
+}
 }
