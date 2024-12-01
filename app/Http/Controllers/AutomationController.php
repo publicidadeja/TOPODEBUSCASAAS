@@ -219,32 +219,19 @@ private function generateSegmentSuggestions($segment)
     $currentMonth = now()->month;
     $suggestions = [];
 
-    // Exemplo de sugestões para restaurantes
-    if (strtolower($segment) === 'restaurante') {
-        switch ($currentMonth) {
-            case 6: // Junho
-                $suggestions[] = [
-                    'type' => 'event',
-                    'title' => 'Dia dos Namorados',
-                    'message' => 'Que tal criar um menu especial para o Dia dos Namorados?'
-                ];
-                break;
-            case 11: // Novembro
-                $suggestions[] = [
-                    'type' => 'promotion',
-                    'title' => 'Black Friday',
-                    'message' => 'Prepare suas promoções para a Black Friday!'
-                ];
-                break;
-            case 12: // Dezembro
-                $suggestions[] = [
-                    'type' => 'hours',
-                    'title' => 'Fim de Ano',
-                    'message' => 'Configure os horários especiais de fim de ano'
-                ];
-                break;
-        }
+    // Enhanced segment-specific suggestions
+    switch (strtolower($segment)) {
+        case 'restaurante':
+            $suggestions = array_merge($suggestions, $this->getRestaurantSuggestions($currentMonth));
+            break;
+        case 'loja':
+            $suggestions = array_merge($suggestions, $this->getRetailSuggestions($currentMonth));
+            break;
+        // Add more segments as needed
     }
+
+    // Add general suggestions
+    $suggestions = array_merge($suggestions, $this->getGeneralSuggestions($currentMonth));
 
     return $suggestions;
 }
@@ -403,6 +390,356 @@ public function getCalendarSuggestions()
     } catch (\Exception $e) {
         return response()->json(['error' => $e->getMessage()], 500);
     }
+}
+
+private function getRestaurantSuggestions($currentMonth)
+{
+    $suggestions = [];
+    
+    switch ($currentMonth) {
+        case 6: // Junho
+            $suggestions[] = [
+                'type' => 'event',
+                'title' => 'Dia dos Namorados',
+                'message' => 'Que tal criar um menu especial para o Dia dos Namorados?',
+                'action_url' => '/automation/create-event/valentines',
+                'priority' => 'high'
+            ];
+            break;
+        case 12: // Dezembro
+            $suggestions[] = [
+                'type' => 'hours',
+                'title' => 'Horários de Fim de Ano',
+                'message' => 'Configure os horários especiais de Natal e Ano Novo',
+                'action_url' => '/automation/holiday-hours',
+                'priority' => 'high'
+            ];
+            $suggestions[] = [
+                'type' => 'menu',
+                'title' => 'Cardápio Festivo',
+                'message' => 'Que tal criar um menu especial para as festas de fim de ano?',
+                'action_url' => '/automation/create-menu/holiday',
+                'priority' => 'medium'
+            ];
+            break;
+        // Add more months
+    }
+
+    // Weather-based suggestions
+    if ($this->isRainySeason()) {
+        $suggestions[] = [
+            'type' => 'service',
+            'title' => 'Delivery em Alta',
+            'message' => 'Época de chuvas: Quer ativar o botão de delivery?',
+            'action_url' => '/automation/toggle-delivery',
+            'priority' => 'medium'
+        ];
+    }
+
+    return $suggestions;
+}
+// In AutomationController.php
+
+public function getAIAssistantSuggestions()
+{
+    $business = Business::where('user_id', auth()->id())->first();
+    
+    if (!$business) {
+        return response()->json(['error' => 'Negócio não encontrado'], 404);
+    }
+
+    // Analyze business data and generate AI suggestions
+    $suggestions = $this->analyzeBusinessData($business);
+
+    return response()->json(['suggestions' => $suggestions]);
+}
+
+private function analyzeBusinessData($business)
+{
+    $suggestions = [];
+    
+    // Analyze competitor photos
+    $competitorPhotos = $this->analyzeCompetitorPhotos($business);
+    if ($competitorPhotos['needsImprovement']) {
+        $suggestions[] = [
+            'type' => 'photos',
+            'title' => 'Melhoria de Fotos',
+            'message' => "Seu concorrente {$competitorPhotos['competitor']} está ganhando mais visibilidade com fotos de produtos. Quer criar posts similares?",
+            'action' => 'create_photo_post',
+            'priority' => 'high'
+        ];
+    }
+
+    // Analyze search trends
+    $searchTrends = $this->analyzeSearchTrends($business);
+    foreach ($searchTrends as $trend) {
+        $suggestions[] = [
+            'type' => 'search_trend',
+            'title' => 'Tendência de Busca',
+            'message' => "Detectamos muitas buscas por '{$trend['keyword']}' na sua região. Que tal destacar esse serviço?",
+            'action' => 'highlight_service',
+            'data' => ['service' => $trend['keyword']],
+            'priority' => 'medium'
+        ];
+    }
+
+    // Analyze reviews
+    $reviewInsights = $this->analyzeReviews($business);
+    if ($reviewInsights['commonTopic']) {
+        $suggestions[] = [
+            'type' => 'review_insight',
+            'title' => 'Destaque nas Avaliações',
+            'message' => "Suas avaliações mencionam muito '{$reviewInsights['commonTopic']}'. Vamos destacar isso na descrição?",
+            'action' => 'update_description',
+            'data' => ['highlight' => $reviewInsights['commonTopic']],
+            'priority' => 'medium'
+        ];
+    }
+
+    // Weather-based suggestions
+    $weatherSuggestion = $this->getWeatherBasedSuggestion($business);
+    if ($weatherSuggestion) {
+        $suggestions[] = $weatherSuggestion;
+    }
+
+    return $suggestions;
+}
+
+private function analyzeCompetitorPhotos($business)
+{
+    // Simulação de análise de fotos dos concorrentes
+    return [
+        'needsImprovement' => true,
+        'competitor' => 'Estabelecimento X'
+    ];
+}
+
+private function analyzeSearchTrends($business)
+{
+    // Simulação de análise de tendências de busca
+    return [
+        ['keyword' => 'delivery', 'volume' => 150],
+        ['keyword' => 'happy hour', 'volume' => 100]
+    ];
+}
+
+private function analyzeReviews($business)
+{
+    // Simulação de análise de avaliações
+    return [
+        'commonTopic' => 'atendimento',
+        'sentiment' => 'positive'
+    ];
+}
+
+private function getWeatherBasedSuggestion($business)
+{
+    // Simulação de sugestão baseada no clima
+    $isRainySeason = true; // Isso seria determinado por uma API de clima
+
+    if ($isRainySeason) {
+        return [
+            'type' => 'weather',
+            'title' => 'Sugestão de Clima',
+            'message' => 'Época de chuvas: Quer ativar o botão de delivery?',
+            'action' => 'enable_delivery',
+            'priority' => 'high'
+        ];
+    }
+
+    return null;
+}
+
+public function handleAISuggestion(Request $request)
+{
+    $validated = $request->validate([
+        'suggestion_type' => 'required|string',
+        'action' => 'required|string',
+        'data' => 'nullable|array'
+    ]);
+
+    $business = Business::where('user_id', auth()->id())->first();
+    
+    if (!$business) {
+        return response()->json(['error' => 'Negócio não encontrado'], 404);
+    }
+
+    // Handle different types of suggestions
+    switch ($validated['action']) {
+        case 'create_photo_post':
+            return $this->handlePhotoPostSuggestion($business);
+        
+        case 'highlight_service':
+            return $this->handleServiceHighlight($business, $validated['data']);
+            
+        case 'update_description':
+            return $this->handleDescriptionUpdate($business, $validated['data']);
+            
+        case 'enable_delivery':
+            return $this->handleDeliveryActivation($business);
+            
+        default:
+            return response()->json(['error' => 'Ação não suportada'], 400);
+    }
+}
+
+// Em AutomationController.php
+
+public function getAutomatedProtection()
+{
+    $business = Business::where('user_id', auth()->id())->first();
+    
+    if (!$business) {
+        return response()->json(['error' => 'Negócio não encontrado'], 404);
+    }
+
+    // Verificar status das proteções
+    $protectionStatus = [
+        'monitoring' => $this->checkMonitoringStatus($business),
+        'backup' => $this->checkBackupStatus($business),
+        'correction' => $this->checkCorrectionStatus($business),
+        'sabotage' => $this->checkSabotageProtection($business)
+    ];
+
+    return response()->json($protectionStatus);
+}
+
+private function checkMonitoringStatus($business)
+{
+    return [
+        'active' => true,
+        'last_check' => now()->subMinutes(5),
+        'status' => 'healthy',
+        'changes_detected' => [
+            'last_24h' => 2,
+            'details' => [
+                ['type' => 'hours', 'time' => now()->subHours(2)],
+                ['type' => 'photos', 'time' => now()->subHours(12)]
+            ]
+        ]
+    ];
+}
+
+private function checkBackupStatus($business)
+{
+    return [
+        'active' => true,
+        'last_backup' => now()->subHours(1),
+        'total_backups' => 24,
+        'storage_used' => '250MB'
+    ];
+}
+
+private function checkCorrectionStatus($business)
+{
+    return [
+        'active' => true,
+        'corrections_made' => [
+            'total' => 5,
+            'last_24h' => 1,
+            'details' => [
+                [
+                    'type' => 'address',
+                    'time' => now()->subHours(6),
+                    'description' => 'Correção automática de endereço'
+                ]
+            ]
+        ]
+    ];
+}
+
+private function checkSabotageProtection($business)
+{
+    return [
+        'active' => true,
+        'attempts_blocked' => 3,
+        'last_attempt' => now()->subDays(2),
+        'risk_level' => 'low'
+    ];
+}
+
+public function getCompetitiveAnalysis()
+{
+    $business = Business::where('user_id', auth()->id())->first();
+    
+    if (!$business) {
+        return response()->json(['error' => 'Negócio não encontrado'], 404);
+    }
+
+    // Análise competitiva
+    $analysis = [
+        'competitors' => $this->analyzeCompetitors($business),
+        'market_opportunities' => $this->findMarketOpportunities($business),
+        'keyword_gaps' => $this->analyzeKeywordGaps($business),
+        'service_comparison' => $this->compareServices($business)
+    ];
+
+    return response()->json($analysis);
+}
+
+private function analyzeCompetitors($business)
+{
+    return [
+        'total_analyzed' => 5,
+        'main_competitors' => [
+            [
+                'name' => 'Competitor A',
+                'strength' => 'photos',
+                'weakness' => 'response_time',
+                'recent_changes' => [
+                    'new_promotion' => 'Black Friday 50% OFF',
+                    'date' => now()->subDays(1)
+                ]
+            ],
+            // Add more competitors
+        ]
+    ];
+}
+
+private function findMarketOpportunities($business)
+{
+    return [
+        'high_demand_services' => [
+            ['service' => 'delivery', 'search_volume' => 150],
+            ['service' => 'reservas online', 'search_volume' => 100]
+        ],
+        'underserved_areas' => [
+            ['area' => 'região norte', 'potential' => 'high'],
+            ['area' => 'centro', 'potential' => 'medium']
+        ],
+        'trending_keywords' => [
+            ['keyword' => 'comida saudável', 'growth' => '+25%'],
+            ['keyword' => 'delivery rápido', 'growth' => '+15%']
+        ]
+    ];
+}
+
+private function analyzeKeywordGaps($business)
+{
+    return [
+        'missing_keywords' => [
+            ['keyword' => 'estacionamento', 'monthly_searches' => 80],
+            ['keyword' => 'wifi grátis', 'monthly_searches' => 50]
+        ],
+        'competitor_keywords' => [
+            ['keyword' => 'happy hour', 'competitors_using' => 3],
+            ['keyword' => 'música ao vivo', 'competitors_using' => 2]
+        ]
+    ];
+}
+
+private function compareServices($business)
+{
+    return [
+        'unique_services' => [
+            'you_offer' => ['playground infantil', 'área pet friendly'],
+            'competitors_offer' => ['karaokê', 'área fumantes']
+        ],
+        'service_gaps' => [
+            ['service' => 'reserva online', 'demand' => 'high'],
+            ['service' => 'pagamento por QR code', 'demand' => 'medium']
+        ]
+    ];
 }
 
 }

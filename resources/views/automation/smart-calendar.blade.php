@@ -15,13 +15,8 @@
             animation: fadeIn 0.3s ease-in;
         }
 
-        .notification.success {
-            background-color: #4CAF50;
-        }
-
-        .notification.error {
-            background-color: #f44336;
-        }
+        .notification.success { background-color: #4CAF50; }
+        .notification.error { background-color: #f44336; }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
@@ -33,10 +28,7 @@
             margin-top: 20px;
         }
 
-        .fc-event {
-            cursor: pointer;
-        }
-
+        .fc-event { cursor: pointer; }
         .fc-day:hover {
             background-color: #f8f9fa;
             cursor: pointer;
@@ -74,13 +66,70 @@
         </div>
     </div>
 
+    <!-- Modal para Criar/Editar Evento -->
+    <div id="eventModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full" style="z-index: 1000;">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="modalTitle">
+                    Criar Novo Evento
+                </h3>
+                <div class="mt-2">
+                    <form id="eventForm" class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Título</label>
+                            <input type="text" id="eventTitle" name="title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Descrição</label>
+                            <textarea id="eventDescription" name="description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Cor do Evento</label>
+                            <select id="eventColor" name="color" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                                <option value="#3788d8">Azul</option>
+                                <option value="#28a745">Verde</option>
+                                <option value="#dc3545">Vermelho</option>
+                                <option value="#ffc107">Amarelo</option>
+                                <option value="#6c757d">Cinza</option>
+                            </select>
+                        </div>
+
+                        <input type="hidden" id="eventStartDate" name="start_date">
+                        <input type="hidden" id="eventEndDate" name="end_date">
+                    </form>
+                </div>
+                <div class="flex justify-end gap-3 mt-4">
+                    <button id="closeModal" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">
+                        Cancelar
+                    </button>
+                    <button id="saveEvent" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                        Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     @push('scripts')
     <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@4.4.0/main.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@4.4.0/main.min.js'></script>
     <script>
-        // Função para carregar sugestões
+        let calendar;
+
+        // Funções auxiliares
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.remove(), 3000);
+        }
+
         function loadSuggestions() {
             fetch('/automation/calendar-suggestions')
                 .then(response => response.json())
@@ -103,13 +152,60 @@
                 });
         }
 
+        // Funções do Modal
+        function openModal(info) {
+            const modal = document.getElementById('eventModal');
+            const startDateInput = document.getElementById('eventStartDate');
+            const endDateInput = document.getElementById('eventEndDate');
+            
+            document.getElementById('eventForm').reset();
+            
+            startDateInput.value = info.startStr;
+            endDateInput.value = info.endStr || info.startStr;
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('eventModal').classList.add('hidden');
+        }
+
+        // Handlers
+        window.handleNewEvent = function(info) {
+            openModal(info);
+        }
+
+        window.handleSuggestion = function(type) {
+            fetch('/automation/calendar-event', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    event_type: type,
+                    title: 'Evento Sugerido',
+                    suggestion: 'Sugestão automática',
+                    start_date: new Date().toISOString(),
+                    end_date: new Date(Date.now() + 86400000).toISOString()
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                calendar.refetchEvents();
+                showNotification('Sugestão aplicada com sucesso!', 'success');
+            })
+            .catch(error => {
+                showNotification('Erro ao aplicar sugestão', 'error');
+            });
+        }
+
+        // Inicialização
         document.addEventListener('DOMContentLoaded', function() {
-            // Carregar sugestões
             loadSuggestions();
 
-            // Inicializar o calendário
-            var calendarEl = document.getElementById('calendar-container');
-            var calendar = new FullCalendar.Calendar(calendarEl, {
+            const calendarEl = document.getElementById('calendar-container');
+            calendar = new FullCalendar.Calendar(calendarEl, {
                 plugins: ['dayGrid', 'timeGrid', 'interaction'],
                 initialView: 'dayGridMonth',
                 locale: 'pt-br',
@@ -123,107 +219,94 @@
                 selectable: true,
                 selectMirror: true,
                 dayMaxEvents: true,
-                select: function(info) {
-                    handleNewEvent(info);
-                },
+                select: handleNewEvent,
                 eventClick: function(info) {
-                    // Manipular clique em eventos existentes
                     alert('Evento: ' + info.event.title);
                 },
                 eventDrop: function(info) {
-                    // Manipular quando um evento é arrastado
                     alert('Evento movido!');
                 },
                 eventResize: function(info) {
-                    // Manipular quando um evento é redimensionado
                     alert('Evento redimensionado!');
                 }
             });
             
             calendar.render();
 
-            // Função para criar novo evento
-            window.handleNewEvent = function(info) {
-                const title = prompt('Digite o título do evento:');
-                if (title) {
-                    const eventData = {
-                        title: title,
-                        event_type: 'custom',
-                        suggestion: 'Evento personalizado',
-                        start_date: info.startStr,
-                        end_date: info.endStr || info.startStr
-                    };
+            // Event Listeners do Modal
+            document.getElementById('closeModal').addEventListener('click', closeModal);
+            
+            document.getElementById('saveEvent').addEventListener('click', function() {
+    const title = document.getElementById('eventTitle').value;
+    const description = document.getElementById('eventDescription').value;
+    const color = document.getElementById('eventColor').value;
+    const startDate = document.getElementById('eventStartDate').value;
+    const endDate = document.getElementById('eventEndDate').value;
 
-                    const token = document.querySelector('meta[name="csrf-token"]').content;
+    if (!title) {
+        showNotification('O título é obrigatório', 'error');
+        return;
+    }
 
-                    fetch('/automation/calendar-event', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': token
-                        },
-                        body: JSON.stringify(eventData)
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Erro ao criar evento');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        calendar.addEvent({
-                            id: data.id,
-                            title: title,
-                            start: info.startStr,
-                            end: info.endStr || info.startStr,
-                            allDay: !info.endStr
-                        });
-                        showNotification('Evento criado com sucesso!', 'success');
-                    })
-                    .catch(error => {
-                        console.error('Erro:', error);
-                        showNotification('Erro ao criar evento: ' + error.message, 'error');
-                    });
+    const eventData = {
+        title: title,
+        description: description,
+        color: color,
+        event_type: 'custom',
+        start_date: startDate,
+        end_date: endDate
+    };
+
+    const token = document.querySelector('meta[name="csrf-token"]').content;
+
+    fetch('/automation/calendar-event', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': token,
+            'Accept': 'application/json' // Add this line to ensure JSON response
+        },
+        body: JSON.stringify(eventData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            // Read the response as text first
+            return response.text().then(text => {
+                try {
+                    // Try to parse it as JSON
+                    return Promise.reject(JSON.parse(text));
+                } catch (e) {
+                    // If it's not JSON, return a generic error
+                    console.error('Server Response:', text);
+                    return Promise.reject(new Error('Erro no servidor. Por favor, tente novamente.'));
                 }
-            }
-
-            // Função para lidar com sugestões
-            window.handleSuggestion = function(type) {
-                fetch('/automation/calendar-event', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify({
-                        event_type: type,
-                        title: 'Evento Sugerido',
-                        suggestion: 'Sugestão automática',
-                        start_date: new Date().toISOString(),
-                        end_date: new Date(Date.now() + 86400000).toISOString()
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    calendar.refetchEvents();
-                    showNotification('Sugestão aplicada com sucesso!', 'success');
-                })
-                .catch(error => {
-                    showNotification('Erro ao aplicar sugestão', 'error');
-                });
-            }
-
-            // Função para mostrar notificações
-            window.showNotification = function(message, type) {
-                const notification = document.createElement('div');
-                notification.className = `notification ${type}`;
-                notification.textContent = message;
-                document.body.appendChild(notification);
-                
-                setTimeout(() => {
-                    notification.remove();
-                }, 3000);
-            }
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        calendar.addEvent({
+            id: data.id,
+            title: title,
+            description: description,
+            backgroundColor: color,
+            borderColor: color,
+            start: startDate,
+            end: endDate,
+            allDay: !endDate || startDate === endDate
+        });
+        
+        closeModal();
+        showNotification('Evento criado com sucesso!', 'success');
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showNotification(error.message || 'Erro ao criar evento. Por favor, tente novamente.', 'error');
+    });
+});
+            document.getElementById('eventModal').addEventListener('click', function(e) {
+                if (e.target === this) closeModal();
+            });
         });
     </script>
     @endpush
