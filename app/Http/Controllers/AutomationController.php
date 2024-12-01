@@ -334,14 +334,21 @@ public function storeCalendarEvent(Request $request)
         $business = Business::where('user_id', auth()->id())->firstOrFail();
         
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'event_type' => 'required|string',
+            'title' => 'required|string',
+            'description' => 'nullable|string',
             'start_date' => 'required|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
-            'suggestion' => 'nullable|string'
+            'end_date' => 'required|date',
+            'color' => 'nullable|string'
         ]);
 
-        $event = $business->calendarEvents()->create($validated);
+        $event = new SmartCalendar();
+        $event->business_id = $business->id;
+        $event->title = $validated['title'];
+        $event->description = $validated['description'] ?? '';
+        $event->start_date = $validated['start_date'];
+        $event->end_date = $validated['end_date'];
+        $event->color = $validated['color'] ?? '#3788d8';
+        $event->save();
 
         return response()->json([
             'success' => true,
@@ -361,15 +368,21 @@ public function getCalendarEvents()
 {
     try {
         $business = Business::where('user_id', auth()->id())->firstOrFail();
-        $events = $business->calendarEvents()->get()->map(function($event) {
-            return [
-                'id' => $event->id,
-                'title' => $event->title,
-                'start' => $event->start_date,
-                'end' => $event->end_date,
-                'allDay' => !$event->end_date
-            ];
-        });
+        
+        $events = SmartCalendar::where('business_id', $business->id)
+            ->get()
+            ->map(function($event) {
+                return [
+                    'id' => $event->id,
+                    'title' => $event->title,
+                    'description' => $event->description,
+                    'start' => $event->start_date,
+                    'end' => $event->end_date,
+                    'backgroundColor' => $event->color,
+                    'borderColor' => $event->color,
+                    'allDay' => false
+                ];
+            });
 
         return response()->json($events);
     } catch (\Exception $e) {

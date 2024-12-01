@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GoogleController;
 
+Route::get('/automation/calendar-events', [AutomationController::class, 'getCalendarEvents'])
+    ->name('automation.calendar.events');
+
 Route::post('/automation/calendar-event', [AutomationController::class, 'storeCalendarEvent'])
     ->name('automation.calendar.store');
 
