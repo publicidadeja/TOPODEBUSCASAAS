@@ -185,4 +185,9 @@ class Business extends Model
 
         return (($current - $previous) / $previous) * 100;
     }
+
+    public function smartCalendar()
+{
+    return $this->hasMany(SmartCalendar::class);
+}
 }

@@ -237,5 +237,24 @@ private function generateSegmentSuggestions($segment)
 
     return $suggestions;
 }
+
+public function smartCalendar()
+{
+    $business = Business::where('user_id', auth()->id())->first();
+    
+    if (!$business) {
+        return redirect()
+            ->route('business.create')
+            ->with('error', 'Você precisa cadastrar seu negócio primeiro.');
+    }
+
+    $events = $business->smartCalendar()
+                      ->where('status', 'approved')
+                      ->orderBy('start_date')
+                      ->get();
+
+    return view('automation.smart-calendar', compact('business', 'events'));
+}
+
 }
 

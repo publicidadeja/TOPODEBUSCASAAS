@@ -11,6 +11,12 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GoogleController;
 
+
+Route::prefix('automation')->name('automation.')->middleware(['auth'])->group(function () {
+    // Adicione esta nova rota junto com as existentes
+    Route::get('/smart-calendar', [AutomationController::class, 'smartCalendar'])->name('smart-calendar');
+});
+
 Route::prefix('automation')->name('automation.')->middleware(['auth'])->group(function () {
     Route::post('/holiday-hours', [AutomationController::class, 'updateHolidayHours'])->name('holiday-hours');
     Route::get('/calendar-suggestions', [AutomationController::class, 'getSmartCalendarSuggestions'])->name('calendar-suggestions');
