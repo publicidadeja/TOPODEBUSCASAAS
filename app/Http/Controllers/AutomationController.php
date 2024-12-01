@@ -359,5 +359,51 @@ public function storeCalendarEvent(Request $request)
     }
 }
 
+public function getCalendarEvents()
+{
+    try {
+        $business = Business::where('user_id', auth()->id())->firstOrFail();
+        $events = $business->calendarEvents()->get()->map(function($event) {
+            return [
+                'id' => $event->id,
+                'title' => $event->title,
+                'start' => $event->start_date,
+                'end' => $event->end_date,
+                'allDay' => !$event->end_date
+            ];
+        });
+
+        return response()->json($events);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+}
+
+
+public function getCalendarSuggestions()
+{
+    try {
+        $business = Business::where('user_id', auth()->id())->firstOrFail();
+        
+        // Exemplo de sugestões - você pode personalizar conforme necessário
+        $suggestions = [
+            [
+                'title' => 'Promoção Sazonal',
+                'message' => 'Que tal criar uma promoção para o próximo feriado?',
+                'type' => 'promotion'
+            ],
+            [
+                'title' => 'Postagem nas Redes Sociais',
+                'message' => 'Aumente seu engajamento com uma nova postagem',
+                'type' => 'social'
+            ]
+        ];
+
+        return response()->json(['suggestions' => $suggestions]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+}
+
 }
 

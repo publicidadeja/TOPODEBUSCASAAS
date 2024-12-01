@@ -11,15 +11,14 @@ return new class extends Migration
      */
     public function up()
 {
-    Schema::create('smart_calendars', function (Blueprint $table) {
+    Schema::create('calendar_events', function (Blueprint $table) {
         $table->id();
         $table->foreignId('business_id')->constrained()->onDelete('cascade');
-        $table->string('event_type');
         $table->string('title');
-        $table->text('suggestion');
-        $table->timestamp('start_date')->nullable();  // Adicionado nullable()
-        $table->timestamp('end_date')->nullable();    // Adicionado nullable()
-        $table->string('status')->default('pending');
+        $table->string('event_type');
+        $table->datetime('start_date');
+        $table->datetime('end_date')->nullable();
+        $table->text('suggestion')->nullable();
         $table->timestamps();
     });
 }
