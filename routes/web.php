@@ -7,52 +7,18 @@ use App\Http\Controllers\AutomationController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\NotificationController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GoogleController;
-
-Route::get('/automation/calendar-events', [AutomationController::class, 'getCalendarEvents'])
-    ->name('automation.calendar.events');
-
-Route::post('/automation/calendar-event', [AutomationController::class, 'storeCalendarEvent'])
-    ->name('automation.calendar.store');
-
-Route::prefix('automation')->name('automation.')->middleware(['auth'])->group(function () {
-    // Adicione estas novas rotas junto com as existentes
-    Route::get('/smart-calendar', [AutomationController::class, 'smartCalendar'])->name('smart-calendar');
-    Route::get('/calendar-suggestions', [AutomationController::class, 'getSmartCalendarSuggestions'])->name('calendar-suggestions');
-    Route::post('/calendar-event', [AutomationController::class, 'createCalendarEvent'])->name('calendar-event');
-});
-
-
-Route::prefix('automation')->name('automation.')->middleware(['auth'])->group(function () {
-    // Adicione esta nova rota junto com as existentes
-    Route::get('/smart-calendar', [AutomationController::class, 'smartCalendar'])->name('smart-calendar');
-});
-
-Route::prefix('automation')->name('automation.')->middleware(['auth'])->group(function () {
-    Route::post('/holiday-hours', [AutomationController::class, 'updateHolidayHours'])->name('holiday-hours');
-    Route::get('/calendar-suggestions', [AutomationController::class, 'getSmartCalendarSuggestions'])->name('calendar-suggestions');
-});
-
-
-Route::get('/google/auth', [GoogleController::class, 'auth'])->name('google.auth');
-Route::get('/google/callback', [GoogleController::class, 'callback'])->name('google.callback');
-
-Route::middleware(['auth'])->group(function () {
-    Route::get('/business/{business}/automation', [BusinessController::class, 'automation'])
-        ->name('business.automation');
-        
-    Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])
-        ->name('google.auth');
-    Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
-        ->name('google.callback');
-});
+use Illuminate\Support\Facades\Route;
 
 // Rota principal (pública)
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Rotas do Google
+Route::get('/google/auth', [GoogleController::class, 'auth'])->name('google.auth');
+Route::get('/google/callback', [GoogleController::class, 'callback'])->name('google.callback');
 
 // Todas as rotas autenticadas
 Route::middleware(['auth'])->group(function () {
@@ -61,7 +27,25 @@ Route::middleware(['auth'])->group(function () {
     
     // Rotas de Negócios
     Route::resource('business', BusinessController::class);
-    
+    Route::get('/business/{business}/automation', [BusinessController::class, 'automation'])
+        ->name('business.automation');
+
+    // Rotas de Automação
+    Route::prefix('automation')->name('automation.')->group(function () {
+        // Rotas do Calendário
+        Route::get('/calendar-events', [AutomationController::class, 'getCalendarEvents'])->name('calendar.events');
+        Route::post('/calendar-event', [AutomationController::class, 'createCalendarEvent'])->name('calendar.store');
+        Route::get('/smart-calendar', [AutomationController::class, 'smartCalendar'])->name('smart-calendar');
+        Route::get('/calendar-suggestions', [AutomationController::class, 'getSmartCalendarSuggestions'])->name('calendar-suggestions');
+        
+        // Outras rotas de automação
+        Route::get('/', [AutomationController::class, 'index'])->name('index');
+        Route::post('/create-post', [AutomationController::class, 'createPost'])->name('create-post');
+        Route::post('/update-hours', [AutomationController::class, 'updateHours'])->name('update-hours');
+        Route::post('/holiday-hours', [AutomationController::class, 'updateHolidayHours'])->name('holiday-hours');
+        Route::post('/respond-review', [AutomationController::class, 'respondReview'])->name('respond-review');
+    });
+
     // Rotas de Analytics
     Route::prefix('analytics')->name('analytics.')->group(function () {
         Route::get('/{business}', [AnalyticsController::class, 'index'])->name('index');
@@ -93,15 +77,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])->name('read.all');
     });
     
-    // Rotas de Automação
-    Route::prefix('automation')->name('automation.')->group(function () {
-        Route::get('/', [AutomationController::class, 'index'])->name('index');
-        Route::post('/create-post', [AutomationController::class, 'createPost'])->name('create-post');
-        Route::post('/update-hours', [AutomationController::class, 'updateHours'])->name('update-hours');
-        Route::post('/respond-review', [AutomationController::class, 'respondReview'])->name('respond-review');
-    });
-
-    
     // Rotas de Perfil
     Route::prefix('profile')->name('profile.')->group(function () {
         Route::get('/', [ProfileController::class, 'edit'])->name('edit');
@@ -111,15 +86,7 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/notifications', [ProfileController::class, 'updateNotifications'])->name('notifications.update');
         Route::get('/api-tokens', [ProfileController::class, 'apiTokens'])->name('api-tokens');
     });
-
-// Rotas do Google Auth
-Route::get('/auth/google', [GoogleAuthController::class, 'redirect'])
-->name('google.auth');
-Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback'])
-->name('google.callback');
 });
-
-
 
 // Rotas de autenticação
 require __DIR__.'/auth.php';

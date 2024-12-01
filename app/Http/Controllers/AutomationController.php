@@ -366,28 +366,23 @@ public function storeCalendarEvent(Request $request)
 
 public function getCalendarEvents()
 {
-    try {
-        $business = Business::where('user_id', auth()->id())->firstOrFail();
-        
-        $events = SmartCalendar::where('business_id', $business->id)
-            ->get()
-            ->map(function($event) {
-                return [
-                    'id' => $event->id,
-                    'title' => $event->title,
-                    'description' => $event->description,
-                    'start' => $event->start_date,
-                    'end' => $event->end_date,
-                    'backgroundColor' => $event->color,
-                    'borderColor' => $event->color,
-                    'allDay' => false
-                ];
-            });
-
-        return response()->json($events);
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
-    }
+    $business = auth()->user()->business;
+    $events = CalendarEvent::where('business_id', $business->id)->get();
+    
+    // Formatar os eventos para o formato que o FullCalendar espera
+    $formattedEvents = $events->map(function($event) {
+        return [
+            'id' => $event->id,
+            'title' => $event->title,
+            'start' => $event->start_date,
+            'end' => $event->end_date,
+            'color' => $event->color,
+            'description' => $event->description,
+            'event_type' => $event->event_type
+        ];
+    });
+    
+    return response()->json($formattedEvents);
 }
 
 
