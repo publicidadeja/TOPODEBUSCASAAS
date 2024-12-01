@@ -366,25 +366,40 @@ public function storeCalendarEvent(Request $request)
 
 public function getCalendarEvents()
 {
-    $business = auth()->user()->business;
-    $events = CalendarEvent::where('business_id', $business->id)->get();
+    // Pega o business_id da sessão (definido pelo middleware ShareCurrentBusiness)
+    $businessId = session('current_business_id');
     
-    // Formatar os eventos para o formato que o FullCalendar espera
-    $formattedEvents = $events->map(function($event) {
-        return [
-            'id' => $event->id,
-            'title' => $event->title,
-            'start' => $event->start_date,
-            'end' => $event->end_date,
-            'color' => $event->color,
-            'description' => $event->description,
-            'event_type' => $event->event_type
-        ];
-    });
-    
-    return response()->json($formattedEvents);
-}
+    if (!$businessId) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Nenhum negócio selecionado'
+        ], 404);
+    }
 
+    try {
+        $events = CalendarEvent::where('business_id', $businessId)->get();
+
+        // Formatar os eventos para o formato que o FullCalendar espera
+        $formattedEvents = $events->map(function($event) {
+            return [
+                'id' => $event->id,
+                'title' => $event->title,
+                'start' => $event->start_date,
+                'end' => $event->end_date,
+                'color' => $event->color,
+                'description' => $event->description,
+                'event_type' => $event->event_type
+            ];
+        });
+
+        return response()->json($formattedEvents);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao carregar eventos: ' . $e->getMessage()
+        ], 500);
+    }
+}
 
 public function getCalendarSuggestions()
 {

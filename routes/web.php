@@ -11,6 +11,8 @@ use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 
+
+
 // Rota principal (pública)
 Route::get('/', function () {
     return view('welcome');
@@ -21,6 +23,7 @@ Route::get('/google/auth', [GoogleController::class, 'auth'])->name('google.auth
 Route::get('/google/callback', [GoogleController::class, 'callback'])->name('google.callback');
 
 // Todas as rotas autenticadas
+
 Route::middleware(['auth'])->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
