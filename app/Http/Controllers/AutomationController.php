@@ -156,4 +156,86 @@ class AutomationController extends Controller
                 Avaliação: {$reviewText}
                 Classificação: {$rating} estrelas";
     }
+
+
+public function updateHolidayHours(Request $request)
+{
+    $business = Business::where('user_id', auth()->id())->first();
+    
+    if (!$business) {
+        return redirect()
+            ->route('business.create')
+            ->with('error', 'Você precisa cadastrar seu negócio primeiro.');
+    }
+
+    $validated = $request->validate([
+        'holiday_date' => 'required|date',
+        'opening_time' => 'required_without:is_closed',
+        'closing_time' => 'required_without:is_closed',
+        'is_closed' => 'boolean'
+    ]);
+
+    $holidayHours = $business->holidayHours()->updateOrCreate(
+        ['date' => $validated['holiday_date']],
+        [
+            'opening_time' => $validated['opening_time'] ?? null,
+            'closing_time' => $validated['closing_time'] ?? null,
+            'is_closed' => $validated['is_closed'] ?? false
+        ]
+    );
+
+    return redirect()
+        ->back()
+        ->with('success', 'Horários de feriado atualizados com sucesso!');
 }
+
+public function getSmartCalendarSuggestions(Request $request)
+{
+    $business = Business::where('user_id', auth()->id())->first();
+    
+    if (!$business) {
+        return response()->json(['error' => 'Negócio não encontrado'], 404);
+    }
+
+    // Lógica para gerar sugestões baseadas no segmento
+    $suggestions = $this->generateSegmentSuggestions($business->segment);
+
+    return response()->json(['suggestions' => $suggestions]);
+}
+
+private function generateSegmentSuggestions($segment)
+{
+    $currentMonth = now()->month;
+    $suggestions = [];
+
+    // Exemplo de sugestões para restaurantes
+    if (strtolower($segment) === 'restaurante') {
+        switch ($currentMonth) {
+            case 6: // Junho
+                $suggestions[] = [
+                    'type' => 'event',
+                    'title' => 'Dia dos Namorados',
+                    'message' => 'Que tal criar um menu especial para o Dia dos Namorados?'
+                ];
+                break;
+            case 11: // Novembro
+                $suggestions[] = [
+                    'type' => 'promotion',
+                    'title' => 'Black Friday',
+                    'message' => 'Prepare suas promoções para a Black Friday!'
+                ];
+                break;
+            case 12: // Dezembro
+                $suggestions[] = [
+                    'type' => 'hours',
+                    'title' => 'Fim de Ano',
+                    'message' => 'Configure os horários especiais de fim de ano'
+                ];
+                break;
+        }
+    }
+
+    return $suggestions;
+}
+}
+
