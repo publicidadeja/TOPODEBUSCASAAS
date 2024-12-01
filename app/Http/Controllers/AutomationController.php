@@ -330,6 +330,34 @@ private function generateCalendarSuggestions($business)
 
     return $suggestions;
 }
+public function storeCalendarEvent(Request $request)
+{
+    try {
+        $business = Business::where('user_id', auth()->id())->firstOrFail();
+        
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'event_type' => 'required|string',
+            'start_date' => 'required|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'suggestion' => 'nullable|string'
+        ]);
+
+        $event = $business->calendarEvents()->create($validated);
+
+        return response()->json([
+            'success' => true,
+            'id' => $event->id,
+            'message' => 'Evento criado com sucesso'
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao criar evento: ' . $e->getMessage()
+        ], 500);
+    }
+}
 
 }
 

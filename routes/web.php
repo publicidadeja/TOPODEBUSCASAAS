@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GoogleController;
 
+Route::post('/automation/calendar-event', [AutomationController::class, 'storeCalendarEvent'])
+    ->name('automation.calendar.store');
+
 Route::prefix('automation')->name('automation.')->middleware(['auth'])->group(function () {
     // Adicione estas novas rotas junto com as existentes
     Route::get('/smart-calendar', [AutomationController::class, 'smartCalendar'])->name('smart-calendar');
