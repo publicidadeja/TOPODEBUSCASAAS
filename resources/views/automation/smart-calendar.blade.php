@@ -2,6 +2,7 @@
     @push('styles')
     <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.css' rel='stylesheet' />
     <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.css' rel='stylesheet' />
+    <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@4.4.0/main.min.css' rel='stylesheet' />
     <style>
         .notification {
             position: fixed;
@@ -30,6 +31,15 @@
         #calendar-container {
             height: 800px;
             margin-top: 20px;
+        }
+
+        .fc-event {
+            cursor: pointer;
+        }
+
+        .fc-day:hover {
+            background-color: #f8f9fa;
+            cursor: pointer;
         }
     </style>
     @endpush
@@ -66,9 +76,9 @@
 
     @push('scripts')
     <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.js'></script>
-<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.js'></script>
-<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@4.4.0/main.min.js'></script>
-<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@4.4.0/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@4.4.0/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@4.4.0/main.min.js'></script>
     <script>
         // Função para carregar sugestões
         function loadSuggestions() {
@@ -100,70 +110,82 @@
             // Inicializar o calendário
             var calendarEl = document.getElementById('calendar-container');
             var calendar = new FullCalendar.Calendar(calendarEl, {
-    plugins: ['dayGrid', 'timeGrid'], // Adicionar timeGrid
-    initialView: 'dayGridMonth',
-    locale: 'pt-br',
-    headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay'
-    },
-    events: '/automation/calendar-events',
-    editable: true,
-    selectable: true,
-    select: function(info) {
-        handleNewEvent(info);
-    }
-});
+                plugins: ['dayGrid', 'timeGrid', 'interaction'],
+                initialView: 'dayGridMonth',
+                locale: 'pt-br',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                events: '/automation/calendar-events',
+                editable: true,
+                selectable: true,
+                selectMirror: true,
+                dayMaxEvents: true,
+                select: function(info) {
+                    handleNewEvent(info);
+                },
+                eventClick: function(info) {
+                    // Manipular clique em eventos existentes
+                    alert('Evento: ' + info.event.title);
+                },
+                eventDrop: function(info) {
+                    // Manipular quando um evento é arrastado
+                    alert('Evento movido!');
+                },
+                eventResize: function(info) {
+                    // Manipular quando um evento é redimensionado
+                    alert('Evento redimensionado!');
+                }
+            });
+            
             calendar.render();
 
             // Função para criar novo evento
             window.handleNewEvent = function(info) {
-    // Criar um modal ou form mais elaborado ao invés de usar prompt
-    const title = prompt('Digite o título do evento:');
-    if (title) {
-        const eventData = {
-            title: title,
-            event_type: 'custom',
-            suggestion: 'Evento personalizado',
-            start_date: info.startStr,
-            end_date: info.endStr || info.startStr // Caso não tenha data final
-        };
+                const title = prompt('Digite o título do evento:');
+                if (title) {
+                    const eventData = {
+                        title: title,
+                        event_type: 'custom',
+                        suggestion: 'Evento personalizado',
+                        start_date: info.startStr,
+                        end_date: info.endStr || info.startStr
+                    };
 
-        // Adicionar o token CSRF
-        const token = document.querySelector('meta[name="csrf-token"]').content;
+                    const token = document.querySelector('meta[name="csrf-token"]').content;
 
-        fetch('/automation/calendar-event', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': token
-            },
-            body: JSON.stringify(eventData)
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Erro ao criar evento');
+                    fetch('/automation/calendar-event', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': token
+                        },
+                        body: JSON.stringify(eventData)
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Erro ao criar evento');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        calendar.addEvent({
+                            id: data.id,
+                            title: title,
+                            start: info.startStr,
+                            end: info.endStr || info.startStr,
+                            allDay: !info.endStr
+                        });
+                        showNotification('Evento criado com sucesso!', 'success');
+                    })
+                    .catch(error => {
+                        console.error('Erro:', error);
+                        showNotification('Erro ao criar evento: ' + error.message, 'error');
+                    });
+                }
             }
-            return response.json();
-        })
-        .then(data => {
-            // Adicionar o evento ao calendário
-            calendar.addEvent({
-                id: data.id, // Assumindo que o backend retorna o ID do evento
-                title: title,
-                start: info.startStr,
-                end: info.endStr || info.startStr,
-                allDay: !info.endStr
-            });
-            showNotification('Evento criado com sucesso!', 'success');
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            showNotification('Erro ao criar evento: ' + error.message, 'error');
-        });
-    }
-}
 
             // Função para lidar com sugestões
             window.handleSuggestion = function(type) {
