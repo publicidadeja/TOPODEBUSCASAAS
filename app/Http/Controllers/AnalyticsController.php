@@ -149,85 +149,94 @@ class AnalyticsController extends Controller
     }
 
     public function competitors(Request $request, Business $business)
-    {
-        if ($business->user_id !== auth()->id()) {
-            return redirect()->route('dashboard')
-                ->with('error', 'Você não tem permissão para acessar este negócio.');
-        }
-
-        $endDate = Carbon::now();
-        $startDate = Carbon::now()->subDays(30);
-
-        $businessAnalytics = BusinessAnalytics::where('business_id', $business->id)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->orderBy('date')
-            ->get();
-
-        $mainBusinessData = $this->prepareCompetitorData($businessAnalytics);
-
-        $competitors = $business->competitors()
-            ->with(['analytics' => function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('date', [$startDate, $endDate]);
-            }])
-            ->get();
-
-        $competitorsData = [];
-        foreach ($competitors as $competitor) {
-            $competitorsData[$competitor->id] = array_merge(
-                ['name' => $competitor->name, 'url' => $competitor->website],
-                $this->prepareCompetitorData($competitor->analytics)
-            );
-        }
-
-        $totalViews = $mainBusinessData['total_views'];
-        $totalClicks = $mainBusinessData['total_clicks'];
-        $totalCalls = $mainBusinessData['total_calls'];
-
-        foreach ($competitorsData as $data) {
-            $totalViews += $data['total_views'];
-            $totalClicks += $data['total_clicks'];
-            $totalCalls += $data['total_calls'];
-        }
-
-        $mainBusinessData['market_share'] = [
-            'views' => $totalViews > 0 ? round(($mainBusinessData['total_views'] / $totalViews) * 100, 1) : 0,
-            'clicks' => $totalClicks > 0 ? round(($mainBusinessData['total_clicks'] / $totalClicks) * 100, 1) : 0,
-            'calls' => $totalCalls > 0 ? round(($mainBusinessData['total_calls'] / $totalCalls) * 100, 1) : 0
-        ];
-
-        foreach ($competitorsData as &$data) {
-            $data['market_share'] = [
-                'views' => $totalViews > 0 ? round(($data['total_views'] / $totalViews) * 100, 1) : 0,
-                'clicks' => $totalClicks > 0 ? round(($data['total_clicks'] / $totalClicks) * 100, 1) : 0,
-                'calls' => $totalCalls > 0 ? round(($data['total_calls'] / $totalCalls) * 100, 1) : 0
-            ];
-        }
-
-        $competitorInsights = $this->generateCompetitorInsights($mainBusinessData, $competitorsData);
-        $businesses = auth()->user()->businesses;
-
-        return view('analytics.competitors', compact(
-            'businesses',
-            'business',
-            'mainBusinessData',
-            'competitorsData',
-            'startDate',
-            'endDate',
-            'competitorInsights'
-        ));
+{
+    if ($business->user_id !== auth()->id()) {
+        return redirect()->route('dashboard')
+            ->with('error', 'Você não tem permissão para acessar este negócio.');
     }
 
-    private function generateCompetitorInsights($mainBusinessData, $competitorsData)
-    {
-        $insights = [];
-        
+    $endDate = Carbon::now();
+    $startDate = Carbon::now()->subDays(30);
+
+    $businessAnalytics = BusinessAnalytics::where('business_id', $business->id)
+        ->whereBetween('date', [$startDate, $endDate])
+        ->orderBy('date')
+        ->get();
+
+    $mainBusinessData = $this->prepareCompetitorData($businessAnalytics);
+
+    $competitors = $business->competitors()
+        ->with(['analytics' => function ($query) use ($startDate, $endDate) {
+            $query->whereBetween('date', [$startDate, $endDate]);
+        }])
+        ->get();
+
+    $competitorsData = [];
+    foreach ($competitors as $competitor) {
+        $competitorsData[$competitor->id] = array_merge(
+            ['name' => $competitor->name, 'url' => $competitor->website],
+            $this->prepareCompetitorData($competitor->analytics)
+        );
+    }
+
+    // Calculate totals
+    $totalViews = $mainBusinessData['total_views'];
+    $totalClicks = $mainBusinessData['total_clicks'];
+    $totalCalls = $mainBusinessData['total_calls'];
+
+    foreach ($competitorsData as $data) {
+        $totalViews += $data['total_views'];
+        $totalClicks += $data['total_clicks'];
+        $totalCalls += $data['total_calls'];
+    }
+
+    // Add market share to main business data
+    $mainBusinessData['market_share'] = [
+        'views' => $totalViews > 0 ? round(($mainBusinessData['total_views'] / $totalViews) * 100, 1) : 0,
+        'clicks' => $totalClicks > 0 ? round(($mainBusinessData['total_clicks'] / $totalClicks) * 100, 1) : 0,
+        'calls' => $totalCalls > 0 ? round(($mainBusinessData['total_calls'] / $totalCalls) * 100, 1) : 0
+    ];
+
+    // Add market share to competitors data
+    foreach ($competitorsData as &$data) {
+        $data['market_share'] = [
+            'views' => $totalViews > 0 ? round(($data['total_views'] / $totalViews) * 100, 1) : 0,
+            'clicks' => $totalClicks > 0 ? round(($data['total_clicks'] / $totalClicks) * 100, 1) : 0,
+            'calls' => $totalCalls > 0 ? round(($data['total_calls'] / $totalCalls) * 100, 1) : 0
+        ];
+    }
+
+    $competitorInsights = $this->generateCompetitorInsights($mainBusinessData, $competitorsData);
+    $businesses = auth()->user()->businesses;
+
+    return view('analytics.competitors', [
+        'businesses' => $businesses,
+        'business' => $business,
+        'selectedBusiness' => $business,
+        'mainBusinessData' => $mainBusinessData,
+        'competitorsData' => $competitorsData,
+        'startDate' => $startDate,
+        'endDate' => $endDate,
+        'competitorInsights' => $competitorInsights
+    ]);
+}
+
+private function generateCompetitorInsights($mainBusinessData, $competitorsData)
+{
+    $insights = [];
+    
+    // Verifica se a chave market_share existe antes de acessá-la
+    if (isset($mainBusinessData['market_share']) && isset($mainBusinessData['market_share']['views'])) {
         $marketShareViews = $mainBusinessData['market_share']['views'];
         if ($marketShareViews > 50) {
             $insights[] = "Seu negócio é líder em visualizações com {$marketShareViews}% do mercado.";
         } elseif ($marketShareViews < 30) {
             $insights[] = "Oportunidade de crescimento: sua participação nas visualizações está em {$marketShareViews}%.";
         }
+    }
 
+    // Verifica se existe taxa de conversão antes de comparar
+    if (isset($mainBusinessData['conversion_rate'])) {
         $avgCompetitorConversion = collect($competitorsData)->avg('conversion_rate');
         if ($mainBusinessData['conversion_rate'] > $avgCompetitorConversion) {
             $difference = round($mainBusinessData['conversion_rate'] - $avgCompetitorConversion, 1);
@@ -236,8 +245,11 @@ class AnalyticsController extends Controller
             $difference = round($avgCompetitorConversion - $mainBusinessData['conversion_rate'], 1);
             $insights[] = "Oportunidade de melhoria: sua taxa de conversão está {$difference}% abaixo da média.";
         }
+    }
 
-        $mainMobileShare = $mainBusinessData['devices']['mobile'] ?? 0;
+    // Verifica se existem dados de dispositivos antes de comparar
+    if (isset($mainBusinessData['devices']) && isset($mainBusinessData['devices']['mobile'])) {
+        $mainMobileShare = $mainBusinessData['devices']['mobile'];
         $avgCompetitorMobile = collect($competitorsData)->avg(function($competitor) {
             return $competitor['devices']['mobile'] ?? 0;
         });
@@ -245,60 +257,27 @@ class AnalyticsController extends Controller
         if (abs($mainMobileShare - $avgCompetitorMobile) > 10) {
             $insights[] = "Sua distribuição de dispositivos móveis difere significativamente da concorrência.";
         }
+    }
 
+    // Verifica se existem dados de tendência antes de comparar
+    if (isset($mainBusinessData['trend']) && 
+        isset($mainBusinessData['trend']['views']) && 
+        isset($mainBusinessData['trend']['clicks'])) {
+        
         if ($mainBusinessData['trend']['views'] > 0 && $mainBusinessData['trend']['clicks'] > 0) {
             $insights[] = "Seu negócio está em crescimento tanto em visualizações quanto em cliques.";
         } elseif ($mainBusinessData['trend']['views'] < 0 && $mainBusinessData['trend']['clicks'] < 0) {
             $insights[] = "Atenção: tendência de queda em visualizações e cliques.";
         }
-
-        return $insights;
     }
 
-    private function prepareCompetitorData($analytics)
-    {
-        $totalViews = $analytics->sum('views');
-        $totalClicks = $analytics->sum('clicks');
-        $totalCalls = $analytics->sum('calls');
-        $daysCount = max($analytics->count(), 1);
-
-        $avgViews = round($totalViews / $daysCount, 1);
-        $avgClicks = round($totalClicks / $daysCount, 1);
-        $avgCalls = round($totalCalls / $daysCount, 1);
-
-        $conversionRate = $totalViews > 0 
-            ? round((($totalClicks + $totalCalls) / $totalViews) * 100, 1) 
-            : 0;
-
-        $dailyData = [];
-        foreach ($analytics as $record) {
-            $date = Carbon::parse($record->date)->format('d/m');
-            $dailyData[$date] = [
-                'views' => $record->views,
-                'clicks' => $record->clicks,
-                'calls' => $record->calls
-            ];
-        }
-
-        $trend = $this->calculateTrend($analytics);
-
-        return [
-            'total_views' => $totalViews,
-            'total_clicks' => $totalClicks,
-            'total_calls' => $totalCalls,
-            'avg_views' => $avgViews,
-            'avg_clicks' => $avgClicks,
-            'avg_calls' => $avgCalls,
-            'conversion_rate' => $conversionRate,
-            'daily_data' => $dailyData,
-            'trend' => $trend,
-            'devices' => $analytics->last()?->devices ?? [
-                'desktop' => 0,
-                'mobile' => 0,
-                'tablet' => 0
-            ]
-        ];
+    // Se não houver insights, adiciona uma mensagem padrão
+    if (empty($insights)) {
+        $insights[] = "Dados insuficientes para gerar insights comparativos.";
     }
+
+    return $insights;
+}
 
     private function calculateTrend($analytics)
     {
@@ -330,10 +309,10 @@ class AnalyticsController extends Controller
     }
 
     private function calculateTrendPercentage($oldValue, $newValue)
-    {
-        if ($oldValue == 0) return 0;
-        return round((($newValue - $oldValue) / $oldValue) * 100, 1);
-    }
+{
+    if ($oldValue == 0) return 0;
+    return round((($newValue - $oldValue) / $oldValue) * 100, 1);
+}
 
     private function getAnalyticsData($businessId, $startDate, $endDate)
 {
@@ -586,4 +565,97 @@ class AnalyticsController extends Controller
         'analysis' => $analysis
     ]);
 }
+
+public function analyzeCompetitors(Business $business)
+{
+    // Monta o prompt com dados do negócio
+    $prompt = "Analise os concorrentes do seguinte negócio:
+               Nome: {$business->name}
+               Ramo: {$business->segment}
+               Localização: {$business->address}
+               
+               Por favor:
+               1. Busque concorrentes próximos
+               2. Analise estratégias que estão funcionando
+               3. Sugira melhorias baseadas no mercado local";
+
+    // Chama o Gemini
+    $analysis = $this->geminiService->generateContent($prompt);
+    
+    return $analysis;
+}
+private function prepareCompetitorData($analytics)
+{
+    $totalViews = $analytics->sum('views');
+    $totalClicks = $analytics->sum('clicks');
+    $totalCalls = $analytics->sum('calls');
+    $daysCount = max($analytics->count(), 1);
+
+    $avgViews = round($totalViews / $daysCount, 1);
+    $avgClicks = round($totalClicks / $daysCount, 1);
+    $avgCalls = round($totalCalls / $daysCount, 1);
+
+    $conversionRate = $totalViews > 0 
+        ? round((($totalClicks + $totalCalls) / $totalViews) * 100, 1) 
+        : 0;
+
+    $dailyData = [];
+    foreach ($analytics as $record) {
+        $date = Carbon::parse($record->date)->format('d/m');
+        $dailyData[$date] = [
+            'views' => $record->views,
+            'clicks' => $record->clicks,
+            'calls' => $record->calls
+        ];
+    }
+
+    // Calcular tendência
+    $trend = [
+        'views' => 0,
+        'clicks' => 0,
+        'calls' => 0
+    ];
+
+    if ($analytics->count() >= 2) {
+        $halfPoint = floor($analytics->count() / 2);
+        $firstHalf = $analytics->take($halfPoint);
+        $secondHalf = $analytics->skip($halfPoint);
+
+        $trend = [
+            'views' => $this->calculateTrendPercentage(
+                $firstHalf->avg('views'),
+                $secondHalf->avg('views')
+            ),
+            'clicks' => $this->calculateTrendPercentage(
+                $firstHalf->avg('clicks'),
+                $secondHalf->avg('clicks')
+            ),
+            'calls' => $this->calculateTrendPercentage(
+                $firstHalf->avg('calls'),
+                $secondHalf->avg('calls')
+            )
+        ];
+    }
+
+    // Obter dados de dispositivos do último registro
+    $devices = $analytics->last() ? $analytics->last()->devices : [
+        'desktop' => 0,
+        'mobile' => 0,
+        'tablet' => 0
+    ];
+
+    return [
+        'total_views' => $totalViews,
+        'total_clicks' => $totalClicks,
+        'total_calls' => $totalCalls,
+        'avg_views' => $avgViews,
+        'avg_clicks' => $avgClicks,
+        'avg_calls' => $avgCalls,
+        'conversion_rate' => $conversionRate,
+        'daily_data' => $dailyData,
+        'trend' => $trend,
+        'devices' => $devices
+    ];
+}
+
 }

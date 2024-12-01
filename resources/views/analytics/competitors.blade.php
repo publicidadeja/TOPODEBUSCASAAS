@@ -197,6 +197,132 @@
     </div>
 </div>
 
+<!-- Análise Gemini -->
+<div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
+    <div class="p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">Análise Inteligente (Gemini)</h3>
+            <button 
+                onclick="updateGeminiAnalysis()"
+                class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center"
+            >
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Atualizar Análise
+            </button>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="geminiLoading" class="hidden">
+            <div class="flex justify-center items-center p-4">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <span class="ml-2">Gerando análise...</span>
+            </div>
+        </div>
+
+        <!-- Conteúdo da Análise -->
+        <div id="geminiContent" class="space-y-4">
+            <!-- Visão Geral do Mercado -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="font-medium text-gray-700 mb-2">Visão Geral do Mercado</h4>
+                <p id="marketOverview" class="text-gray-600">
+                    {{ $geminiAnalysis['market_overview'] ?? 'Clique em Atualizar Análise para gerar insights sobre o mercado.' }}
+                </p>
+            </div>
+
+            <!-- Análise de Concorrentes -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="font-medium text-gray-700 mb-2">Análise de Concorrentes</h4>
+                <ul id="competitorAnalysis" class="list-disc list-inside text-gray-600">
+                    @if(isset($geminiAnalysis['competitor_insights']))
+                        @foreach($geminiAnalysis['competitor_insights'] as $insight)
+                            <li>{{ $insight }}</li>
+                        @endforeach
+                    @else
+                        <li>Atualize para ver análise dos concorrentes.</li>
+                    @endif
+                </ul>
+            </div>
+
+            <!-- Recomendações -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h4 class="font-medium text-gray-700 mb-2">Recomendações Estratégicas</h4>
+                <ul id="recommendations" class="list-disc list-inside text-gray-600">
+                    @if(isset($geminiAnalysis['recommendations']))
+                        @foreach($geminiAnalysis['recommendations'] as $recommendation)
+                            <li>{{ $recommendation }}</li>
+                        @endforeach
+                    @else
+                        <li>Atualize para ver recomendações personalizadas.</li>
+                    @endif
+                </ul>
+            </div>
+
+            <!-- Data da Última Atualização -->
+            <div class="text-sm text-gray-500 mt-4">
+                Última atualização: 
+                <span id="lastUpdate">
+                    {{ isset($geminiAnalysis['updated_at']) ? \Carbon\Carbon::parse($geminiAnalysis['updated_at'])->format('d/m/Y H:i') : 'Nunca' }}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+    function updateGeminiAnalysis() {
+        // Mostra loading
+        document.getElementById('geminiLoading').classList.remove('hidden');
+        document.getElementById('geminiContent').classList.add('opacity-50');
+
+        // Faz a requisição para atualizar a análise
+        fetch(`/analytics/update-gemini-analysis/{{ $selectedBusiness->id }}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Atualiza o conteúdo
+            document.getElementById('marketOverview').textContent = data.market_overview;
+            
+            // Atualiza análise de concorrentes
+            const competitorList = document.getElementById('competitorAnalysis');
+            competitorList.innerHTML = data.competitor_insights.map(insight => 
+                `<li>${insight}</li>`
+            ).join('');
+
+            // Atualiza recomendações
+            const recommendationsList = document.getElementById('recommendations');
+            recommendationsList.innerHTML = data.recommendations.map(rec => 
+                `<li>${rec}</li>`
+            ).join('');
+
+            // Atualiza timestamp
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+
+            // Esconde loading
+            document.getElementById('geminiLoading').classList.add('hidden');
+            document.getElementById('geminiContent').classList.remove('opacity-50');
+
+            // Mostra mensagem de sucesso
+            alert('Análise atualizada com sucesso!');
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao atualizar análise. Tente novamente.');
+            document.getElementById('geminiLoading').classList.add('hidden');
+            document.getElementById('geminiContent').classList.remove('opacity-50');
+        });
+    }
+</script>
+@endpush
+
     @push('scripts')
     <script>
         // Dados para os gráficos

@@ -11,6 +11,11 @@ use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 
+Route::prefix('analytics')->group(function () {
+    Route::get('/competitors-analysis/{business}', [AnalyticsController::class, 'analyzeCompetitors']);
+    Route::get('/smart-post/{business}', [AutomationController::class, 'createSmartPost']);
+});
+
 Route::post('/analytics/{business}/refresh-analysis', [AnalyticsController::class, 'refreshAnalysis'])
     ->name('analytics.refresh-analysis');
 

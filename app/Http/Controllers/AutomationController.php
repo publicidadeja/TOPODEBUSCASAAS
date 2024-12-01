@@ -948,5 +948,19 @@ public function aiSuggestions(Business $business)
         'suggestions' => $gemini->generateSuggestions($context)
     ]);
 }
+
+public function createSmartPost(Business $business)
+{
+    $prompt = "Crie um post para uma empresa do ramo {$business->segment} 
+               localizada em {$business->address}.
+               Considere:
+               - Tendências locais
+               - Público-alvo da região
+               - Horário de maior engajamento";
+
+    $postSuggestion = $this->geminiService->generateContent($prompt);
+    
+    return $postSuggestion;
+}
 }
 
