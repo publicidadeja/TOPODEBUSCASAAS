@@ -154,20 +154,29 @@ public function analyzeBusinessData($business, $analytics)
 
 private function buildAnalysisPrompt($business, $analytics)
 {
-    return "Analise os seguintes dados do negócio e forneça insights e recomendações:
+    // Convert arrays to strings or get first value if array
+    $views = is_array($analytics['views']) ? array_sum($analytics['views']) : $analytics['views'];
+    $clicks = is_array($analytics['clicks']) ? array_sum($analytics['clicks']) : $analytics['clicks'];
+    $conversionRate = $analytics['currentConversion'] ?? 0; // Use currentConversion instead of conversion_rate
     
+    // Get growth values from the growth array
+    $viewsGrowth = $analytics['growth']['views'] ?? 0;
+    $clicksGrowth = $analytics['growth']['clicks'] ?? 0;
+
+    return "Analise os seguintes dados do negócio e forneça insights e recomendações:
+
     Negócio: {$business->name}
     Segmento: {$business->segment}
-    
+
     Métricas dos últimos 30 dias:
-    - Visualizações: {$analytics['views']}
-    - Cliques: {$analytics['clicks']}
-    - Taxa de Conversão: {$analytics['conversion_rate']}%
-    
+    - Visualizações: {$views}
+    - Cliques: {$clicks}
+    - Taxa de Conversão: {$conversionRate}%
+
     Tendências:
-    - Crescimento de visualizações: {$analytics['views_growth']}%
-    - Crescimento de cliques: {$analytics['clicks_growth']}%
-    
+    - Crescimento de visualizações: {$viewsGrowth}%
+    - Crescimento de cliques: {$clicksGrowth}%
+
     Por favor, forneça:
     1. Análise do desempenho atual
     2. Identificação de problemas

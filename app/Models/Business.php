@@ -190,4 +190,9 @@ class Business extends Model
 {
     return $this->hasMany(SmartCalendar::class);
 }
+
+public function actions()
+{
+    return $this->hasMany(Action::class);
+}
 }

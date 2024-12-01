@@ -23,9 +23,9 @@
 
     <x-slot name="header">
         <div class="flex justify-between items-center">
-            <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                Analytics - {{ $selectedBusiness->name }}
-            </h2>
+        <h2 class="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
+    Analytics - {{ $business->name }}
+</h2>
             <div class="flex items-center space-x-4">
                 <!-- Seletor de Período -->
                 <select id="period-selector" class="rounded-md shadow-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
@@ -38,7 +38,7 @@
                 <!-- Seletor de Negócio -->
                 <select id="business-selector" class="rounded-md shadow-sm border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
                     @foreach($businesses as $business)
-                        <option value="{{ $business->id }}" {{ $business->id == $selectedBusiness->id ? 'selected' : '' }}>
+                    <option value="{{ $business->id }}" {{ $business->id == $currentBusiness->id ? 'selected' : '' }}>
                             {{ $business->name }}
                         </option>
                     @endforeach
@@ -53,14 +53,14 @@
                         </svg>
                     </button>
                     <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50">
-                        <div class="py-1">
-                            <a href="{{ route('analytics.export.pdf', $selectedBusiness->id) }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                Exportar PDF
-                            </a>
-                            <a href="{{ route('analytics.export.excel', $selectedBusiness->id) }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
-                                Exportar Excel
-                            </a>
-                        </div>
+                    <div class="py-1">
+    <a href="{{ route('analytics.export.pdf', $business->id) }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+        Exportar PDF
+    </a>
+    <a href="{{ route('analytics.export.excel', $business->id) }}" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+        Exportar Excel
+    </a>
+</div>
                     </div>
                 </div>
             </div>
@@ -68,6 +68,7 @@
     </x-slot>
 
     @if(isset($aiAnalysis))
+    <!-- Your AI analysis content -->
     <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
         <h3 class="text-lg font-medium mb-4">Análise Inteligente</h3>
         <div class="prose dark:prose-invert">
@@ -77,41 +78,43 @@
             Última atualização: {{ $aiAnalysis['timestamp']->diffForHumans() }}
         </div>
     </div>
+    @endif
+
     
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <!-- Cards de Métricas -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <x-metric-card
-                    title="Visualizações"
-                    :value="number_format(end($views))"
-                    :growth="$growth['views'] ?? null"
-                    color="blue"
-                >
-                    <x-slot name="icon">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-                        </svg>
-                    </x-slot>
-                </x-metric-card>
+            <x-metric-card
+    title="Visualizações"
+    :value="number_format(!empty($analytics['views']) ? end($analytics['views']) : 0)"
+    :growth="$growth['views'] ?? null"
+    color="blue"
+>
+    <x-slot name="icon">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+        </svg>
+    </x-slot>
+</x-metric-card>
 
-                <x-metric-card
-                    title="Cliques"
-                    :value="number_format(end($clicks))"
-                    :growth="$growth['clicks'] ?? null"
-                    color="green"
-                >
-                    <x-slot name="icon">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/>
-                        </svg>
-                    </x-slot>
-                </x-metric-card>
+<x-metric-card
+    title="Cliques"
+    :value="number_format(!empty($analytics['clicks']) ? end($analytics['clicks']) : 0)"
+    :growth="$growth['clicks'] ?? null"
+    color="green"
+>
+    <x-slot name="icon">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/>
+        </svg>
+    </x-slot>
+</x-metric-card>
 
-                <x-metric-card
+<x-metric-card
     title="Taxa de Conversão"
-    :value="number_format($currentConversion, 1) . '%'"
+    :value="number_format($analytics['currentConversion'], 1) . '%'"
     :growth="$growth['conversion'] ?? null"
     color="purple"
 >
@@ -122,18 +125,18 @@
     </x-slot>
 </x-metric-card>
 
-                <x-metric-card
-                    title="Avaliação Média"
-                    :value="number_format($averageRating, 1)"
-                    :growth="$growth['rating'] ?? null"
-                    color="yellow"
-                >
-                    <x-slot name="icon">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
-                        </svg>
-                    </x-slot>
-                </x-metric-card>
+<x-metric-card
+    title="Avaliação Média"
+    :value="number_format($analytics['averageRating'], 1)"
+    :growth="$growth['rating'] ?? null"
+    color="yellow"
+>
+    <x-slot name="icon">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3."/>
+        </svg>
+    </x-slot>
+</x-metric-card>
             </div>
 
             <!-- Gráficos -->
@@ -152,26 +155,26 @@
             </div>
 
             <!-- Insights e Recomendações -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-                <div class="p-6">
-                    <h3 class="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">Insights e Recomendações</h3>
-                    <div class="space-y-4">
-                        @foreach($insights as $insight)
-                            <div class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                <div class="flex-shrink-0">
-                                    @if($insight->type === 'success')
-                                        <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                    @elseif($insight->type === 'warning')
-                                        <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                        </svg>
-                                    @else
-                                        <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                        </svg>
-                                    @endif
+<div class="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+    <div class="p-6">
+        <h3 class="text-lg font-medium mb-4 text-gray-900 dark:text-gray-100">Insights e Recomendações</h3>
+        <div class="space-y-4">
+            @foreach($analytics['insights'] as $insight)
+                <div class="flex items-start space-x-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div class="flex-shrink-0">
+                        @if($insight->type === 'success')
+                            <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        @elseif($insight->type === 'warning')
+                            <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                        @else
+                            <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        @endif
                                 </div>
                                 <div class="flex-1">
                                     <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ $insight->title }}</p>

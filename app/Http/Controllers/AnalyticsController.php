@@ -10,7 +10,9 @@ use Illuminate\Support\Facades\Response;
 use App\Exports\AnalyticsExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Models\Action; // Ajuste o namespace conforme necessário
+use App\Models\Action;
+use App\Services\GeminiService;
+use Illuminate\Support\Facades\Cache;
 
 class AnalyticsController extends Controller
 {
@@ -28,20 +30,25 @@ class AnalyticsController extends Controller
     }
 
     public function dashboard(Business $business)
-    {
-        // Obter dados analíticos
-        $analytics = $this->getAnalyticsData($business->id, now()->subDays(30), now());
-        
-        // Gerar análise com IA
-        $aiAnalysis = $this->geminiService->analyzeBusinessData($business, $analytics);
+{
+    // Obter dados analíticos
+    $analytics = $this->getAnalyticsData($business->id, now()->subDays(30), now());
+    
+    // Gerar análise com IA
+    $aiAnalysis = $this->geminiService->analyzeBusinessData($business, $analytics);
 
-        return view('analytics.dashboard', [
-            'business' => $business,
-            'analytics' => $analytics,
-            'aiAnalysis' => $aiAnalysis
-        ]);
-    }
+    // Get actions for the business
+    $actions = Action::where('business_id', $business->id)
+        ->orderBy('created_at', 'desc')
+        ->get();
 
+    return view('analytics.dashboard', [
+        'business' => $business,
+        'analytics' => $analytics,
+        'aiAnalysis' => $aiAnalysis,
+        'actions' => $actions // Add this line
+    ]);
+}
     protected function getOrGenerateAIAnalysis($business, $analytics)
     {
         // Verifica se já existe uma análise recente (menos de 24h)
