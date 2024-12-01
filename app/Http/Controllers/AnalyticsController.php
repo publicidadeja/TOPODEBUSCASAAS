@@ -31,6 +31,9 @@ class AnalyticsController extends Controller
 
     public function dashboard(Business $business)
 {
+    // Get all businesses for the current user
+    $businesses = auth()->user()->businesses;
+    
     // Obter dados analíticos
     $analytics = $this->getAnalyticsData($business->id, now()->subDays(30), now());
     
@@ -44,9 +47,10 @@ class AnalyticsController extends Controller
 
     return view('analytics.dashboard', [
         'business' => $business,
+        'businesses' => $businesses, // Add this line
         'analytics' => $analytics,
         'aiAnalysis' => $aiAnalysis,
-        'actions' => $actions // Add this line
+        'actions' => $actions
     ]);
 }
     protected function getOrGenerateAIAnalysis($business, $analytics)

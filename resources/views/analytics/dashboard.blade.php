@@ -242,13 +242,13 @@
     <script>
         // Configuração do gráfico de Visualizações e Cliques
         const viewsClicksChart = new ApexCharts(document.querySelector("#views-clicks-chart"), {
-            series: [{
-                name: 'Visualizações',
-                data: @json($views)
-            }, {
-                name: 'Cliques',
-                data: @json($clicks)
-            }],
+    series: [{
+        name: 'Visualizações',
+        data: @json($analytics['views'])
+    }, {
+        name: 'Cliques',
+        data: @json($analytics['clicks'])
+    }],
             chart: {
                 type: 'line',
                 height: 320,
@@ -263,7 +263,7 @@
             },
             colors: ['#3B82F6', '#10B981'],
             xaxis: {
-                categories: @json($dates),
+                categories: @json($analytics['dates']),
                 labels: {
                     style: {
                         colors: '#6B7280'
@@ -294,9 +294,9 @@
         // Configuração do gráfico de Taxa de Conversão
         const conversionChart = new ApexCharts(document.querySelector("#conversion-chart"), {
             series: [{
-                name: 'Taxa de Conversão',
-                data: @json($conversionRates)
-            }],
+    name: 'Taxa de Conversão',
+    data: @json($analytics['conversionRates'])
+}],
             chart: {
                 type: 'area',
                 height: 320,
@@ -319,13 +319,13 @@
                 }
             },
             xaxis: {
-                categories: @json($dates),
-                labels: {
-                    style: {
-                        colors: '#6B7280'
-                    }
-                }
-            },
+    categories: @json($analytics['dates']),
+    labels: {
+        style: {
+            colors: '#6B7280'
+        }
+    }
+},
             yaxis: {
                 labels: {
                     style: {
