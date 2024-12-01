@@ -14,50 +14,51 @@ use App\Models\Action; // Ajuste o namespace conforme necessário
 
 class AnalyticsController extends Controller
 {
+    protected $geminiService;
+    
+    public function __construct(GeminiService $geminiService)
+    {
+        $this->geminiService = $geminiService;
+    }
+
     public function index(Business $business)
     {
-        if (!$business) {
-            return redirect()
-                ->route('business.create')
-                ->with('warning', 'Você precisa cadastrar um negócio primeiro.');
-        }
-
-        return redirect()->route('analytics.dashboard', [
-            'business' => $business->id
-        ]);
+        // Use $this->geminiService ao invés de chamar diretamente
+        return redirect()->route('analytics.dashboard', $business);
     }
 
     public function dashboard(Business $business)
-{
-    if ($business->user_id !== auth()->id()) {
-        return redirect()->route('dashboard')
-            ->with('error', 'Você não tem permissão para acessar este negócio.');
+    {
+        // Obter dados analíticos
+        $analytics = $this->getAnalyticsData($business->id, now()->subDays(30), now());
+        
+        // Gerar análise com IA
+        $aiAnalysis = $this->geminiService->analyzeBusinessData($business, $analytics);
+
+        return view('analytics.dashboard', [
+            'business' => $business,
+            'analytics' => $analytics,
+            'aiAnalysis' => $aiAnalysis
+        ]);
     }
 
-    $period = request()->input('period', 30);
-    $endDate = Carbon::now();
-    $startDate = Carbon::now()->subDays($period);
+    protected function getOrGenerateAIAnalysis($business, $analytics)
+    {
+        // Verifica se já existe uma análise recente (menos de 24h)
+        $recentAnalysis = Cache::get("business_{$business->id}_analysis");
+        
+        if (!$recentAnalysis) {
+            $analysis = $this->geminiService->analyzeBusinessData($business, $analytics);
+            
+            // Cache por 24 horas
+            Cache::put("business_{$business->id}_analysis", $analysis, now()->addHours(24));
+            
+            return $analysis;
+        }
 
-    if (request()->has('start_date') && request()->has('end_date')) {
-        $startDate = Carbon::parse(request()->start_date);
-        $endDate = Carbon::parse(request()->end_date);
+        return $recentAnalysis;
     }
 
-    $analyticsData = $this->getAnalyticsData($business->id, $startDate, $endDate);
-    $businesses = auth()->user()->businesses;
-
-    // Adicione esta linha para definir $actions
-    $actions = []; // Você deve substituir isso pela lógica real de busca das ações
-
-    return view('analytics.dashboard', array_merge(
-        $analyticsData,
-        [
-            'businesses' => $businesses,
-            'selectedBusiness' => $business,
-            'actions' => $actions // Adicione actions ao array de dados
-        ]
-    ));
-}
     public function getData(Request $request, Business $business)
     {
         if ($business->user_id !== auth()->id()) {
@@ -561,4 +562,17 @@ class AnalyticsController extends Controller
 
         return $months;
     }
+
+    public function refreshAnalysis(Business $business)
+{
+    $analytics = $this->getAnalyticsData($business->id, now()->subDays(30), now());
+    $analysis = $this->geminiService->analyzeBusinessData($business, $analytics);
+    
+    Cache::put("business_{$business->id}_analysis", $analysis, now()->addHours(24));
+    
+    return response()->json([
+        'success' => true,
+        'analysis' => $analysis
+    ]);
+}
 }

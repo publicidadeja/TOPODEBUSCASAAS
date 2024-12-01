@@ -11,6 +11,29 @@ use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 
+Route::post('/analytics/{business}/refresh-analysis', [AnalyticsController::class, 'refreshAnalysis'])
+    ->name('analytics.refresh-analysis');
+
+    Route::get('/test-gemini', function () {
+        $gemini = app(App\Services\GeminiService::class);
+        return $gemini->generateContent("Teste");
+    })->name('test.gemini');
+
+Route::get('/test-suggestions', function() {
+    $gemini = app(App\Services\GeminiService::class);
+    return $gemini->generateSuggestions("Uma loja de roupas que precisa aumentar vendas online");
+});
+
+Route::get('/test-review', function() {
+    $gemini = app(App\Services\GeminiService::class);
+    return $gemini->generateReviewResponse("Cliente insatisfeito com o tempo de entrega");
+});
+
+Route::get('/test-gemini', function() {
+    $gemini = app(App\Services\GeminiService::class);
+    return $gemini->generateContent("Crie um post sobre marketing digital");
+});
+
 
 
 // Rota principal (pública)

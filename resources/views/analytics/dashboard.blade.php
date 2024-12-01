@@ -67,6 +67,17 @@
         </div>
     </x-slot>
 
+    @if(isset($aiAnalysis))
+    <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
+        <h3 class="text-lg font-medium mb-4">Análise Inteligente</h3>
+        <div class="prose dark:prose-invert">
+            {!! nl2br(e($aiAnalysis['analysis'])) !!}
+        </div>
+        <div class="text-sm text-gray-500 mt-4">
+            Última atualização: {{ $aiAnalysis['timestamp']->diffForHumans() }}
+        </div>
+    </div>
+    
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <!-- Cards de Métricas -->

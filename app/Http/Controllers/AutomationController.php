@@ -938,5 +938,15 @@ private function getConversionsData($business, $params)
     ];
 }
 
+
+public function aiSuggestions(Business $business)
+{
+    $gemini = app(GeminiService::class);
+    $context = "Negócio: {$business->name}\nSetor: {$business->industry}\nDescrição: {$business->description}";
+    
+    return response()->json([
+        'suggestions' => $gemini->generateSuggestions($context)
+    ]);
+}
 }
 
