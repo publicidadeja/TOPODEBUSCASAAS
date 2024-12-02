@@ -309,10 +309,10 @@ private function generateCompetitorInsights($mainBusinessData, $competitorsData)
     }
 
     private function calculateTrendPercentage($oldValue, $newValue)
-{
-    if ($oldValue == 0) return 0;
-    return round((($newValue - $oldValue) / $oldValue) * 100, 1);
-}
+    {
+        if ($oldValue == 0) return 0;
+        return round((($newValue - $oldValue) / $oldValue) * 100, 1);
+    }
 
     private function getAnalyticsData($businessId, $startDate, $endDate)
 {
@@ -674,5 +674,80 @@ private function buildCompetitorAnalysisPrompt($business, $mainBusinessData, $co
 
     Formate a resposta em tópicos claros e acionáveis.";
 }
+private function prepareCompetitorData($analytics)
+{
+    $totalViews = $analytics->sum('views');
+    $totalClicks = $analytics->sum('clicks');
+    $totalCalls = $analytics->sum('calls');
+    $daysCount = max($analytics->count(), 1);
+
+    $avgViews = round($totalViews / $daysCount, 1);
+    $avgClicks = round($totalClicks / $daysCount, 1);
+    $avgCalls = round($totalCalls / $daysCount, 1);
+
+    $conversionRate = $totalViews > 0 
+        ? round((($totalClicks + $totalCalls) / $totalViews) * 100, 1) 
+        : 0;
+
+    $dailyData = [];
+    foreach ($analytics as $record) {
+        $date = Carbon::parse($record->date)->format('d/m');
+        $dailyData[$date] = [
+            'views' => $record->views,
+            'clicks' => $record->clicks,
+            'calls' => $record->calls
+        ];
+    }
+
+    // Calcular tendência
+    $trend = [
+        'views' => 0,
+        'clicks' => 0,
+        'calls' => 0
+    ];
+
+    if ($analytics->count() >= 2) {
+        $halfPoint = floor($analytics->count() / 2);
+        $firstHalf = $analytics->take($halfPoint);
+        $secondHalf = $analytics->skip($halfPoint);
+
+        $trend = [
+            'views' => $this->calculateTrendPercentage(
+                $firstHalf->avg('views'),
+                $secondHalf->avg('views')
+            ),
+            'clicks' => $this->calculateTrendPercentage(
+                $firstHalf->avg('clicks'),
+                $secondHalf->avg('clicks')
+            ),
+            'calls' => $this->calculateTrendPercentage(
+                $firstHalf->avg('calls'),
+                $secondHalf->avg('calls')
+            )
+        ];
+    }
+
+    // Obter dados de dispositivos do último registro
+    $devices = $analytics->last() ? $analytics->last()->devices : [
+        'desktop' => 0,
+        'mobile' => 0,
+        'tablet' => 0
+    ];
+
+    return [
+        'total_views' => $totalViews,
+        'total_clicks' => $totalClicks,
+        'total_calls' => $totalCalls,
+        'avg_views' => $avgViews,
+        'avg_clicks' => $avgClicks,
+        'avg_calls' => $avgCalls,
+        'conversion_rate' => $conversionRate,
+        'daily_data' => $dailyData,
+        'trend' => $trend,
+        'devices' => $devices
+    ];
+}
+
+
 
 }
