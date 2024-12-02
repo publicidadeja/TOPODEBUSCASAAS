@@ -120,12 +120,19 @@ public function generateReviewResponse($review)
 
 public function analyzeBusinessData($business, $analytics)
 {
-    $prompt = $this->buildAnalysisPrompt($business, $analytics);
-    
     try {
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-        ])->post($this->apiEndpoint . '?key=' . $this->apiKey, [
+        // Instancia o SerperService
+        $serper = app(SerperService::class);
+        
+        // Faz busca por concorrentes
+        $searchQuery = "{$business->name} concorrentes {$business->segment} {$business->address}";
+        $searchResults = $serper->search($searchQuery);
+        
+        // Prepara prompt com dados reais
+        $prompt = $this->buildAnalysisPrompt($business, $analytics, $searchResults);
+        
+        // Chama API do Gemini
+        $response = Http::post($this->apiEndpoint, [
             'contents' => [
                 [
                     'parts' => [
@@ -136,18 +143,14 @@ public function analyzeBusinessData($business, $analytics)
         ]);
 
         if ($response->successful()) {
-            $data = $response->json();
-            return $this->extractAnalysis($data);
+            return $this->extractAnalysis($response->json());
         }
 
-        Log::error('Erro na análise do negócio via Gemini', [
-            'business_id' => $business->id,
-            'response' => $response->json()
-        ]);
-
+        Log::error('Erro na resposta do Gemini: ' . $response->body());
         return null;
+
     } catch (\Exception $e) {
-        Log::error('Erro ao analisar negócio: ' . $e->getMessage());
+        Log::error('Erro ao analisar dados: ' . $e->getMessage());
         return null;
     }
 }

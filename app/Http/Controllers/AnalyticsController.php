@@ -568,94 +568,111 @@ private function generateCompetitorInsights($mainBusinessData, $competitorsData)
 
 public function analyzeCompetitors(Business $business)
 {
-    // Monta o prompt com dados do negócio
-    $prompt = "Analise os concorrentes do seguinte negócio:
-               Nome: {$business->name}
-               Ramo: {$business->segment}
-               Localização: {$business->address}
-               
-               Por favor:
-               1. Busque concorrentes próximos
-               2. Analise estratégias que estão funcionando
-               3. Sugira melhorias baseadas no mercado local";
+    try {
+        // 1. Buscar dados analíticos do negócio principal
+        $endDate = Carbon::now();
+        $startDate = Carbon::now()->subDays(30);
+        
+        $businessAnalytics = BusinessAnalytics::where('business_id', $business->id)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->orderBy('date')
+            ->get();
 
-    // Chama o Gemini
-    $analysis = $this->geminiService->generateContent($prompt);
-    
-    return $analysis;
+        // 2. Preparar dados do negócio principal
+        $mainBusinessData = $this->prepareCompetitorData($businessAnalytics);
+
+        // 3. Buscar e preparar dados dos concorrentes
+        $competitors = $business->competitors()
+            ->with(['analytics' => function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('date', [$startDate, $endDate]);
+            }])
+            ->get();
+
+        $competitorsData = [];
+        foreach ($competitors as $competitor) {
+            $competitorsData[$competitor->id] = array_merge(
+                [
+                    'name' => $competitor->name,
+                    'website' => $competitor->website,
+                    'segment' => $competitor->segment,
+                    'address' => $competitor->address
+                ],
+                $this->prepareCompetitorData($competitor->analytics)
+            );
+        }
+
+        // 4. Construir prompt detalhado para o Gemini
+        $prompt = $this->buildCompetitorAnalysisPrompt($business, $mainBusinessData, $competitorsData);
+
+        // 5. Gerar análise com IA usando dados reais
+        $analysis = $this->geminiService->generateContent($prompt);
+
+        // 6. Estruturar resposta
+        $response = [
+            'business_data' => $mainBusinessData,
+            'competitors_data' => $competitorsData,
+            'ai_analysis' => $analysis,
+            'period' => [
+                'start' => $startDate->format('Y-m-d'),
+                'end' => $endDate->format('Y-m-d')
+            ]
+        ];
+
+        return response()->json($response);
+
+    } catch (\Exception $e) {
+        \Log::error('Erro na análise de concorrentes: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Não foi possível completar a análise de concorrentes.',
+            'message' => $e->getMessage()
+        ], 500);
+    }
 }
-private function prepareCompetitorData($analytics)
+
+private function buildCompetitorAnalysisPrompt($business, $mainBusinessData, $competitorsData)
 {
-    $totalViews = $analytics->sum('views');
-    $totalClicks = $analytics->sum('clicks');
-    $totalCalls = $analytics->sum('calls');
-    $daysCount = max($analytics->count(), 1);
+    // Formatar dados principais do negócio
+    $mainMetrics = "Métricas do negócio principal ({$business->name}):
+    - Visualizações totais: {$mainBusinessData['total_views']}
+    - Cliques totais: {$mainBusinessData['total_clicks']}
+    - Chamadas totais: {$mainBusinessData['total_calls']}
+    - Taxa de conversão: {$mainBusinessData['conversion_rate']}%
+    - Tendência de visualizações: {$mainBusinessData['trend']['views']}%
+    - Tendência de cliques: {$mainBusinessData['trend']['clicks']}%
+    - Distribuição de dispositivos: " . json_encode($mainBusinessData['devices']);
 
-    $avgViews = round($totalViews / $daysCount, 1);
-    $avgClicks = round($totalClicks / $daysCount, 1);
-    $avgCalls = round($totalCalls / $daysCount, 1);
-
-    $conversionRate = $totalViews > 0 
-        ? round((($totalClicks + $totalCalls) / $totalViews) * 100, 1) 
-        : 0;
-
-    $dailyData = [];
-    foreach ($analytics as $record) {
-        $date = Carbon::parse($record->date)->format('d/m');
-        $dailyData[$date] = [
-            'views' => $record->views,
-            'clicks' => $record->clicks,
-            'calls' => $record->calls
-        ];
+    // Formatar dados dos concorrentes
+    $competitorsInfo = "Dados dos concorrentes:\n";
+    foreach ($competitorsData as $id => $competitor) {
+        $competitorsInfo .= "\nConcorrente: {$competitor['name']}
+        - Website: {$competitor['website']}
+        - Visualizações totais: {$competitor['total_views']}
+        - Taxa de conversão: {$competitor['conversion_rate']}%
+        - Tendência de visualizações: {$competitor['trend']['views']}%";
     }
 
-    // Calcular tendência
-    $trend = [
-        'views' => 0,
-        'clicks' => 0,
-        'calls' => 0
-    ];
+    // Construir prompt completo
+    return "Analise detalhadamente os seguintes dados de mercado:
 
-    if ($analytics->count() >= 2) {
-        $halfPoint = floor($analytics->count() / 2);
-        $firstHalf = $analytics->take($halfPoint);
-        $secondHalf = $analytics->skip($halfPoint);
+    NEGÓCIO PRINCIPAL:
+    Nome: {$business->name}
+    Segmento: {$business->segment}
+    Localização: {$business->address}
 
-        $trend = [
-            'views' => $this->calculateTrendPercentage(
-                $firstHalf->avg('views'),
-                $secondHalf->avg('views')
-            ),
-            'clicks' => $this->calculateTrendPercentage(
-                $firstHalf->avg('clicks'),
-                $secondHalf->avg('clicks')
-            ),
-            'calls' => $this->calculateTrendPercentage(
-                $firstHalf->avg('calls'),
-                $secondHalf->avg('calls')
-            )
-        ];
-    }
+    {$mainMetrics}
 
-    // Obter dados de dispositivos do último registro
-    $devices = $analytics->last() ? $analytics->last()->devices : [
-        'desktop' => 0,
-        'mobile' => 0,
-        'tablet' => 0
-    ];
+    {$competitorsInfo}
 
-    return [
-        'total_views' => $totalViews,
-        'total_clicks' => $totalClicks,
-        'total_calls' => $totalCalls,
-        'avg_views' => $avgViews,
-        'avg_clicks' => $avgClicks,
-        'avg_calls' => $avgCalls,
-        'conversion_rate' => $conversionRate,
-        'daily_data' => $dailyData,
-        'trend' => $trend,
-        'devices' => $devices
-    ];
+    Por favor, forneça uma análise detalhada incluindo:
+    1. Posicionamento atual do negócio no mercado
+    2. Principais vantagens competitivas identificadas
+    3. Áreas que precisam de melhorias
+    4. Estratégias específicas que estão funcionando para os concorrentes
+    5. Recomendações práticas baseadas nos dados apresentados
+    6. Oportunidades de mercado identificadas
+    7. Sugestões para aumentar a taxa de conversão
+
+    Formate a resposta em tópicos claros e acionáveis.";
 }
 
 }
