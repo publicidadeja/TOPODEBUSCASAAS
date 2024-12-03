@@ -104,11 +104,16 @@ Route::middleware(['auth'])->group(function () {
 
     // Rotas de Analytics
     Route::prefix('analytics')->name('analytics.')->group(function () {
+        Route::get('/competitive/{business}', [AnalyticsController::class, 'competitors'])
+        ->name('competitive');
         Route::get('/{business}', [AnalyticsController::class, 'index'])->name('index');
         Route::get('/{business}/dashboard', [AnalyticsController::class, 'dashboard'])->name('dashboard');
         Route::get('/{business}/data', [AnalyticsController::class, 'getData'])->name('data');
         Route::get('/{business}/competitors', [AnalyticsController::class, 'competitors'])->name('competitors');
         Route::get('/{business}/performance', [AnalyticsController::class, 'performance'])->name('performance');
+        Route::get('/export/pdf/{business}', [AnalyticsController::class, 'exportPdf'])->name('export.pdf');
+    Route::get('/export/excel/{business}', [AnalyticsController::class, 'exportExcel'])->name('export.excel');
+    Route::get('/export/{business}', [AnalyticsController::class, 'exportPdf'])->name('export');
         
         // Exportações
         Route::get('/{business}/export/pdf', [AnalyticsController::class, 'exportPdf'])->name('export.pdf');
@@ -116,6 +121,13 @@ Route::middleware(['auth'])->group(function () {
         
         // Relatórios
         Route::get('/{business}/report/{type}', [AnalyticsController::class, 'generateReport'])->name('report');
+    });
+
+    Route::prefix('business')->name('business.')->group(function () {
+        // Existing business routes...
+        
+        // Add this new route for settings
+        Route::get('/{business}/settings', [SettingsController::class, 'index'])->name('settings');
     });
     
     // Rotas de Metas
