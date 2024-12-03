@@ -1060,5 +1060,10 @@ public function createSmartPost(Business $business)
     
     return $postSuggestion;
 }
+
+public function protection(Business $business)
+{
+    return view('automation.protection', compact('business'));
 }
 
+}
