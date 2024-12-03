@@ -1,9 +1,28 @@
 <x-app-layout>
+
+
+    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <strong class="font-bold">Erro!</strong>
+        <span class="block sm:inline">Nenhum negócio encontrado.</span>
+    </div>
+
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
             {{ __('Automação de Posts') }}
         </h2>
     </x-slot>
+    <div class="py-12">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            @if(!isset($business))
+                <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6" role="alert">
+                    <p class="font-bold">Atenção!</p>
+                    <p>Você precisa cadastrar seu negócio primeiro para acessar a automação. 
+                        <a href="{{ route('business.create') }}" class="underline">Clique aqui para cadastrar</a>
+                    </p>
+                </div>
+            @else
+                <!-- Resto do conteúdo da página -->
+            @endif
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
@@ -103,12 +122,11 @@ setInterval(loadSuggestions, 300000);
 
 @push('scripts')
 <script>
-// Certifique-se que businessId está definido
-const businessId = {{ auth()->user()->business_id ?? 'null' }};
+const businessId = {{ $business->id ?? 'null' }};
 
 function refreshSuggestions() {
     if (!businessId) {
-        showNotification('Erro: ID do negócio não encontrado', 'error');
+        showNotification('Você precisa cadastrar seu negócio primeiro.', 'error');
         return;
     }
     

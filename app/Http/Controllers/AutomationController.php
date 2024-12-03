@@ -118,30 +118,28 @@ class AutomationController extends Controller
 
 
     public function index()
-    {
-        $business = Business::where('user_id', auth()->id())->first();
+{
+    $business = Business::where('user_id', auth()->id())->first();
 
-        // Se não houver negócio cadastrado, redireciona para criar
-        if (!$business) {
-            return redirect()
-                ->route('business.create')
-                ->with('warning', 'Você precisa cadastrar seu negócio primeiro para acessar a automação.');
-        }
-
-        // Busca os posts apenas se houver um negócio
-        $scheduledPosts = AutomatedPost::where('business_id', $business->id)
-                         ->where('is_posted', false)
-                         ->orderBy('scheduled_for')
-                         ->get();
-                         
-        $postedPosts = AutomatedPost::where('business_id', $business->id)
-                      ->where('is_posted', true)
-                      ->orderBy('scheduled_for', 'desc')
-                      ->take(5)
-                      ->get();
-
-        return view('automation.index', compact('business', 'scheduledPosts', 'postedPosts'));
+    if (!$business) {
+        return redirect()
+            ->route('business.create')
+            ->with('warning', 'Você precisa cadastrar seu negócio primeiro para acessar a automação.');
     }
+
+    $scheduledPosts = AutomatedPost::where('business_id', $business->id)
+        ->where('is_posted', false)
+        ->orderBy('scheduled_for')
+        ->get();
+        
+    $postedPosts = AutomatedPost::where('business_id', $business->id)
+        ->where('is_posted', true)
+        ->orderBy('scheduled_for', 'desc')
+        ->take(5)
+        ->get();
+
+    return view('automation.index', compact('business', 'scheduledPosts', 'postedPosts'));
+}
 
     public function createPost(Request $request)
     {
