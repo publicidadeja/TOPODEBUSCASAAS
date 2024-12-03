@@ -21,140 +21,161 @@
         <!-- Styles -->
         <style>
             :root {
-                --primary-color: #4285F4;
-                --secondary-color: #34A853;
-                --warning-color: #FBBC05;
-                --error-color: #EA4335;
+                /* Google Colors */
+                --google-blue: #4285F4;
+                --google-red: #EA4335;
+                --google-yellow: #FBBC05;
+                --google-green: #34A853;
+                
+                /* UI Colors */
                 --surface-color: #FFFFFF;
                 --background-color: #F8F9FA;
+                --border-color: #DADCE0;
                 --text-primary: #202124;
                 --text-secondary: #5F6368;
-            }
-
-            .dark {
-                --surface-color: #202124;
-                --background-color: #1A1A1A;
-                --text-primary: #FFFFFF;
-                --text-secondary: #9AA0A6;
+                
+                /* Shadows */
+                --shadow-sm: 0 1px 2px 0 rgba(60,64,67,0.3);
+                --shadow-md: 0 1px 3px 0 rgba(60,64,67,0.3);
+                --shadow-lg: 0 2px 6px 0 rgba(60,64,67,0.3);
             }
 
             body {
                 font-family: 'Roboto', sans-serif;
+                background-color: var(--background-color);
+                color: var(--text-primary);
+                line-height: 1.5;
+                -webkit-font-smoothing: antialiased;
             }
 
             h1, h2, h3, h4, h5, h6 {
                 font-family: 'Google Sans', sans-serif;
+                color: var(--text-primary);
             }
 
-            [x-cloak] { display: none !important; }
+            /* Card Styles */
+            .card {
+                background: var(--surface-color);
+                border-radius: 8px;
+                border: 1px solid var(--border-color);
+                transition: box-shadow 0.2s ease-in-out;
+            }
 
-            /* Material Design inspired elevation */
+            .card:hover {
+                box-shadow: var(--shadow-md);
+            }
+
+            /* Button Styles */
+            .btn {
+                font-family: 'Google Sans', sans-serif;
+                padding: 8px 24px;
+                border-radius: 4px;
+                font-weight: 500;
+                transition: all 0.2s ease;
+                cursor: pointer;
+            }
+
+            .btn-primary {
+                background-color: var(--google-blue);
+                color: white;
+                border: none;
+            }
+
+            .btn-primary:hover {
+                background-color: #1a73e8;
+                box-shadow: var(--shadow-sm);
+            }
+
+            /* Navigation */
+            .nav-header {
+                background: var(--surface-color);
+                border-bottom: 1px solid var(--border-color);
+                padding: 12px 0;
+            }
+
+            /* Container */
+            .container {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 0 24px;
+            }
+
+            /* Grid System */
+            .grid {
+                display: grid;
+                gap: 24px;
+            }
+
+            @media (min-width: 768px) {
+                .grid-cols-2 {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+
+            @media (min-width: 1024px) {
+                .grid-cols-3 {
+                    grid-template-columns: repeat(3, 1fr);
+                }
+            }
+
+            /* Form Elements */
+            .input {
+                border: 1px solid var(--border-color);
+                border-radius: 4px;
+                padding: 8px 16px;
+                width: 100%;
+                transition: border 0.2s ease;
+            }
+
+            .input:focus {
+                border-color: var(--google-blue);
+                outline: none;
+            }
+
+            /* Utility Classes */
             .elevation-1 {
-                box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+                box-shadow: var(--shadow-sm);
             }
 
             .elevation-2 {
-                box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.3), 0 2px 6px 2px rgba(60, 64, 67, 0.15);
+                box-shadow: var(--shadow-md);
             }
 
-            /* Smooth transitions */
-            .transition-all {
-                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            }
+            [x-cloak] { display: none !important; }
         </style>
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         @stack('styles')
     </head>
-    <body 
-        class="font-sans antialiased min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100"
-        x-data="{ showNotification: false, notificationMessage: '', notificationType: 'success' }"
-    >
+    <body class="font-sans antialiased">
         <div class="min-h-screen flex flex-col">
             @include('layouts.navigation')
 
             <!-- Page Heading -->
             @if (isset($header))
-                <header class="bg-white dark:bg-gray-800 elevation-1">
-                    <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+                <header class="bg-white border-b border-gray-200">
+                    <div class="container py-4">
                         {{ $header }}
                     </div>
                 </header>
             @endif
 
-            <!-- Notification Component -->
-            <div
-                x-cloak
-                x-show="showNotification"
-                x-transition:enter="transition ease-out duration-300"
-                x-transition:enter-start="opacity-0 transform translate-y-2"
-                x-transition:enter-end="opacity-100 transform translate-y-0"
-                x-transition:leave="transition ease-in duration-200"
-                x-transition:leave-start="opacity-100"
-                x-transition:leave-end="opacity-0"
-                class="fixed bottom-4 right-4 z-50"
-            >
-                <div class="max-w-sm w-full bg-white dark:bg-gray-800 elevation-2 rounded-lg pointer-events-auto">
-                    <div class="p-4">
-                        <div class="flex items-start">
-                            <div class="flex-shrink-0">
-                                <template x-if="notificationType === 'success'">
-                                    <svg class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                </template>
-                                <!-- Add other notification type icons here -->
-                            </div>
-                            <div class="ml-3 w-0 flex-1">
-                                <p class="text-sm font-medium text-gray-900 dark:text-gray-100" x-text="notificationMessage"></p>
-                            </div>
-                            <button @click="showNotification = false" class="ml-4 flex-shrink-0 text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500">
-                                <span class="sr-only">Close</span>
-                                <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Main Content -->
             <main class="flex-grow py-6">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="container">
                     {{ $slot }}
                 </div>
             </main>
 
             <!-- Footer -->
-            <footer class="bg-white dark:bg-gray-800 elevation-1 mt-auto">
-                <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
-                    <div class="text-center text-sm text-gray-500 dark:text-gray-400">
+            <footer class="bg-white border-t border-gray-200 mt-auto">
+                <div class="container py-4">
+                    <div class="text-center text-sm text-gray-500">
                         © {{ date('Y') }} {{ config('app.name') }}. Todos os direitos reservados.
                     </div>
                 </div>
             </footer>
         </div>
 
-        <!-- Scripts -->
         @stack('scripts')
-        <script>
-            // Notification system
-            window.notify = function(message, type = 'success') {
-                window.dispatchEvent(new CustomEvent('notify', {
-                    detail: { message, type }
-                }));
-            };
-
-            window.addEventListener('notify', (e) => {
-                const notification = document.querySelector('[x-data]').__x.$data;
-                notification.notificationMessage = e.detail.message;
-                notification.notificationType = e.detail.type;
-                notification.showNotification = true;
-
-                setTimeout(() => {
-                    notification.showNotification = false;
-                }, 5000);
-            });
-        </script>
     </body>
 </html>

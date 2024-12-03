@@ -1,60 +1,78 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Analytics') }}
-        </h2>
+        <div class="flex justify-between items-center">
+            <h2 class="font-google-sans text-xl text-gray-800">
+                {{ __('Analytics') }}
+            </h2>
+            <x-business-selector :businesses="$businesses" :selected="$selectedBusiness" route="analytics.index" />
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+    <div class="py-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <!-- Resumo -->
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mb-6">
-                <div class="p-6 text-gray-900 dark:text-gray-100">
-                    <h3 class="text-lg font-semibold mb-4">Resumo dos Últimos 30 Dias</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-blue-50 dark:bg-blue-900 p-4 rounded-lg">
-                            <div class="text-blue-600 dark:text-blue-300 text-sm">Visualizações</div>
-                            <div class="text-2xl font-bold">{{ $summary['total_views'] }}</div>
+            <div class="mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Visualizações -->
+                    <div class="card">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-gray-600 font-google-sans">Visualizações</h4>
+                            <span class="text-sm {{ $summary['trends']['views'] >= 0 ? 'text-google-green' : 'text-google-red' }}">
+                                {{ $summary['trends']['views'] }}%
+                            </span>
                         </div>
-                        <div class="bg-green-50 dark:bg-green-900 p-4 rounded-lg">
-                            <div class="text-green-600 dark:text-green-300 text-sm">Cliques</div>
-                            <div class="text-2xl font-bold">{{ $summary['total_clicks'] }}</div>
+                        <p class="text-3xl font-google-sans">{{ number_format($summary['total_views']) }}</p>
+                        <span class="text-sm text-gray-500">vs. período anterior</span>
+                    </div>
+
+                    <!-- Cliques -->
+                    <div class="card">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-gray-600 font-google-sans">Cliques</h4>
+                            <span class="text-sm {{ $summary['trends']['clicks'] >= 0 ? 'text-google-green' : 'text-google-red' }}">
+                                {{ $summary['trends']['clicks'] }}%
+                            </span>
                         </div>
-                        <div class="bg-purple-50 dark:bg-purple-900 p-4 rounded-lg">
-                            <div class="text-purple-600 dark:text-purple-300 text-sm">Ligações</div>
-                            <div class="text-2xl font-bold">{{ $summary['total_calls'] }}</div>
+                        <p class="text-3xl font-google-sans">{{ number_format($summary['total_clicks']) }}</p>
+                        <span class="text-sm text-gray-500">vs. período anterior</span>
+                    </div>
+
+                    <!-- Ligações -->
+                    <div class="card">
+                        <div class="flex items-center justify-between mb-4">
+                            <h4 class="text-gray-600 font-google-sans">Ligações</h4>
+                            <span class="text-sm {{ $summary['trends']['calls'] >= 0 ? 'text-google-green' : 'text-google-red' }}">
+                                {{ $summary['trends']['calls'] }}%
+                            </span>
                         </div>
+                        <p class="text-3xl font-google-sans">{{ number_format($summary['total_calls']) }}</p>
+                        <span class="text-sm text-gray-500">vs. período anterior</span>
                     </div>
                 </div>
             </div>
 
             <!-- Palavras-chave Populares -->
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mb-6">
-                <div class="p-6 text-gray-900 dark:text-gray-100">
-                    <h3 class="text-lg font-semibold mb-4">Palavras-chave Populares</h3>
-                    @if(count($summary['popular_keywords']) > 0)
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            @foreach($summary['popular_keywords'] as $keyword => $count)
-                                <div class="bg-gray-50 dark:bg-gray-700 p-3 rounded">
-                                    <div class="text-sm">{{ $keyword }}</div>
-                                    <div class="text-lg font-semibold">{{ $count }}</div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <p class="text-gray-500">Nenhuma palavra-chave registrada ainda.</p>
-                    @endif
-                </div>
+            <div class="card mb-8">
+                <h3 class="text-lg font-google-sans mb-4">Palavras-chave Populares</h3>
+                @if(count($summary['popular_keywords']) > 0)
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        @foreach($summary['popular_keywords'] as $keyword => $count)
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <div class="text-sm text-gray-600 font-google-sans">{{ $keyword }}</div>
+                                <div class="text-lg font-google-sans mt-1">{{ $count }}</div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-gray-500 font-google-sans">Nenhuma palavra-chave registrada ainda.</p>
+                @endif
             </div>
 
-            <!-- Gráfico de Estatísticas Diárias -->
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900 dark:text-gray-100">
-                    <h3 class="text-lg font-semibold mb-4">Estatísticas Diárias</h3>
-                    <div class="h-64">
-                        <!-- Aqui você pode adicionar um gráfico usando Chart.js ou outra biblioteca -->
-                        <canvas id="dailyStatsChart"></canvas>
-                    </div>
+            <!-- Gráfico de Estatísticas -->
+            <div class="card">
+                <h3 class="text-lg font-google-sans mb-4">Estatísticas Diárias</h3>
+                <div class="h-[400px]">
+                    <canvas id="dailyStatsChart"></canvas>
                 </div>
             </div>
         </div>
@@ -74,29 +92,68 @@
                     {
                         label: 'Visualizações',
                         data: stats.map(stat => stat.views),
-                        borderColor: 'rgb(59, 130, 246)',
-                        tension: 0.1
+                        borderColor: '#4285F4',
+                        backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                        tension: 0.4,
+                        fill: true
                     },
                     {
                         label: 'Cliques',
                         data: stats.map(stat => stat.clicks),
-                        borderColor: 'rgb(34, 197, 94)',
-                        tension: 0.1
+                        borderColor: '#34A853',
+                        backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                        tension: 0.4,
+                        fill: true
                     },
                     {
                         label: 'Ligações',
                         data: stats.map(stat => stat.calls),
-                        borderColor: 'rgb(168, 85, 247)',
-                        tension: 0.1
+                        borderColor: '#FBBC05',
+                        backgroundColor: 'rgba(251, 188, 5, 0.1)',
+                        tension: 0.4,
+                        fill: true
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            font: {
+                                family: 'Google Sans'
+                            },
+                            padding: 20
+                        }
+                    }
+                },
                 scales: {
                     y: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        grid: {
+                            borderDash: [2, 2]
+                        },
+                        ticks: {
+                            font: {
+                                family: 'Google Sans'
+                            }
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                family: 'Google Sans'
+                            }
+                        }
                     }
                 }
             }

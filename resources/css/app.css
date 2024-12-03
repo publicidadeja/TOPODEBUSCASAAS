@@ -1,3 +1,175 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap');
+
+/* Base Styles */
+@layer base {
+  :root {
+    --google-blue: #4285F4;
+    --google-red: #EA4335;
+    --google-yellow: #FBBC05;
+    --google-green: #34A853;
+  }
+
+  body {
+    @apply bg-gray-50;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Google Sans', sans-serif;
+  }
+}
+
+/* Component Styles */
+@layer components {
+  /* Buttons */
+  .btn {
+    @apply px-6 py-2 rounded-lg font-medium transition-all duration-200 font-['Google_Sans'];
+  }
+
+  .btn-primary {
+    @apply bg-[--google-blue] text-white hover:bg-blue-600 hover:shadow-md;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:shadow-sm;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200;
+  }
+
+  /* Forms */
+  .form-input {
+    @apply w-full px-4 py-2 rounded-lg border border-gray-300 focus:border-[--google-blue] focus:ring-1 focus:ring-[--google-blue] outline-none transition-all duration-200;
+  }
+
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 mb-1 font-['Google_Sans'];
+  }
+
+  /* Navigation */
+  .nav-link {
+    @apply h-16 px-4 inline-flex items-center text-gray-600 hover:text-[--google-blue] font-['Google_Sans'] transition-colors duration-200;
+  }
+
+  .nav-link-active {
+    @apply text-[--google-blue] border-b-2 border-[--google-blue];
+  }
+
+  /* Dropdown */
+  .dropdown-content {
+    @apply bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden;
+  }
+
+  .dropdown-item {
+    @apply px-4 py-2 text-gray-700 hover:bg-gray-50 font-['Google_Sans'] transition-colors duration-200;
+  }
+}
+
+/* Utility Classes */
+@layer utilities {
+  .font-google-sans {
+    font-family: 'Google Sans', sans-serif;
+  }
+
+  .font-roboto {
+    font-family: 'Roboto', sans-serif;
+  }
+
+  .text-google-blue {
+    color: var(--google-blue);
+  }
+
+  .bg-google-blue {
+    background-color: var(--google-blue);
+  }
+
+  /* Shadows */
+  .shadow-google-sm {
+    box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3);
+  }
+
+  .shadow-google-md {
+    box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3);
+  }
+
+  /* Animations */
+  .transition-google {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* Grid Layout */
+.grid-auto-fit {
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+/* Tables */
+.table-modern {
+  @apply w-full border-collapse;
+}
+
+.table-modern th {
+  @apply px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-['Google_Sans'];
+}
+
+.table-modern td {
+  @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b border-gray-200;
+}
+
+/* Badges */
+.badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium font-['Google_Sans'];
+}
+
+.badge-success {
+  @apply bg-green-100 text-green-800;
+}
+
+.badge-warning {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.badge-error {
+  @apply bg-red-100 text-red-800;
+}
+
+/* Loading States */
+.loading-skeleton {
+  @apply animate-pulse bg-gray-200 rounded;
+}
+
+/* Tooltips */
+.tooltip {
+  @apply invisible absolute;
+}
+
+.has-tooltip:hover .tooltip {
+  @apply visible z-50;
+}
+
+/* Responsive Design Helpers */
+@media (max-width: 640px) {
+  .mobile-only {
+    @apply block;
+  }
+  
+  .desktop-only {
+    @apply hidden;
+  }
+}
+
+@media (min-width: 641px) {
+  .mobile-only {
+    @apply hidden;
+  }
+  
+  .desktop-only {
+    @apply block;
+  }
+}
