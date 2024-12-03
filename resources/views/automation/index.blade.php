@@ -103,8 +103,15 @@ setInterval(loadSuggestions, 300000);
 
 @push('scripts')
 <script>
+// Certifique-se que businessId está definido
+const businessId = {{ auth()->user()->business_id ?? 'null' }};
 
 function refreshSuggestions() {
+    if (!businessId) {
+        showNotification('Erro: ID do negócio não encontrado', 'error');
+        return;
+    }
+    
     // Adiciona classe de loading ao botão
     const button = document.querySelector('button[onclick="refreshSuggestions()"]');
     button.disabled = true;
@@ -115,13 +122,27 @@ function refreshSuggestions() {
     icon.classList.add('animate-spin');
     
     fetch(`/automation/suggestions/${businessId}?refresh=true`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erro na requisição');
+            }
+            return response.json();
+        })
         .then(data => {
+            if (!data.suggestions || !Array.isArray(data.suggestions)) {
+                throw new Error('Formato de dados inválido');
+            }
+            
             const container = document.getElementById('suggestions-container');
+            if (data.suggestions.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center p-4">Nenhuma sugestão disponível no momento.</p>';
+                return;
+            }
+            
             container.innerHTML = data.suggestions.map(suggestion => `
                 <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                    <h4 class="font-medium mb-2">${suggestion.title}</h4>
-                    <p class="text-sm mb-3">${suggestion.message}</p>
+                    <h4 class="font-medium mb-2">${suggestion.title || 'Sem título'}</h4>
+                    <p class="text-sm mb-3">${suggestion.message || suggestion.description || 'Sem descrição'}</p>
                     <div class="flex justify-end space-x-2">
                         <button onclick="applyImprovement('${suggestion.action_type}', ${JSON.stringify(suggestion.action_data)})"
                                 class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm">
@@ -135,6 +156,10 @@ function refreshSuggestions() {
                 </div>
             `).join('');
         })
+        .catch(error => {
+            console.error('Erro:', error);
+            showNotification('Erro ao carregar sugestões: ' + error.message, 'error');
+        })
         .finally(() => {
             // Remove estados de loading
             button.disabled = false;
@@ -142,6 +167,25 @@ function refreshSuggestions() {
             icon.classList.remove('animate-spin');
         });
 }
+
+// Função para mostrar notificações
+function showNotification(message, type = 'success') {
+    // Cria o elemento de notificação
+    const notification = document.createElement('div');
+    notification.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white ${
+        type === 'success' ? 'bg-green-500' : 'bg-red-500'
+    }`;
+    notification.textContent = message;
+    
+    // Adiciona ao DOM
+    document.body.appendChild(notification);
+    
+    // Remove após 3 segundos
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
 function loadSuggestions() {
     fetch(`/automation/suggestions/${businessId}`)
         .then(response => response.json())

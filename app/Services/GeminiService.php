@@ -57,33 +57,38 @@ class GeminiService
     }
 
     private function extractSuggestions($content)
-    {
-        $suggestions = [];
-        
-        // Procurar por padrões de sugestões no texto
-        if (preg_match_all('/\b(Sugestão|Melhoria|Recomendação):\s*([^\n]+)/i', $content, $matches)) {
-            foreach ($matches[2] as $index => $suggestion) {
-                $suggestions[] = [
-                    'title' => 'Sugestão ' . ($index + 1),
-                    'message' => trim($suggestion),
-                    'action_type' => $this->determineActionType($suggestion),
-                    'action_data' => $this->extractActionData($suggestion),
-                    'priority' => $this->determinePriority($suggestion)
-                ];
-            }
-        }
-        
-        return $suggestions ?: [
-            [
-                'title' => 'Melhoria de Fotos',
-                'message' => 'Atualize as fotos do estabelecimento',
-                'action_type' => 'update_photos',
-                'action_data' => ['type' => 'exterior'],
-                'priority' => 'high'
-            ]
-        ];
+{
+    // Se $content for um array, converte para string
+    if (is_array($content)) {
+        $content = json_encode($content, JSON_UNESCAPED_UNICODE);
     }
 
+    $suggestions = [];
+
+    // Procurar por padrões de sugestões no texto
+    if (preg_match_all('/\b(Sugestão|Melhoria|Recomendação):\s*([^\n]+)/i', $content, $matches)) {
+        foreach ($matches[2] as $index => $suggestion) {
+            $suggestions[] = [
+                'title' => 'Sugestão ' . ($index + 1),
+                'message' => trim($suggestion),
+                'action_type' => $this->determineActionType($suggestion),
+                'action_data' => $this->extractActionData($suggestion),
+                'priority' => $this->determinePriority($suggestion)
+            ];
+        }
+    }
+
+    // Se não encontrou sugestões, retorna uma sugestão padrão
+    return $suggestions ?: [
+        [
+            'title' => 'Melhoria de Fotos',
+            'message' => 'Considere atualizar as fotos do seu negócio para melhor visibilidade',
+            'action_type' => 'update_photos',
+            'action_data' => [],
+            'priority' => 'medium'
+        ]
+    ];
+}
     private function extractImportantDates($content)
     {
         $dates = [];

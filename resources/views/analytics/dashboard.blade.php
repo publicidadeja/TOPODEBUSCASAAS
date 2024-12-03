@@ -71,7 +71,15 @@
     <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
         <h3 class="text-lg font-medium mb-4">Análise Inteligente</h3>
         <div class="prose dark:prose-invert">
-            {!! nl2br(e($aiAnalysis['analysis'])) !!}
+            @if(is_array($aiAnalysis['analysis']))
+                @if(isset($aiAnalysis['analysis']['content']))
+                    {!! nl2br(e($aiAnalysis['analysis']['content'])) !!}
+                @else
+                    {!! nl2br(e(json_encode($aiAnalysis['analysis'], JSON_PRETTY_PRINT))) !!}
+                @endif
+            @else
+                {!! nl2br(e($aiAnalysis['analysis'])) !!}
+            @endif
         </div>
         <div class="text-sm text-gray-500 mt-4">
             @if(isset($aiAnalysis['timestamp']))
@@ -82,7 +90,6 @@
         </div>
     </div>
 @endif
-
     
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
