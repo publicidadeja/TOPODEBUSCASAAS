@@ -40,6 +40,81 @@
                 </div>
             </div>
 
+            <div class="py-12">
+    <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+        <!-- Seção de Sugestões de Melhorias -->
+        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mb-6">
+            <div class="p-6">
+                <h3 class="text-lg font-medium mb-4">Sugestões de Melhorias</h3>
+                <div id="suggestions-container" class="space-y-4">
+                    <!-- Sugestões serão carregadas aqui via JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de Ações Pendentes -->
+        <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+            <div class="p-6">
+                <h3 class="text-lg font-medium mb-4">Ações Pendentes</h3>
+                <div id="pending-actions" class="space-y-4">
+                    <!-- Ações pendentes serão carregadas aqui -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+function loadSuggestions() {
+    fetch(`/automation/suggestions/${businessId}`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('suggestions-container');
+            container.innerHTML = data.suggestions.map(suggestion => `
+                <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <h4 class="font-medium mb-2">${suggestion.title}</h4>
+                    <p class="text-sm mb-3">${suggestion.message}</p>
+                    <div class="flex justify-end space-x-2">
+                        <button onclick="applyImprovement('${suggestion.action_type}', ${JSON.stringify(suggestion.action_data)})"
+                                class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm">
+                            Aplicar Melhoria
+                        </button>
+                        <button onclick="dismissSuggestion(${suggestion.id})"
+                                class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm">
+                            Ignorar
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        });
+}
+
+function applyImprovement(type, data) {
+    fetch(`/automation/apply-improvement/${businessId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ improvement_type: type, data: data })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Melhoria aplicada com sucesso!', 'success');
+            loadSuggestions(); // Recarrega as sugestões
+        } else {
+            showNotification(data.error, 'error');
+        }
+    });
+}
+
+// Carregar sugestões quando a página carregar
+document.addEventListener('DOMContentLoaded', loadSuggestions);
+</script>
+@endpush
+
             <!-- Posts Agendados -->
             <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg mb-6">
                 <div class="p-6 text-gray-900 dark:text-gray-100">

@@ -11,6 +11,13 @@ use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 
+Route::prefix('automation')->group(function () {
+    Route::get('/suggestions/{business}', [AutomationController::class, 'getImprovementSuggestions'])
+         ->name('automation.suggestions');
+    Route::post('/apply-improvement/{business}', [AutomationController::class, 'applyImprovement'])
+         ->name('automation.apply-improvement');
+});
+
 Route::post('/analytics/update-gemini-analysis/{business}', [AnalyticsController::class, 'updateGeminiAnalysis'])
     ->name('analytics.update-gemini-analysis');
 

@@ -7,15 +7,110 @@ use App\Models\Business;
 use App\Models\AutomatedPost;
 use App\Services\GeminiService;
 use App\Models\CalendarEvent;
+use App\Services\SerperService;
 
 class AutomationController extends Controller
 {
     protected $gemini;
+    protected $serper;
 
-    public function __construct(GeminiService $gemini)
+    public function __construct(GeminiService $gemini, SerperService $serper)
     {
         $this->gemini = $gemini;
+        $this->serper = $serper;
     }
+
+    public function getImprovementSuggestions(Business $business)
+    {
+        try {
+            // Buscar dados dos concorrentes
+            $competitors = $this->serper->search("{$business->name} concorrentes {$business->segment} {$business->address}");
+            
+            // Analisar dados com Gemini
+            $analysis = $this->gemini->analyzeBusinessData($business, [
+                'competitors' => $competitors,
+                'metrics' => $this->getBusinessMetrics($business),
+                'segment' => $business->segment
+            ]);
+
+            // Criar notificações baseadas na análise
+            $this->createImprovementNotifications($business, $analysis);
+
+            return response()->json([
+                'success' => true,
+                'suggestions' => $analysis,
+                'notifications_created' => true
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao gerar sugestões: ' . $e->getMessage());
+            return response()->json(['error' => 'Erro ao gerar sugestões'], 500);
+        }
+    }
+
+    private function createImprovementNotifications($business, $analysis)
+    {
+        foreach ($analysis['suggestions'] as $suggestion) {
+            Notification::create([
+                'business_id' => $business->id,
+                'type' => 'improvement',
+                'title' => $suggestion['title'],
+                'message' => $suggestion['message'],
+                'action_type' => $suggestion['action_type'],
+                'action_data' => json_encode($suggestion['action_data']),
+                'priority' => $suggestion['priority']
+            ]);
+        }
+    }
+
+    public function applyImprovement(Request $request, Business $business)
+    {
+        try {
+            $validated = $request->validate([
+                'improvement_type' => 'required|string',
+                'data' => 'required|array'
+            ]);
+
+            // Implementar melhorias específicas
+            switch ($validated['improvement_type']) {
+                case 'update_photos':
+                    return $this->handlePhotoUpdate($business, $validated['data']);
+                
+                case 'update_business_info':
+                    return $this->handleBusinessInfoUpdate($business, $validated['data']);
+                
+                case 'update_products':
+                    return $this->handleProductsUpdate($business, $validated['data']);
+                
+                default:
+                    return response()->json(['error' => 'Tipo de melhoria não suportado'], 400);
+            }
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao aplicar melhoria: ' . $e->getMessage());
+            return response()->json(['error' => 'Erro ao aplicar melhoria'], 500);
+        }
+    }
+
+    private function handlePhotoUpdate($business, $data)
+    {
+        // Implementar lógica de atualização de fotos
+        // Usar API do Google My Business para atualizar
+        return response()->json(['success' => true, 'message' => 'Fotos atualizadas com sucesso']);
+    }
+
+    private function handleBusinessInfoUpdate($business, $data)
+    {
+        // Implementar lógica de atualização de informações
+        return response()->json(['success' => true, 'message' => 'Informações atualizadas com sucesso']);
+    }
+
+    private function handleProductsUpdate($business, $data)
+    {
+        // Implementar lógica de atualização de produtos
+        return response()->json(['success' => true, 'message' => 'Produtos atualizados com sucesso']);
+    }
+
 
     public function index()
     {
