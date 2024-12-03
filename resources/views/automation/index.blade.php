@@ -1,4 +1,18 @@
 <x-app-layout>
+    @push('styles')
+    <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.css' rel='stylesheet' />
+    <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.css' rel='stylesheet' />
+    <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@4.4.0/main.min.css' rel='stylesheet' />
+    <style>
+        #calendar-container {
+            height: 600px;
+            margin-top: 20px;
+        }
+        .fc-event { cursor: pointer; }
+        .fc-day:hover { background-color: #f8f9fa; }
+    </style>
+    @endpush
+
     <x-slot name="header">
         <div class="flex items-center justify-between">
             <h2 class="text-xl font-google-sans text-gray-800">
@@ -28,11 +42,10 @@
                     </div>
                 </div>
             @else
-                <!-- Grid Layout for Main Content -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <!-- Left Column -->
+                    <!-- Coluna Esquerda -->
                     <div class="space-y-6">
-                        <!-- Create New Post Card -->
+                        <!-- Criar Novo Post -->
                         <div class="bg-white rounded-lg shadow-sm border border-gray-100">
                             <div class="p-6">
                                 <h3 class="text-lg font-google-sans mb-4 text-gray-800">Criar Novo Post</h3>
@@ -65,7 +78,7 @@
                                                   class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200"></textarea>
                                     </div>
                                     <div class="flex justify-end">
-                                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition">
+                                        <button type="submit" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
                                             Criar Post
                                         </button>
                                     </div>
@@ -73,13 +86,24 @@
                             </div>
                         </div>
 
-                        <!-- Suggestions Card -->
+                        <!-- Calendário -->
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-100">
+                            <div class="p-6">
+                                <h3 class="text-lg font-google-sans mb-4 text-gray-800">Calendário de Publicações</h3>
+                                <div id="calendar-container"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Coluna Direita -->
+                    <div class="space-y-6">
+                        <!-- Sugestões de Datas -->
                         <div class="bg-white rounded-lg shadow-sm border border-gray-100">
                             <div class="p-6">
                                 <div class="flex justify-between items-center mb-4">
-                                    <h3 class="text-lg font-google-sans text-gray-800">Sugestões de Melhorias</h3>
+                                    <h3 class="text-lg font-google-sans text-gray-800">Sugestões de Datas</h3>
                                     <button onclick="refreshSuggestions()" 
-                                            class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition">
+                                            class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                         </svg>
@@ -87,15 +111,12 @@
                                     </button>
                                 </div>
                                 <div id="suggestions-container" class="space-y-4">
-                                    <!-- Suggestions will be loaded here -->
+                                    <!-- Sugestões serão carregadas aqui -->
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- Right Column -->
-                    <div class="space-y-6">
-                        <!-- Scheduled Posts Card -->
+                        <!-- Posts Agendados -->
                         <div class="bg-white rounded-lg shadow-sm border border-gray-100">
                             <div class="p-6">
                                 <h3 class="text-lg font-google-sans mb-4 text-gray-800">Posts Agendados</h3>
@@ -126,98 +147,61 @@
                                 @endif
                             </div>
                         </div>
-
-                        <!-- Posted Posts Card -->
-                        <div class="bg-white rounded-lg shadow-sm border border-gray-100">
-                            <div class="p-6">
-                                <h3 class="text-lg font-google-sans mb-4 text-gray-800">Últimos Posts Publicados</h3>
-                                @if($postedPosts->isEmpty())
-                                    <p class="text-gray-600">Nenhum post publicado ainda.</p>
-                                @else
-                                    <div class="space-y-4">
-                                        @foreach($postedPosts as $post)
-                                            <div class="border rounded-lg p-4">
-                                                <div class="flex justify-between items-start">
-                                                    <div>
-                                                        <h4 class="font-medium text-gray-800">{{ $post->title }}</h4>
-                                                        <p class="text-sm text-gray-600">
-                                                            Publicado em: {{ $post->scheduled_for->format('d/m/Y H:i') }}
-                                                        </p>
-                                                        <p class="mt-2 text-gray-700">{{ $post->content }}</p>
-                                                    </div>
-                                                    <span class="px-2 py-1 text-xs rounded-full 
-                                                        {{ $post->type === 'promotion' ? 'bg-green-100 text-green-800' : 
-                                                           ($post->type === 'engagement' ? 'bg-blue-100 text-blue-800' : 
-                                                           'bg-gray-100 text-gray-800') }}">
-                                                        {{ ucfirst($post->type) }}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
                     </div>
                 </div>
             @endif
         </div>
     </div>
 
-    @push('scripts')
-    <script>
-        const businessId = {{ $business->id ?? 'null' }};
+    <!-- Modal para Eventos do Calendário -->
+    <div id="eventModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full" style="z-index: 1000;">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="modalTitle">
+                    Criar Novo Evento
+                </h3>
+                <form id="eventForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Título</label>
+                        <input type="text" id="eventTitle" name="title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-200">
+                    </div>
 
-        function refreshSuggestions() {
-            if (!businessId) {
-                showNotification('Você precisa cadastrar seu negócio primeiro.', 'error');
-                return;
-            }
-            
-            const button = document.querySelector('button[onclick="refreshSuggestions()"]');
-            button.disabled = true;
-            button.classList.add('opacity-75');
-            
-            const icon = button.querySelector('svg');
-            icon.classList.add('animate-spin');
-            
-            fetch(`/automation/suggestions/${businessId}?refresh=true`)
-                .then(response => response.json())
-                .then(data => {
-                    const container = document.getElementById('suggestions-container');
-                    
-                    if (!data.suggestions || data.suggestions.length === 0) {
-                        container.innerHTML = '<p class="text-gray-500 text-center p-4">Nenhuma sugestão disponível no momento.</p>';
-                        return;
-                    }
-                    
-                    container.innerHTML = data.suggestions.map(suggestion => `
-                        <div class="bg-gray-50 p-4 rounded-lg">
-                            <h4 class="font-medium mb-2">${suggestion.title || 'Sem título'}</h4>
-                            <p class="text-sm mb-3">${suggestion.message || suggestion.description || 'Sem descrição'}</p>
-                            <div class="flex justify-end space-x-2">
-                                <button onclick="applyImprovement('${suggestion.action_type}', ${JSON.stringify(suggestion.action_data)})"
-                                        class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 transition">
-                                    Aplicar Melhoria
-                                </button>
-                                <button onclick="dismissSuggestion(${suggestion.id})"
-                                        class="bg-gray-200 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-300 transition">
-                                    Ignorar
-                                </button>
-                            </div>
-                        </div>
-                    `).join('');
-                })
-                .catch(error => {
-                    console.error('Erro:', error);
-                    showNotification('Erro ao carregar sugestões: ' + error.message, 'error');
-                })
-                .finally(() => {
-                    button.disabled = false;
-                    button.classList.remove('opacity-75');
-                    icon.classList.remove('animate-spin');
-                });
-        }
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Descrição</label>
+                        <textarea id="eventDescription" name="description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-200"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Tipo</label>
+                        <select id="eventType" name="type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-200">
+                            <option value="post">Post</option>
+                            <option value="promotion">Promoção</option>
+                            <option value="event">Evento</option>
+                        </select>
+                    </div>
+
+                    <input type="hidden" id="eventStartDate" name="start_date">
+                    <input type="hidden" id="eventEndDate" name="end_date">
+                </form>
+                <div class="flex justify-end gap-3 mt-4">
+                    <button id="closeModal" class="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400">
+                        Cancelar
+                    </button>
+                    <button id="saveEvent" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @push('scripts')
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@4.4.0/main.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@4.4.0/main.min.js'></script>
+    <script>
+        let calendar;
 
         function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
@@ -229,30 +213,141 @@
             setTimeout(() => notification.remove(), 3000);
         }
 
-        function applyImprovement(type, data) {
-            fetch(`/automation/apply-improvement/${businessId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify({ improvement_type: type, data: data })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showNotification('Melhoria aplicada com sucesso!', 'success');
-                    refreshSuggestions();
-                } else {
-                    showNotification(data.error, 'error');
-                }
-            });
+        function loadSuggestions() {
+            fetch('/automation/calendar-suggestions')
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('suggestions-container');
+                    container.innerHTML = '';
+
+                    data.suggestions.forEach(suggestion => {
+                        container.innerHTML += `
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <h4 class="font-semibold">${suggestion.title}</h4>
+                                <p class="text-gray-600 mb-2">${suggestion.message}</p>
+                                <button onclick="addToCalendar('${suggestion.title}', '${suggestion.date}', '${suggestion.type}')" 
+                                        class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
+                                    Adicionar ao Calendário
+                                </button>
+                            </div>
+                        `;
+                    });
+                });
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            refreshSuggestions();
-            setInterval(refreshSuggestions, 300000);
+        function addToCalendar(title, date, type) {
+            calendar.addEvent({
+                title: title,
+                start: date,
+                allDay: true,
+                extendedProps: {
+                    type: type
+                }
+            });
+            showNotification('Evento adicionado ao calendário!');
+        }
+
+        function openModal(info) {
+            const modal = document.getElementById('eventModal');
+            const startDateInput = document.getElementById('eventStartDate');
+            const endDateInput = document.getElementById('eventEndDate');
+            
+            document.getElementById('eventForm').reset();
+            
+            startDateInput.value = info.startStr;
+            endDateInput.value = info.endStr || info.startStr;
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('eventModal').classList.add('hidden');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const calendarEl = document.getElementById('calendar-container');
+            calendar = new FullCalendar.Calendar(calendarEl, {
+                plugins: ['dayGrid', 'timeGrid', 'interaction'],
+                initialView: 'dayGridMonth',
+                locale: 'pt-br',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                events: '/automation/calendar-events',
+                editable: true,
+                selectable: true,
+                selectMirror: true,
+                dayMaxEvents: true,
+                select: openModal,
+                eventClick: function(info) {
+                    // Implementar edição do evento
+                    alert('Evento: ' + info.event.title);
+                }
+            });
+            
+            calendar.render();
+            loadSuggestions();
+
+            // Event Listeners
+            document.getElementById('closeModal').addEventListener('click', closeModal);
+            
+            document.getElementById('saveEvent').addEventListener('click', function() {
+                const eventData = {
+                    title: document.getElementById('eventTitle').value,
+                    description: document.getElementById('eventDescription').value,
+                    type: document.getElementById('eventType').value,
+                    start_date: document.getElementById('eventStartDate').value,
+                    end_date: document.getElementById('eventEndDate').value
+                };
+
+                if (!eventData.title) {
+                    showNotification('O título é obrigatório', 'error');
+                    return;
+                }
+
+                fetch('/automation/calendar-event', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify(eventData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        calendar.addEvent({
+                            title: eventData.title,
+                            start: eventData.start_date,
+                            end: eventData.end_date,
+                            extendedProps: {
+                                type: eventData.type,
+                                description: eventData.description
+                            }
+                        });
+                        showNotification('Evento criado com sucesso!');
+                        closeModal();
+                    } else {
+                        showNotification(data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    showNotification('Erro ao criar evento', 'error');
+                });
+            });
+
+            document.getElementById('eventModal').addEventListener('click', function(e) {
+                if (e.target === this) closeModal();
+            });
         });
+
+        function refreshSuggestions() {
+            loadSuggestions();
+            showNotification('Sugestões atualizadas!');
+        }
     </script>
     @endpush
 </x-app-layout>

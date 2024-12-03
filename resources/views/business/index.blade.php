@@ -44,161 +44,91 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                         </svg>
                         <h3 class="mt-2 text-lg font-google-sans text-gray-900">Nenhum negócio cadastrado</h3>
-                        <p class="mt-1 text-gray-500">Comece adicionando seu primeiro negócio ou importe do Google.</p>
-                        <div class="mt-6 flex justify-center space-x-4">
-                            <a href="{{ route('business.create') }}" 
-                               class="inline-flex items-center px-4 py-2 bg-google-blue text-white rounded-md text-sm hover:bg-google-blue/90 transition-colors">
-                                Adicionar Negócio
-                            </a>
+                        <p class="mt-1 text-gray-500">Comece importando seus negócios do Google Meu Negócio.</p>
+                        <div class="mt-6">
                             <a href="{{ route('google.auth') }}" 
-                               class="inline-flex items-center px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md text-sm hover:bg-gray-50 transition-colors">
+                               class="inline-flex items-center px-4 py-2 bg-google-blue text-white rounded-md text-sm hover:bg-google-blue/90 transition-colors">
                                 Importar do Google
                             </a>
                         </div>
                     </div>
                 </div>
             @else
-                <!-- Insights e Automações -->
-                <div class="mb-8">
-                    <div class="bg-white rounded-lg shadow p-6">
-                        <h3 class="text-lg font-google-sans text-gray-900 mb-4">Insights e Automações</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <!-- Calendário Inteligente -->
-                            <div class="bg-gray-50 rounded-lg p-4">
-                                <h4 class="font-google-sans text-gray-900 mb-3">Calendário Inteligente</h4>
-                                <div class="space-y-2">
-                                    @foreach($calendarSuggestions ?? [] as $suggestion)
-                                    <div class="flex items-center justify-between bg-white p-3 rounded-lg">
-                                        <span class="text-sm text-gray-600">{{ $suggestion->message }}</span>
-                                        <button class="text-sm text-google-blue hover:text-google-blue/80 transition-colors">
-                                            Ativar
-                                        </button>
-                                    </div>
-                                    @endforeach
-                                </div>
-                            </div>
-
-                            <!-- Proteção Automática -->
-                            <div class="bg-gray-50 rounded-lg p-4">
-                                <h4 class="font-google-sans text-gray-900 mb-3">Proteção Automática</h4>
-                                <div class="space-y-3">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-sm text-gray-600">Monitoramento 24/7</span>
-                                        <x-toggle-switch name="monitoring" :checked="true"/>
-                                    </div>
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-sm text-gray-600">Backup Automático</span>
-                                        <x-toggle-switch name="backup" :checked="true"/>
-                                    </div>
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-sm text-gray-600">Correção Automática</span>
-                                        <x-toggle-switch name="autocorrect" :checked="true"/>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Otimização IA -->
-                            <div class="bg-gray-50 rounded-lg p-4">
-                                <h4 class="font-google-sans text-gray-900 mb-3">Otimização por IA</h4>
-                                <div class="space-y-2">
-                                    @foreach($aiSuggestions ?? [] as $suggestion)
-                                    <div class="bg-white p-3 rounded-lg">
-                                        <p class="text-sm text-gray-600 mb-2">{{ $suggestion->message }}</p>
-                                        <div class="flex justify-end space-x-2">
-                                            <button class="text-sm text-google-green hover:text-google-green/80 transition-colors">
-                                                Aplicar
-                                            </button>
-                                            <button class="text-sm text-gray-500 hover:text-gray-600 transition-colors">
-                                                Ignorar
-                                            </button>
-                                        </div>
-                                    </div>
-                                    @endforeach
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Lista de Negócios -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     @foreach($businesses as $business)
-                    <div class="bg-white rounded-lg shadow">
+                    <div class="bg-white rounded-lg shadow overflow-hidden">
+                        <!-- Imagem do negócio -->
+                        <div class="aspect-w-16 aspect-h-9">
+                            <img src="{{ $business->cover_photo_url }}" 
+                                 alt="{{ $business->name }}" 
+                                 class="w-full h-full object-cover">
+                        </div>
+                        
                         <div class="p-6">
                             <div class="flex justify-between items-start mb-4">
                                 <div>
                                     <h3 class="text-lg font-google-sans text-gray-900 mb-1">{{ $business->name }}</h3>
-                                    <p class="text-gray-500">{{ $business->segment }}</p>
+                                    <div class="flex items-center mb-2">
+                                        <div class="flex items-center text-google-yellow">
+                                            @for($i = 1; $i <= 5; $i++)
+                                                <svg class="w-4 h-4 {{ $i <= $business->rating ? 'text-google-yellow' : 'text-gray-300' }}" 
+                                                     fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                                </svg>
+                                            @endfor
+                                        </div>
+                                        <span class="ml-2 text-sm text-gray-600">{{ $business->rating }} ({{ $business->review_count }} avaliações)</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm mb-3">{{ $business->description }}</p>
                                 </div>
-                                @if($business->google_business_id)
-                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-medium bg-google-blue/10 text-google-blue">
-                                        Google
-                                    </span>
-                                @endif
                             </div>
 
-                            <div class="space-y-2 mb-4">
-                                <p class="text-sm">
-                                    <span class="font-medium text-gray-700">Endereço:</span>
-                                    <span class="text-gray-600">{{ $business->address }}</span>
-                                </p>
-                                <p class="text-sm">
-                                    <span class="font-medium text-gray-700">Telefone:</span>
-                                    <span class="text-gray-600">{{ $business->phone }}</span>
-                                </p>
+                            <div class="space-y-3 mb-4">
+                                <div class="flex items-start">
+                                    <svg class="w-5 h-5 text-gray-500 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                    </svg>
+                                    <div>
+                                        <p class="text-sm text-gray-600">{{ $business->address }}</p>
+                                        <p class="text-sm text-gray-500">{{ $business->city }}, {{ $business->state }} - {{ $business->postal_code }}</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center">
+                                    <svg class="w-5 h-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                    </svg>
+                                    <p class="text-sm text-gray-600">{{ $business->phone }}</p>
+                                </div>
+
                                 @if($business->website)
-                                    <p class="text-sm">
-                                        <span class="font-medium text-gray-700">Website:</span>
+                                    <div class="flex items-center">
+                                        <svg class="w-5 h-5 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+                                        </svg>
                                         <a href="{{ $business->website }}" target="_blank" 
-                                           class="text-google-blue hover:text-google-blue/80 transition-colors">
+                                           class="text-sm text-google-blue hover:text-google-blue/80 transition-colors">
                                             {{ $business->website }}
                                         </a>
-                                    </p>
+                                    </div>
                                 @endif
-                            </div>
-
-                            <div class="mb-4 p-3 bg-gray-50 rounded-lg">
-                                <h4 class="text-sm font-google-sans text-gray-900 mb-2">Automações Ativas</h4>
-                                <div class="space-y-2">
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-sm text-gray-600">Posts Automáticos</span>
-                                        <x-toggle-switch name="auto_posts_{{$business->id}}" 
-                                                       :checked="$business->settings->auto_posts ?? false"/>
-                                    </div>
-                                    <div class="flex items-center justify-between">
-                                        <span class="text-sm text-gray-600">Respostas IA</span>
-                                        <x-toggle-switch name="ai_responses_{{$business->id}}" 
-                                                       :checked="$business->settings->ai_responses ?? false"/>
-                                    </div>
-                                </div>
                             </div>
 
                             <div class="flex justify-between items-center">
-                                <div class="flex space-x-4">
-                                    <a href="{{ route('analytics.dashboard', $business->id) }}" 
-                                       class="text-sm text-google-blue hover:text-google-blue/80 transition-colors">
-                                        Analytics
-                                    </a>
-                                    <a href="{{ route('business.automation', $business->id) }}" 
-                                       class="text-sm text-google-blue hover:text-google-blue/80 transition-colors">
-                                        Automações
-                                    </a>
-                                </div>
-                                <div class="flex space-x-2">
-                                    <a href="{{ route('business.edit', $business) }}" 
-                                       class="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors">
-                                        Editar
-                                    </a>
-                                    <form action="{{ route('business.destroy', $business) }}" method="POST" class="inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" 
-                                                onclick="return confirm('Tem certeza que deseja remover este negócio?')" 
-                                                class="px-3 py-1 text-xs font-medium text-google-red bg-google-red/10 rounded-md hover:bg-google-red/20 transition-colors">
-                                            Remover
-                                        </button>
-                                    </form>
-                                </div>
+                                <a href="{{ route('business.edit', $business) }}" 
+                                   class="text-sm text-gray-700 hover:text-gray-900 transition-colors">
+                                    Editar
+                                </a>
+                                <form action="{{ route('business.destroy', $business) }}" method="POST" class="inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" 
+                                            onclick="return confirm('Tem certeza que deseja remover este negócio?')" 
+                                            class="text-sm text-google-red hover:text-google-red/80 transition-colors">
+                                        Remover
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     </div>
