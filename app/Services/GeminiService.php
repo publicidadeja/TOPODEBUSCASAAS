@@ -263,90 +263,31 @@ class GeminiService
         return $this->generateResponse($prompt);
     }
 
-    public function analyzeBusinessData($business, $analytics)
-    {
-        try {
-            $serper = app(\App\Services\SerperService::class);
-            // Validar dados de entrada
-            if (!$business || !$analytics) {
-                throw new \InvalidArgumentException('Dados do negócio ou analytics faltando');
-            }
-
-            // Instancia o SerperService
-            $serper = app(SerperService::class);
-            
-            // Faz busca por concorrentes
-            $searchQuery = "{$business->name} concorrentes {$business->segment} {$business->address}";
-            $searchResults = $serper->search($searchQuery);
-            
-            // Prepara prompt com dados reais
-            $prompt = $this->buildAnalysisPrompt($business, $analytics, $searchResults);
-            
-            // Chama API do Gemini
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-            ])->post($this->apiEndpoint . '?key=' . $this->apiKey, [
-                'contents' => [
-                    [
-                        'parts' => [
-                            ['text' => $prompt]
-                        ]
-                    ]
-                ]
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return $this->parseAnalysisResponse($data);
-            }
-
-            Log::error('Erro na resposta do Gemini: ' . $response->body());
-            return null;
-
-        } catch (\Exception $e) {
-            Log::error('Erro ao analisar dados: ' . $e->getMessage());
-            return null;
-        }
-    }
-
-    private function buildAnalysisPrompt($business, $analytics, $searchResults)
-    {
-        $views = is_array($analytics['views']) ? array_sum($analytics['views']) : $analytics['views'];
-        $clicks = is_array($analytics['clicks']) ? array_sum($analytics['clicks']) : $analytics['clicks'];
-        $conversionRate = $analytics['currentConversion'] ?? 0;
+    public function analyzeBusinessData($business, $analytics, $competitors = null)
+{
+    $prompt = $this->buildAnalysisPrompt($business, $analytics, $competitors);
+    
+    try {
+        $response = $this->generateContent($prompt);
         
-        $viewsGrowth = $analytics['growth']['views'] ?? 0;
-        $clicksGrowth = $analytics['growth']['clicks'] ?? 0;
-
-        $competitorsInfo = "";
-        if ($searchResults && isset($searchResults['organic'])) {
-            $competitorsInfo = "\n\nConcorrentes encontrados:\n";
-            foreach ($searchResults['organic'] as $competitor) {
-                $competitorsInfo .= "- {$competitor['title']}\n";
-            }
-        }
-
-        return "Analise os seguintes dados do negócio e forneça insights e recomendações:
-
-        Negócio: {$business->name}
-        Segmento: {$business->segment}
-
-        Métricas dos últimos 30 dias:
-        - Visualizações: {$views}
-        - Cliques: {$clicks}
-        - Taxa de Conversão: {$conversionRate}%
-
-        Tendências:
-        - Crescimento de visualizações: {$viewsGrowth}%
-        - Crescimento de cliques: {$clicksGrowth}%
-        {$competitorsInfo}
-
-        Por favor, forneça:
-        1. Análise do desempenho atual
-        2. Identificação de problemas
-        3. Oportunidades de melhoria
-        4. Recomendações específicas";
+        return [
+            'suggestions' => $this->extractSuggestions($response),
+            'analysis' => $response
+        ];
+    } catch (\Exception $e) {
+        Log::error('Erro na análise do Gemini: ' . $e->getMessage());
+        return null;
     }
+}
+
+private function buildAnalysisPrompt($business, $analytics, $competitors)
+{
+    return "Analise os seguintes dados e sugira melhorias específicas:
+    Negócio: {$business->name}
+    Segmento: {$business->segment}
+    Dados Analytics: " . json_encode($analytics) . "
+    Dados Concorrentes: " . json_encode($competitors);
+}
 
     private function parseAnalysisResponse($data)
     {
@@ -364,4 +305,6 @@ class GeminiService
             'timestamp' => now() 
         ];
     }
+
+    
 }

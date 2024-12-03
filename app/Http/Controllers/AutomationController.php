@@ -20,33 +20,38 @@ class AutomationController extends Controller
         $this->serper = $serper;
     }
 
-    public function getImprovementSuggestions(Business $business)
-    {
-        try {
-            // Buscar dados dos concorrentes
-            $competitors = $this->serper->search("{$business->name} concorrentes {$business->segment} {$business->address}");
-            
-            // Analisar dados com Gemini
-            $analysis = $this->gemini->analyzeBusinessData($business, [
-                'competitors' => $competitors,
-                'metrics' => $this->getBusinessMetrics($business),
-                'segment' => $business->segment
-            ]);
+    public function getImprovementSuggestions(Business $business, Request $request)
+{
+    try {
+        // Se for uma atualização manual, força a geração de novas sugestões
+        $forceRefresh = $request->query('refresh', false);
+        
+        // Buscar dados dos concorrentes
+        $competitors = $this->serper->search("{$business->name} concorrentes {$business->segment} {$business->address}");
+        
+        // Analisar dados com Gemini
+        $analysis = $this->gemini->analyzeBusinessData($business, [
+            'competitors' => $competitors,
+            'metrics' => $this->getBusinessMetrics($business),
+            'segment' => $business->segment,
+            'force_refresh' => $forceRefresh
+        ]);
 
-            // Criar notificações baseadas na análise
-            $this->createImprovementNotifications($business, $analysis);
+        // Criar notificações baseadas na análise
+        $this->createImprovementNotifications($business, $analysis);
 
-            return response()->json([
-                'success' => true,
-                'suggestions' => $analysis,
-                'notifications_created' => true
-            ]);
+        return response()->json([
+            'success' => true,
+            'suggestions' => $analysis,
+            'notifications_created' => true,
+            'refreshed' => $forceRefresh
+        ]);
 
-        } catch (\Exception $e) {
-            \Log::error('Erro ao gerar sugestões: ' . $e->getMessage());
-            return response()->json(['error' => 'Erro ao gerar sugestões'], 500);
-        }
+    } catch (\Exception $e) {
+        \Log::error('Erro ao gerar sugestões: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao gerar sugestões'], 500);
     }
+}
 
     private function createImprovementNotifications($business, $analysis)
     {

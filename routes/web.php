@@ -11,6 +11,11 @@ use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 
+Route::prefix('automation')->middleware(['auth'])->group(function () {
+    Route::get('/suggestions/{business}', [AutomationController::class, 'getImprovementSuggestions']);
+    Route::post('/apply-improvement/{business}', [AutomationController::class, 'applyImprovement']);
+});
+
 Route::prefix('automation')->group(function () {
     Route::get('/suggestions/{business}', [AutomationController::class, 'getImprovementSuggestions'])
          ->name('automation.suggestions');
