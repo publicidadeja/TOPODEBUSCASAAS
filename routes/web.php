@@ -10,6 +10,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\SettingsController;
 
 
 Route::get('/automation/protection/{business}', [AutomationController::class, 'protection'])
@@ -128,7 +129,8 @@ Route::middleware(['auth'])->group(function () {
         
         // Add this new route for settings
         Route::get('/{business}/settings', [SettingsController::class, 'index'])->name('settings');
-    });
+    Route::put('/{business}/settings', [SettingsController::class, 'update'])->name('settings.update');
+});
     
     // Rotas de Metas
     Route::prefix('business/{business}/goals')->name('goals.')->group(function () {

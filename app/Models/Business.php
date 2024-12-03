@@ -17,7 +17,12 @@ class Business extends Model
         'google_business_id',
         'description',
         'website',
-        'user_id'
+        'user_id',
+        'settings', // Adicione esta linha aos fillable
+    ];
+
+    protected $casts = [
+        'settings' => 'array', // Adicione esta linha para o cast do settings
     ];
 
     /**
