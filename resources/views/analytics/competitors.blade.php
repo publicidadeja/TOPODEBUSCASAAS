@@ -273,53 +273,69 @@
 @push('scripts')
 <script>
     function updateGeminiAnalysis() {
-        // Mostra loading
-        document.getElementById('geminiLoading').classList.remove('hidden');
-        document.getElementById('geminiContent').classList.add('opacity-50');
+    // Mostra loading
+    document.getElementById('geminiLoading').classList.remove('hidden');
+    document.getElementById('geminiContent').classList.add('opacity-50');
 
-        // Faz a requisição para atualizar a análise
-        fetch(`/analytics/update-gemini-analysis/{{ $selectedBusiness->id }}`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Atualiza o conteúdo
-            document.getElementById('marketOverview').textContent = data.market_overview;
-            
-            // Atualiza análise de concorrentes
-            const competitorList = document.getElementById('competitorAnalysis');
-            competitorList.innerHTML = data.competitor_insights.map(insight => 
-                `<li>${insight}</li>`
-            ).join('');
+    // Faz a requisição
+    fetch(`/analytics/update-gemini-analysis/{{ $business->id }}`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erro na resposta do servidor');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.message || 'Erro ao atualizar análise');
+        }
 
-            // Atualiza recomendações
-            const recommendationsList = document.getElementById('recommendations');
-            recommendationsList.innerHTML = data.recommendations.map(rec => 
-                `<li>${rec}</li>`
-            ).join('');
+        // Atualiza o conteúdo
+        document.getElementById('marketOverview').textContent = data.market_overview;
+        
+        // Atualiza análise de concorrentes
+        const competitorList = document.getElementById('competitorAnalysis');
+        competitorList.innerHTML = data.competitor_insights.map(insight => 
+            `<li>${insight}</li>`
+        ).join('');
 
-            // Atualiza timestamp
-            document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+        // Atualiza recomendações
+        const recommendationsList = document.getElementById('recommendations');
+        recommendationsList.innerHTML = data.recommendations.map(rec => 
+            `<li>${rec}</li>`
+        ).join('');
 
-            // Esconde loading
-            document.getElementById('geminiLoading').classList.add('hidden');
-            document.getElementById('geminiContent').classList.remove('opacity-50');
+        // Atualiza timestamp
+        document.getElementById('lastUpdate').textContent = new Date(data.updated_at).toLocaleString();
 
-            // Mostra mensagem de sucesso
-            alert('Análise atualizada com sucesso!');
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            alert('Erro ao atualizar análise. Tente novamente.');
-            document.getElementById('geminiLoading').classList.add('hidden');
-            document.getElementById('geminiContent').classList.remove('opacity-50');
+        // Mostra mensagem de sucesso
+        Swal.fire({
+            title: 'Sucesso!',
+            text: 'Análise atualizada com sucesso',
+            icon: 'success'
         });
-    }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        Swal.fire({
+            title: 'Erro',
+            text: error.message || 'Erro ao atualizar análise. Tente novamente.',
+            icon: 'error'
+        });
+    })
+    .finally(() => {
+        // Esconde loading
+        document.getElementById('geminiLoading').classList.add('hidden');
+        document.getElementById('geminiContent').classList.remove('opacity-50');
+    });
+}
 </script>
 @endpush
 

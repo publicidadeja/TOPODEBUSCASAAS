@@ -748,6 +748,78 @@ private function prepareCompetitorData($analytics)
     ];
 }
 
+public function updateGeminiAnalysis(Business $business)
+{
+    try {
+        // Verificar permissão
+        if ($business->user_id !== auth()->id()) {
+            return response()->json([
+                'error' => 'Não autorizado'
+            ], 403);
+        }
+
+        // Buscar dados analíticos
+        $endDate = Carbon::now();
+        $startDate = Carbon::now()->subDays(30);
+        
+        $businessAnalytics = BusinessAnalytics::where('business_id', $business->id)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->orderBy('date')
+            ->get();
+
+        // Preparar dados
+        $mainBusinessData = $this->prepareCompetitorData($businessAnalytics);
+
+        // Buscar concorrentes
+        $competitors = $business->competitors()
+            ->with(['analytics' => function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('date', [$startDate, $endDate]);
+            }])
+            ->get();
+
+        $competitorsData = [];
+        foreach ($competitors as $competitor) {
+            $competitorsData[$competitor->id] = array_merge(
+                [
+                    'name' => $competitor->name,
+                    'website' => $competitor->website,
+                    'segment' => $competitor->segment,
+                    'address' => $competitor->address
+                ],
+                $this->prepareCompetitorData($competitor->analytics)
+            );
+        }
+
+        // Gerar análise
+        $prompt = $this->buildCompetitorAnalysisPrompt($business, $mainBusinessData, $competitorsData);
+        $analysis = $this->geminiService->generateContent($prompt);
+
+        // Estruturar resposta
+        return response()->json([
+            'success' => true,
+            'market_overview' => $analysis['content'],
+            'competitor_insights' => [
+                'Análise de mercado atualizada com sucesso.',
+                'Dados processados para ' . count($competitorsData) . ' concorrentes.',
+                'Período analisado: últimos 30 dias'
+            ],
+            'recommendations' => [
+                'Mantenha o monitoramento constante dos concorrentes',
+                'Avalie as tendências identificadas',
+                'Implemente as sugestões fornecidas'
+            ],
+            'updated_at' => now()->format('Y-m-d H:i:s')
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Erro na atualização da análise: ' . $e->getMessage());
+        return response()->json([
+            'error' => 'Erro ao atualizar análise',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+}
+
 
 
 }

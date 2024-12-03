@@ -11,6 +11,9 @@ use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 
+Route::post('/analytics/update-gemini-analysis/{business}', [AnalyticsController::class, 'updateGeminiAnalysis'])
+    ->name('analytics.update-gemini-analysis');
+
 Route::prefix('analytics')->group(function () {
     Route::get('/competitors-analysis/{business}', [AnalyticsController::class, 'analyzeCompetitors']);
     Route::get('/smart-post/{business}', [AutomationController::class, 'createSmartPost']);
