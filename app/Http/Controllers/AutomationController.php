@@ -1292,26 +1292,41 @@ public function createScheduledPost($business, $postData)
 public function getSegmentEvents(Business $business)
 {
     try {
-        // Obter eventos específicos do segmento
-        $segment = $business->segment;
-        $currentMonth = now()->month;
-        
-        // Verificar eventos sazonais baseados no segmento
-        $seasonalEvents = $this->getSeasonalEventsBySegment($segment, $currentMonth);
-        
-        // Verificar datas comemorativas próximas
-        $upcomingHolidays = $this->getUpcomingHolidays($currentMonth);
-        
+        $events = $this->aiAnalysis->getSeasonalEvents($business);
         return response()->json([
             'success' => true,
-            'seasonal_events' => $seasonalEvents,
-            'upcoming_holidays' => $upcomingHolidays
+            'seasonal_events' => $events
         ]);
     } catch (\Exception $e) {
-        \Log::error('Erro ao buscar eventos do segmento: ' . $e->getMessage());
+        \Log::error('Erro ao buscar eventos sazonais: ' . $e->getMessage());
         return response()->json([
             'success' => false,
-            'message' => 'Erro ao buscar eventos'
+            'error' => 'Erro ao buscar eventos sazonais'
+        ], 500);
+    }
+}
+
+public function updateCalendarEvent(Request $request)
+{
+    try {
+        $validated = $request->validate([
+            'id' => 'required',
+            'start' => 'required|date',
+            'end' => 'required|date'
+        ]);
+
+        $event = CalendarEvent::findOrFail($validated['id']);
+        $event->update([
+            'start_date' => $validated['start'],
+            'end_date' => $validated['end']
+        ]);
+
+        return response()->json(['success' => true]);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao atualizar evento: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'error' => 'Erro ao atualizar evento'
         ], 500);
     }
 }
