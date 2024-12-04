@@ -15,8 +15,9 @@ class Kernel extends ConsoleKernel
 
     protected function schedule(Schedule $schedule)
     {
-
-        $schedule->command('businesses:analyze')->daily();
+        $schedule->command('business:analyze')
+        ->dailyAt('02:00')
+        ->withoutOverlapping();
         $schedule->command('analytics:update')
                  ->dailyAt('00:01')
                  ->appendOutputTo(storage_path('logs/analytics.log'));
@@ -28,6 +29,8 @@ class Kernel extends ConsoleKernel
 
         require base_path('routes/console.php');
     }
+
+    
 
     
 }

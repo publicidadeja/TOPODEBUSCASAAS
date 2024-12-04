@@ -12,14 +12,169 @@ use App\Services\SerperService;
 class AutomationController extends Controller
 {
     protected $gemini;
-    protected $serper;
+protected $serper;
+protected $googleBusiness;
+protected $aiAnalysis;
 
-    public function __construct(GeminiService $gemini, SerperService $serper)
-    {
-        $this->gemini = $gemini;
-        $this->serper = $serper;
+public function __construct(
+    GeminiService $gemini, 
+    SerperService $serper,
+    AIAnalysisService $aiAnalysis
+) {
+    $this->gemini = $gemini;
+    $this->serper = $serper;
+    $this->aiAnalysis = $aiAnalysis;
+}
+
+public function getAIInsights(Business $business)
+{
+    try {
+        $insights = [
+            'performance' => $this->aiAnalysis->analyzeBusinessPerformance($business),
+            'content' => $this->aiAnalysis->generateContentSuggestions($business),
+            'competitors' => $this->aiAnalysis->analyzeCompetitors($business)
+        ];
+
+        return response()->json([
+            'success' => true,
+            'insights' => $insights
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao gerar insights: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao gerar insights'], 500);
     }
+}
 
+private function getBusinessMetrics($business)
+{
+    return [
+        'views' => $business->analytics()->sum('views'),
+        'clicks' => $business->analytics()->sum('clicks'),
+        'calls' => $business->analytics()->sum('calls'),
+        'conversion_rate' => $business->getConversionRate(),
+        'growth_rate' => $business->getGrowthRate()
+    ];
+}
+
+private function isRainySeason()
+{
+    // Implementar lógica de verificação de estação chuvosa
+    // Pode usar uma API de clima ou definir manualmente os meses
+    $rainyMonths = [11, 12, 1, 2, 3]; // exemplo
+    return in_array(now()->month, $rainyMonths);
+}
+
+private function handlePhotoPostSuggestion($business)
+{
+    try {
+        // Gerar sugestão de post com foto
+        $suggestion = $this->gemini->generatePhotoPostSuggestion($business);
+        
+        // Criar post automatizado
+        $post = AutomatedPost::create([
+            'business_id' => $business->id,
+            'type' => 'photo',
+            'title' => $suggestion['title'],
+            'content' => $suggestion['content'],
+            'scheduled_for' => now()->addDay(),
+            'status' => 'pending'
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sugestão de post com foto criada',
+            'post' => $post
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao criar sugestão: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+private function handleServiceHighlight($business, $data)
+{
+    try {
+        // Atualizar destaque do serviço
+        $this->googleBusiness->updateServiceHighlight($business, $data['service']);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Serviço destacado com sucesso'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao destacar serviço: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+private function handleDescriptionUpdate($business, $data)
+{
+    try {
+        // Atualizar descrição do negócio
+        $this->googleBusiness->updateBusinessDescription(
+            $business,
+            $data['highlight']
+        );
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Descrição atualizada com sucesso'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao atualizar descrição: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+private function handleDeliveryActivation($business)
+{
+    try {
+        // Ativar opção de delivery
+        $this->googleBusiness->updateBusinessAttributes($business, [
+            'has_delivery' => true
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Delivery ativado com sucesso'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao ativar delivery: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+private function getReviewsData($business, $params)
+{
+    return [
+        'total' => $business->reviews()->count(),
+        'average_rating' => $business->reviews()->avg('rating'),
+        'response_rate' => $this->calculateResponseRate($business),
+        'sentiment_analysis' => $this->analyzeSentiment($business->reviews)
+    ];
+}
+
+private function calculateResponseRate($business)
+{
+    $totalReviews = $business->reviews()->count();
+    $respondedReviews = $business->reviews()->whereNotNull('response')->count();
+    
+    return $totalReviews > 0 ? ($respondedReviews / $totalReviews) * 100 : 0;
+}
+
+private function analyzeSentiment($reviews)
+{
+    // Usar o Gemini para análise de sentimento
+    return $this->gemini->analyzeSentiment($reviews);
+}
     public function getImprovementSuggestions(Business $business, Request $request)
 {
     try {
@@ -1064,6 +1219,62 @@ public function createSmartPost(Business $business)
 public function protection(Business $business)
 {
     return view('automation.protection', compact('business'));
+}
+
+public function provideFeedback(Request $request, Business $business)
+{
+    $validated = $request->validate([
+        'suggestion_id' => 'required|string',
+        'feedback_type' => 'required|in:helpful,not_helpful',
+        'comments' => 'nullable|string'
+    ]);
+
+    try {
+        // Registrar feedback
+        $feedback = $business->suggestionFeedback()->create([
+            'suggestion_id' => $validated['suggestion_id'],
+            'feedback_type' => $validated['feedback_type'],
+            'comments' => $validated['comments'],
+            'user_id' => auth()->id()
+        ]);
+
+        // Atualizar modelo de IA com o feedback
+        $this->gemini->updateModelWithFeedback($feedback);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Feedback registrado com sucesso'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => 'Erro ao registrar feedback: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+public function handleInsight(Business $business, Notification $notification)
+{
+    // Marcar notificação como lida
+    $notification->update(['read_at' => now()]);
+
+    // Redirecionar para a ação apropriada baseada no tipo
+    switch ($notification->action_type) {
+        case 'update_photos':
+            return redirect()->route('automation.photos', [
+                'business' => $business->id,
+                'suggestion' => $notification->id
+            ]);
+        
+        case 'update_description':
+            return redirect()->route('automation.description', [
+                'business' => $business->id,
+                'suggestion' => $notification->id
+            ]);
+        
+        default:
+            return redirect()->route('automation.index')
+                ->with('notification_id', $notification->id);
+    }
 }
 
 }

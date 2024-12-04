@@ -20,7 +20,10 @@ class BusinessController extends Controller
 
         return view('business.index', compact('businesses'));
     }
-
+    public function create()
+    {
+        return view('business.create');
+    }
 
     /**
      * Store a newly created resource in storage.

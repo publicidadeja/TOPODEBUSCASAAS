@@ -12,6 +12,45 @@ use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SettingsController;
 
+// routes/web.php
+
+Route::prefix('automation')->middleware(['auth'])->group(function () {
+    Route::post('/feedback', [AIFeedbackController::class, 'store'])
+         ->name('automation.feedback');
+    Route::get('/dashboard', [AIFeedbackController::class, 'dashboard'])
+         ->name('automation.dashboard');
+    Route::get('/export-feedback', [AIFeedbackController::class, 'export'])
+         ->name('automation.export-feedback');
+});
+
+
+Route::prefix('automation')->middleware(['auth'])->group(function () {
+    Route::get('/handle-insight/{business}/{notification}', [AutomationController::class, 'handleInsight'])
+         ->name('automation.handle-insight');
+});
+
+
+Route::prefix('automation')->middleware(['auth'])->group(function () {
+    Route::get('/dashboard', [AutomationController::class, 'dashboard'])
+         ->name('automation.dashboard');
+    Route::post('/feedback', [AutomationController::class, 'provideFeedback'])
+         ->name('automation.feedback');
+    Route::get('/export/{type}', [AutomationController::class, 'exportReport'])
+         ->name('automation.export');
+});
+
+Route::prefix('automation')->middleware(['auth'])->group(function () {
+    Route::get('/insights/{business}', [AutomationController::class, 'getAIInsights'])
+         ->name('automation.insights');
+});
+
+Route::prefix('automation')->group(function () {
+    Route::post('/setup/{business}', [AutomationController::class, 'setupAutomation'])
+         ->name('automation.setup');
+    Route::post('/toggle/{business}/{feature}', [AutomationController::class, 'toggleAutomation'])
+         ->name('automation.toggle');
+});
+
 
 Route::get('/automation/protection/{business}', [AutomationController::class, 'protection'])
     ->name('automation.protection');

@@ -9,7 +9,7 @@ class BusinessAnalytics extends Model
 {
     use HasFactory;
 
-    protected $table = 'analytics';
+    protected $table = 'business_analytics';
 
     protected $fillable = [
         'business_id',

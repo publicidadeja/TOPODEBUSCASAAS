@@ -237,4 +237,36 @@ protected function doImportBusinesses($user)
         }
         return $message;
     }
+
+    // Add to GoogleBusinessService.php
+    public function handleWebhook(Request $request)
+    {
+        $notification = $request->all();
+        Log::info('Received webhook from Google:', $notification);
+        
+        // Process notification based on type
+        switch ($notification['type']) {
+            case 'BUSINESS_INFORMATION_CHANGED':
+                $this->updateBusinessInformation($notification['location']);
+                break;
+            case 'NEW_REVIEW':
+                $this->processNewReview($notification['review']);
+                break;
+            // Add other notification types as needed
+        }
+    }
+
+// Add to GoogleBusinessService.php
+private function monitorApiHealth()
+{
+    try {
+        $response = $this->service->accounts->listAccounts();
+        Log::info('Google API health check passed');
+        return true;
+    } catch (Exception $e) {
+        Log::error('Google API health check failed: ' . $e->getMessage());
+        // Notify administrators
+        return false;
+    }
+}
 }
