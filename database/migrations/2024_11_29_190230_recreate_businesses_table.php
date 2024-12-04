@@ -64,10 +64,16 @@ return new class extends Migration
     }
 
     public function down()
-    {
-        Schema::dropIfExists('business_hours');
-        Schema::dropIfExists('automated_posts');
-        Schema::dropIfExists('business_analytics');
-        Schema::dropIfExists('businesses');
-    }
+{
+    Schema::dropIfExists('holiday_hours');
+    Schema::dropIfExists('calendar_events');
+    Schema::dropIfExists('business_analytics');
+    Schema::dropIfExists('business_hours');
+    Schema::dropIfExists('automated_posts');
+    Schema::dropIfExists('business_competitors');
+    Schema::dropIfExists('business_goals');
+    Schema::dropIfExists('notification_settings');
+    Schema::dropIfExists('notifications');
+    Schema::dropIfExists('businesses');
+}
 };
