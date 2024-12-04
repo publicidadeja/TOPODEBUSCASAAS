@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     public function up()
-    {
+{
+    if (!Schema::hasTable('business_analytics')) {
         Schema::create('business_analytics', function (Blueprint $table) {
             $table->id();
             $table->foreignId('business_id')->constrained()->onDelete('cascade');
@@ -19,11 +20,9 @@ return new class extends Migration
             $table->json('user_locations')->nullable();
             $table->json('search_keywords')->nullable();
             $table->timestamps();
-
-            // Índice composto para melhor performance
-            $table->index(['business_id', 'date']);
         });
     }
+}
 
     public function down()
     {
