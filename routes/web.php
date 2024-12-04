@@ -12,7 +12,9 @@ use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SettingsController;
 
-// routes/web.php
+Route::get('/automation/segment-events/{business}', [AutomationController::class, 'getSegmentEvents'])
+    ->name('automation.segment-events');
+
 
 Route::prefix('automation')->middleware(['auth'])->group(function () {
     Route::post('/feedback', [AIFeedbackController::class, 'store'])

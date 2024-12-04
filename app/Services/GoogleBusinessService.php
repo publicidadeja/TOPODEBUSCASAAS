@@ -269,4 +269,17 @@ private function monitorApiHealth()
         return false;
     }
 }
+
+public function updateBusinessHours($business, $specialHours) 
+{
+    try {
+        $this->setupClientToken($business->user);
+        // Implementar lógica de atualização de horários
+        return true;
+    } catch (\Exception $e) {
+        Log::error('Erro ao atualizar horários: ' . $e->getMessage());
+        return false;
+    }
+}
+
 }

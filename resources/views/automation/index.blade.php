@@ -86,6 +86,37 @@
                             </div>
                         </div>
 
+                        <div class="mt-4">
+    <button id="checkSeasonalEvents" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+        Verificar Eventos Sazonais
+    </button>
+</div>
+
+@push('scripts')
+<script>
+document.getElementById('checkSeasonalEvents').addEventListener('click', async () => {
+    try {
+        const response = await fetch(`/automation/segment-events/${businessId}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            // Adicionar eventos ao calendário
+            data.seasonal_events.forEach(event => {
+                calendar.addEvent({
+                    title: event,
+                    start: new Date(),
+                    allDay: true,
+                    className: 'seasonal-event'
+                });
+            });
+        }
+    } catch (error) {
+        console.error('Erro ao buscar eventos sazonais:', error);
+    }
+});
+</script>
+@endpush
+
                         <!-- Calendário -->
                         <div class="bg-white rounded-lg shadow-sm border border-gray-100">
                             <div class="p-6">
@@ -94,6 +125,7 @@
                             </div>
                         </div>
                     </div>
+
 
                     <!-- Coluna Direita -->
                     <div class="space-y-6">
@@ -194,6 +226,7 @@
             </div>
         </div>
     </div>
+
 
     @push('scripts')
     <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.js'></script>

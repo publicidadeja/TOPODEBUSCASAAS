@@ -8,6 +8,7 @@ use App\Models\AutomatedPost;
 use App\Services\GeminiService;
 use App\Models\CalendarEvent;
 use App\Services\SerperService;
+use App\Services\AIAnalysisService;
 
 class AutomationController extends Controller
 {
@@ -1274,6 +1275,147 @@ public function handleInsight(Business $business, Notification $notification)
         default:
             return redirect()->route('automation.index')
                 ->with('notification_id', $notification->id);
+    }
+}
+
+public function createScheduledPost($business, $postData)
+{
+    try {
+        // Implementar lógica de criação de posts programados
+        return true;
+    } catch (\Exception $e) {
+        Log::error('Erro ao criar post: ' . $e->getMessage());
+        return false;
+    }
+}
+
+public function getSegmentEvents(Business $business)
+{
+    try {
+        // Obter eventos específicos do segmento
+        $segment = $business->segment;
+        $currentMonth = now()->month;
+        
+        // Verificar eventos sazonais baseados no segmento
+        $seasonalEvents = $this->getSeasonalEventsBySegment($segment, $currentMonth);
+        
+        // Verificar datas comemorativas próximas
+        $upcomingHolidays = $this->getUpcomingHolidays($currentMonth);
+        
+        return response()->json([
+            'success' => true,
+            'seasonal_events' => $seasonalEvents,
+            'upcoming_holidays' => $upcomingHolidays
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao buscar eventos do segmento: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao buscar eventos'
+        ], 500);
+    }
+}
+
+protected function getSeasonalEventsBySegment($segment, $month)
+{
+    try {
+        // Primeiro tenta buscar eventos pré-definidos
+        $staticEvents = $this->getStaticEvents($segment, $month);
+        
+        // Se não encontrar eventos estáticos ou houver poucos, busca dinâmicamente
+        if (empty($staticEvents) || count($staticEvents) < 2) {
+            $dynamicEvents = $this->getDynamicEvents($segment, $month);
+            return array_merge($staticEvents, $dynamicEvents);
+        }
+
+        return $staticEvents;
+    } catch (\Exception $e) {
+        \Log::error('Erro ao buscar eventos sazonais: ' . $e->getMessage());
+        return [];
+    }
+}
+
+protected function getStaticEvents($segment, $month)
+{
+    $seasonalEvents = [
+        'restaurante' => [
+            1 => ['Pratos Leves de Verão', 'Happy Hour de Férias'],
+            2 => ['Cardápio de Carnaval', 'Festival de Frutos do Mar'],
+            3 => ['Dia da Mulher - Menu Especial', 'Festival Gastronômico'],
+            4 => ['Páscoa Gourmet', 'Festival de Risotos'],
+            5 => ['Dia das Mães', 'Festival de Massas'],
+            6 => ['Dia dos Namorados', 'Festival de Sopas'],
+            7 => ['Festival de Inverno', 'Noite do Fondue'],
+            8 => ['Dia dos Pais', 'Festival de Churrasco'],
+            9 => ['Festival da Primavera', 'Semana da Gastronomia'],
+            10 => ['Oktoberfest', 'Festival de Frutos do Mar'],
+            11 => ['Black Friday Gastronômica', 'Festival de Sobremesas'],
+            12 => ['Confraternizações', 'Cardápio Especial de Natal']
+        ],
+        'academia' => [
+            1 => ['Programa Verão em Forma', 'Desafio Ano Novo'],
+            2 => ['Projeto Carnaval Fitness', 'Aulas Especiais de Dança'],
+            3 => ['Mês da Mulher Fitness', 'Desafio Funcional'],
+            4 => ['Programa Páscoa Fit', 'Maratona de Spinning'],
+            5 => ['Desafio Dia das Mães', 'Aulas ao Ar Livre'],
+            6 => ['Programa Inverno Forte', 'Desafio Casais Fitness'],
+            7 => ['Férias Ativas', 'Gincana Fitness'],
+            8 => ['Desafio Dia dos Pais', 'Maratona de Musculação'],
+            9 => ['Primavera Fitness', 'Desafio Cross Training'],
+            10 => ['Outubro Rosa Fitness', 'Maratona de Yoga'],
+            11 => ['Black Friday Fitness', 'Desafio Pré-Verão'],
+            12 => ['Desafio Fim de Ano', 'Aulas Temáticas Natalinas']
+        ],
+        'salao_beleza' => [
+            1 => ['Promoção Volta às Aulas', 'Tratamentos de Verão'],
+            2 => ['Especial Carnaval', 'Day Spa dos Namorados'],
+            3 => ['Mês da Mulher', 'Festival de Hidratação'],
+            4 => ['Páscoa Beauty', 'Semana do Cabelo'],
+            5 => ['Especial Dia das Mães', 'Noivas de Maio'],
+            6 => ['Dia dos Namorados Beauty', 'Festival de Coloração'],
+            7 => ['Férias Beauty', 'Tratamentos de Inverno'],
+            8 => ['Dia dos Pais VIP', 'Mês do Noivo'],
+            9 => ['Primavera Beauty', 'Festival de Mechas'],
+            10 => ['Outubro Rosa', 'Noivas de Primavera'],
+            11 => ['Black Friday Beauty', 'Preparação para Festas'],
+            12 => ['Natal Relax', 'Reveillon Beauty']
+        ]
+    ];
+
+    return $seasonalEvents[$segment][$month] ?? [];
+}
+
+protected function getDynamicEvents($segment, $month)
+{
+    try {
+        $year = date('Y');
+        $monthName = date('F', mktime(0, 0, 0, $month, 1));
+        
+        $query = "eventos importantes {$segment} {$monthName} {$year} brasil";
+        
+        $results = $this->serper->search($query);
+        
+        $events = [];
+        if (!empty($results['organic'])) {
+            foreach ($results['organic'] as $result) {
+                if (count($events) >= 3) break;
+                
+                // Extrai o título do evento do resultado
+                $title = $result['title'];
+                // Remove datas e caracteres especiais
+                $title = preg_replace('/\d{4}|\||[-–]/', '', $title);
+                $title = trim($title);
+                
+                if (strlen($title) > 10 && strlen($title) < 50) {
+                    $events[] = $title;
+                }
+            }
+        }
+        
+        return $events;
+    } catch (\Exception $e) {
+        \Log::error('Erro ao buscar eventos dinâmicos: ' . $e->getMessage());
+        return [];
     }
 }
 
