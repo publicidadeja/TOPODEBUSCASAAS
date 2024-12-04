@@ -172,6 +172,89 @@
   .desktop-only {
     @apply block;
   }
+  .automation-controls .card {
+    @apply bg-white p-4 rounded-lg shadow;
+}
 
+.switch {
+    @apply relative inline-block w-14 h-7;
+}
+
+.switch input {
+    @apply opacity-0 w-0 h-0;
+}
+
+.slider {
+    @apply absolute cursor-pointer inset-0 bg-gray-300 transition-all rounded-full;
+}
+
+.slider:before {
+    @apply absolute h-5 w-5 left-1 bottom-1 bg-white transition-all rounded-full;
+    content: "";
+}
+
+input:checked + .slider {
+    @apply bg-blue-500;
+}
+
+input:checked + .slider:before {
+    @apply transform translate-x-7;
+}
   
+
+/* Estilos para o modal */
+.modal-container {
+  transition: all 0.3s ease-out;
+}
+
+.modal-content {
+  max-height: 90vh;
+}
+
+/* Estilos para o calendário */
+.fc-event {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fc-event:hover {
+  transform: scale(1.02);
+}
+
+/* Estilos para os cards de sugestão */
+.suggestion-card {
+  @apply bg-white p-4 rounded-lg shadow-sm border border-gray-100;
+  transition: all 0.2s ease;
+}
+
+.suggestion-card:hover {
+  @apply shadow-md;
+  transform: translateY(-2px);
+}
+
+/* Estilos para os botões de ação */
+.btn-primary {
+  @apply bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors;
+}
+
+.btn-secondary {
+  @apply bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors;
+}
+
+/* Estilos para notificações */
+.notification {
+  @apply fixed bottom-4 right-4 p-4 rounded-lg text-white;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+      transform: translateY(100%);
+      opacity: 0;
+  }
+  to {
+      transform: translateY(0);
+      opacity: 1;
+  }
+}
 }

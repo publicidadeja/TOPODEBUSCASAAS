@@ -1434,4 +1434,31 @@ protected function getDynamicEvents($segment, $month)
     }
 }
 
+public function getSegmentSuggestions(Business $business)
+{
+    try {
+        // Busca dados do segmento via Gemini
+        $segmentData = $this->gemini->analyzeBusinessSegment($business);
+        
+        // Busca tendências via Serper
+        $trends = $this->serper->search("{$business->segment} trends {$business->city}");
+        
+        // Combina dados para gerar sugestões
+        $suggestions = $this->aiAnalysis->generateSegmentSuggestions([
+            'segment_data' => $segmentData,
+            'trends' => $trends,
+            'business' => $business
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'suggestions' => $suggestions
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => 'Erro ao gerar sugestões: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
 }

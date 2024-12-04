@@ -12,6 +12,19 @@ use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SettingsController;
 
+Route::middleware(['auth'])->group(function () {
+    Route::prefix('automation')->group(function () {
+        Route::get('/', [AutomationController::class, 'index'])->name('automation.index');
+        Route::get('/calendar-events', [AutomationController::class, 'getCalendarEvents']);
+        Route::post('/create-event', [AutomationController::class, 'createCalendarEvent']);
+        Route::post('/toggle/{type}', [AutomationController::class, 'toggleAutomation']);
+        Route::get('/ai-suggestions', [AutomationController::class, 'getAIAssistantSuggestions']);
+        Route::post('/handle-suggestion', [AutomationController::class, 'handleAISuggestion']);
+        Route::get('/competitive-analysis', [AutomationController::class, 'getCompetitiveAnalysis']);
+        Route::get('/segment-events/{business}', [AutomationController::class, 'getSmartCalendarSuggestions']);
+    });
+});
+
 Route::get('/automation/segment-events/{business}', [AutomationController::class, 'getSegmentEvents'])
     ->name('automation.segment-events');
 
