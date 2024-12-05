@@ -8,6 +8,7 @@ use Google\Client;
 use Google\Service\MyBusinessBusinessInformation;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Request;
 use Exception;
 
 class GoogleBusinessService

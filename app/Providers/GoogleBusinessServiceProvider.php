@@ -9,7 +9,7 @@ class GoogleBusinessServiceProvider extends ServiceProvider
 {
     public function register()
     {
-        $this->app->singleton(GoogleBusinessService::class, function ($app) {
+        $this->app->bind(GoogleBusinessService::class, function ($app) {
             return new GoogleBusinessService();
         });
     }
