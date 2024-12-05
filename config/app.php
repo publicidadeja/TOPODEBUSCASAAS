@@ -157,6 +157,7 @@ return [
 
     'providers' => ServiceProvider::defaultProviders()->merge([
         App\Providers\GeminiServiceProvider::class,
+        Laravel\Sanctum\SanctumServiceProvider::class,
         /*
          * Package Service Providers...
          */
@@ -187,10 +188,7 @@ return [
         // 'Example' => App\Facades\Example::class,
     ])->toArray(),
 
-    'providers' => [
-    // ...
-    App\Providers\GoogleServiceProvider::class,
-],
+
 
 
 ];
