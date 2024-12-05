@@ -25,6 +25,14 @@ Route::middleware(['auth'])->group(function () {
     });
 });
 
+// Rotas para dados simulados do Google Meu Negócio
+Route::prefix('business/{business}')->group(function () {
+    Route::get('/google-data', [BusinessController::class, 'getGoogleData'])->name('business.google-data');
+    Route::get('/insights', [BusinessController::class, 'getInsights'])->name('business.insights');
+    Route::get('/metrics', [BusinessController::class, 'getMetrics'])->name('business.metrics');
+    Route::get('/automation-data', [BusinessController::class, 'getAutomationData'])->name('business.automation-data');
+});
+
 Route::get('/automation/segment-events/{business}', [AutomationController::class, 'getSegmentEvents'])
     ->name('automation.segment-events');
 

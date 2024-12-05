@@ -3,63 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Business;
+use App\Services\FakeGoogleBusinessService;
 use Illuminate\Http\Request;
 
 class BusinessController extends Controller
 {
-    public function index()
-    {
-        $user = auth()->user();
-        $businesses = $user->businesses()->latest()->get();
-        
-        \Log::info('Listando negócios', [
-            'user_id' => $user->id,
-            'count' => $businesses->count(),
-            'businesses' => $businesses->toArray()
-        ]);
 
-        return view('business.index', compact('businesses'));
-    }
-    public function create()
-    {
-        return view('business.create');
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'segment' => 'required|string|max:255',
-            'address' => 'required|string|max:255',
-            'phone' => 'required|string|max:255',
-            'website' => 'nullable|url|max:255',
-            'description' => 'nullable|string|max:1000',
-        ]);
-
-        $business = new Business($validated);
-        $business->user_id = auth()->id();
-        $business->save();
-
-        return redirect()
-            ->route('business.index')
-            ->with('success', 'Negócio cadastrado com sucesso!');
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Business $business)
-    {
-        $this->authorize('update', $business);
-        return view('business.edit', compact('business'));
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Business $business)
     {
         $this->authorize('update', $business);
@@ -71,7 +20,19 @@ class BusinessController extends Controller
             'phone' => 'required|string|max:255',
             'website' => 'nullable|url|max:255',
             'description' => 'nullable|string|max:1000',
+            'cover_photo' => 'nullable|image|max:2048', // Máximo 2MB
         ]);
+
+        if ($request->hasFile('cover_photo')) {
+            // Remove a imagem antiga se existir
+            if ($business->cover_photo_url) {
+                Storage::disk('public')->delete($business->cover_photo_url);
+            }
+
+            // Armazena a nova imagem
+            $path = $request->file('cover_photo')->store('business-covers', 'public');
+            $validated['cover_photo_url'] = $path;
+        }
 
         $business->update($validated);
 
@@ -80,17 +41,99 @@ class BusinessController extends Controller
             ->with('success', 'Negócio atualizado com sucesso!');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Business $business)
-    {
-        $this->authorize('delete', $business);
-        
-        $business->delete();
+    protected $googleService;
 
-        return redirect()
-            ->route('business.index')
-            ->with('success', 'Negócio removido com sucesso!');
+    public function __construct(FakeGoogleBusinessService $googleService)
+    {
+        $this->googleService = $googleService;
+    }
+
+    public function index()
+    {
+        $businesses = auth()->user()->businesses()->latest()->get();
+        foreach ($businesses as $business) {
+            // Adiciona dados simulados do Google para cada negócio
+            $business->googleData = $this->googleService->getBusinessData($business->id);
+            $business->insights = $this->googleService->getInsights($business->id);
+        }
+        
+        return view('business.index', compact('businesses'));
+    }
+
+    public function show(Business $business)
+    {
+        $googleData = $this->googleService->getBusinessData($business->id);
+        $insights = $this->googleService->getInsights($business->id);
+        
+        return view('business.show', compact('business', 'googleData', 'insights'));
+    }
+
+    // API Endpoints para dados simulados
+    public function getGoogleData(Business $business)
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $this->googleService->getBusinessData($business->id)
+        ]);
+    }
+
+    public function getInsights(Business $business, Request $request)
+    {
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+        
+        return response()->json([
+            'success' => true,
+            'data' => $this->googleService->getInsights($business->id, $startDate, $endDate)
+        ]);
+    }
+
+    public function getMetrics(Business $business)
+    {
+        $googleData = $this->googleService->getBusinessData($business->id);
+        
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'views' => $googleData['metrics']['views'],
+                'clicks' => $googleData['metrics']['clicks'],
+                'calls' => $googleData['metrics']['calls'],
+                'rating' => $googleData['rating'] ?? 0,
+                'reviews_count' => count($googleData['reviews'] ?? []),
+            ]
+        ]);
+    }
+
+    public function getAutomationData(Business $business)
+    {
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'suggestions' => [
+                    [
+                        'type' => 'post',
+                        'title' => 'Sugestão de Post',
+                        'message' => 'Que tal compartilhar fotos dos produtos mais vendidos esta semana?',
+                    ],
+                    [
+                        'type' => 'promotion',
+                        'title' => 'Sugestão de Promoção',
+                        'message' => 'Os clientes estão procurando muito por café expresso. Considere criar uma promoção.',
+                    ],
+                ],
+                'trends' => [
+                    [
+                        'keyword' => 'café artesanal',
+                        'growth' => '+15%',
+                        'period' => 'última semana',
+                    ],
+                    [
+                        'keyword' => 'café gourmet',
+                        'growth' => '+8%',
+                        'period' => 'último mês',
+                    ],
+                ],
+            ]
+        ]);
     }
 }
