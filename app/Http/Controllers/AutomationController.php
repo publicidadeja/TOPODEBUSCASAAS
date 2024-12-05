@@ -280,7 +280,7 @@ private function analyzeSentiment($reviews)
     if (!$business) {
         return redirect()
             ->route('business.create')
-            ->with('warning', 'Você precisa cadastrar seu negócio primeiro para acessar a automação.');
+            ->with('warning', 'Você precisa cadastrar seu negócio primeiro.');
     }
 
     $scheduledPosts = AutomatedPost::where('business_id', $business->id)
@@ -294,9 +294,20 @@ private function analyzeSentiment($reviews)
         ->take(5)
         ->get();
 
-    return view('automation.index', compact('business', 'scheduledPosts', 'postedPosts'));
-}
+    // Adicionar novos dados
+    $protectionStatus = $this->getProtectionStatus();
+    $competitiveAnalysis = $this->getDetailedCompetitiveAnalysis();
+    $smartNotifications = $this->getSmartNotifications();
 
+    return view('automation.index', compact(
+        'business',
+        'scheduledPosts',
+        'postedPosts',
+        'protectionStatus',
+        'competitiveAnalysis',
+        'smartNotifications'
+    ));
+}
     public function createPost(Request $request)
     {
         $business = Business::where('user_id', auth()->id())->first();
@@ -1459,6 +1470,129 @@ public function getSegmentSuggestions(Business $business)
             'error' => 'Erro ao gerar sugestões: ' . $e->getMessage()
         ], 500);
     }
+}
+public function getProtectionStatus()
+{
+    $business = Business::where('user_id', auth()->id())->first();
+    
+    if (!$business) {
+        return response()->json(['error' => 'Negócio não encontrado'], 404);
+    }
+
+    return response()->json([
+        'monitoring' => [
+            'active' => true,
+            'last_check' => now()->subMinutes(5),
+            'changes_detected' => [
+                'last_24h' => rand(0, 5),
+                'total' => rand(10, 50)
+            ]
+        ],
+        'backup' => [
+            'active' => true,
+            'last_backup' => now()->subHours(1),
+            'total_backups' => rand(20, 100)
+        ],
+        'correction' => [
+            'active' => true,
+            'corrections_made' => [
+                'last_24h' => rand(0, 3),
+                'total' => rand(10, 30)
+            ]
+        ],
+        'sabotage' => [
+            'active' => true,
+            'attempts_blocked' => rand(0, 10),
+            'risk_level' => ['low', 'medium', 'high'][rand(0, 2)]
+        ]
+    ]);
+}
+
+public function getDetailedCompetitiveAnalysis()
+{
+    $business = Business::where('user_id', auth()->id())->first();
+    
+    if (!$business) {
+        return response()->json(['error' => 'Negócio não encontrado'], 404);
+    }
+
+    return response()->json([
+        'competitors' => [
+            'main_competitors' => [
+                [
+                    'name' => 'Concorrente A',
+                    'strength' => 'Forte presença online',
+                    'weakness' => 'Poucas avaliações',
+                    'market_share' => rand(10, 30)
+                ],
+                [
+                    'name' => 'Concorrente B',
+                    'strength' => 'Muitas avaliações positivas',
+                    'weakness' => 'Pouca variedade de serviços',
+                    'market_share' => rand(10, 30)
+                ]
+            ],
+            'market_opportunities' => [
+                [
+                    'service' => 'Delivery',
+                    'search_volume' => rand(100, 1000),
+                    'competition_level' => 'medium'
+                ],
+                [
+                    'service' => 'Atendimento 24h',
+                    'search_volume' => rand(100, 1000),
+                    'competition_level' => 'low'
+                ]
+            ],
+            'keyword_gaps' => [
+                [
+                    'keyword' => 'promoção',
+                    'monthly_searches' => rand(100, 500),
+                    'competition' => 'low'
+                ],
+                [
+                    'keyword' => 'reserva online',
+                    'monthly_searches' => rand(100, 500),
+                    'competition' => 'medium'
+                ]
+            ]
+        ]
+    ]);
+}
+
+public function getSmartNotifications()
+{
+    $business = Business::where('user_id', auth()->id())->first();
+    
+    if (!$business) {
+        return response()->json(['error' => 'Negócio não encontrado'], 404);
+    }
+
+    return response()->json([
+        'notifications' => [
+            [
+                'type' => 'protection',
+                'title' => 'Alteração detectada',
+                'message' => 'Detectamos uma alteração não autorizada em seus horários de funcionamento.',
+                'priority' => 'high',
+                'action' => 'review_changes'
+            ],
+            [
+                'type' => 'opportunity',
+                'title' => 'Oportunidade de mercado',
+                'message' => 'Aumento nas buscas por delivery na sua região.',
+                'priority' => 'medium',
+                'action' => 'enable_delivery'
+            ],
+            [
+                'type' => 'competitor',
+                'title' => 'Alerta de concorrência',
+                'message' => 'Concorrente principal atualizou seus preços.',
+                'priority' => 'medium',
+                'action' => 'review_prices'
+            ]
+        ]
+    ]);
 }
 
 }

@@ -20,11 +20,17 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('name');
             $table->string('segment');
-            $table->string('address')->nullable();
-            $table->string('phone')->nullable();
-            $table->string('google_business_id')->nullable();
             $table->text('description')->nullable();
+            $table->string('address')->nullable();
+            $table->string('city')->nullable();
+            $table->string('state')->nullable();
+            $table->string('postal_code')->nullable();
+            $table->string('phone')->nullable();
             $table->string('website')->nullable();
+            $table->string('google_business_id')->nullable();
+            $table->json('settings')->nullable();
+            $table->timestamp('last_sync')->nullable();
+            $table->string('status')->default('active');
             $table->timestamps();
         });
 
@@ -64,16 +70,10 @@ return new class extends Migration
     }
 
     public function down()
-{
-    Schema::dropIfExists('holiday_hours');
-    Schema::dropIfExists('calendar_events');
-    Schema::dropIfExists('business_analytics');
-    Schema::dropIfExists('business_hours');
-    Schema::dropIfExists('automated_posts');
-    Schema::dropIfExists('business_competitors');
-    Schema::dropIfExists('business_goals');
-    Schema::dropIfExists('notification_settings');
-    Schema::dropIfExists('notifications');
-    Schema::dropIfExists('businesses');
-}
+    {
+        Schema::dropIfExists('business_hours');
+        Schema::dropIfExists('automated_posts');
+        Schema::dropIfExists('business_analytics');
+        Schema::dropIfExists('businesses');
+    }
 };

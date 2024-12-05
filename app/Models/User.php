@@ -2,20 +2,21 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasApiTokens, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
-    'name',
-    'email',
-    'password',
-    'google_token'
-];
+        'name',
+        'email',
+        'password',
+        'google_token',
+    ];
 
     protected $hidden = [
         'password',
@@ -27,18 +28,19 @@ class User extends Authenticatable
         'password' => 'hashed',
     ];
 
-    // Adicione esta relação
     public function businesses()
     {
         return $this->hasMany(Business::class);
     }
 
     public function getCurrentBusiness()
-{
-    $businessId = session('current_business_id');
-    if ($businessId) {
-        return $this->businesses()->find($businessId);
+    {
+        $currentBusinessId = session('current_business_id');
+        
+        if ($currentBusinessId) {
+            return $this->businesses()->find($currentBusinessId);
+        }
+        
+        return $this->businesses()->first();
     }
-    return $this->businesses()->first();
-}
 }

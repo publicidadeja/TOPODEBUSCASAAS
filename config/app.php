@@ -158,6 +158,7 @@ return [
     'providers' => ServiceProvider::defaultProviders()->merge([
         App\Providers\GeminiServiceProvider::class,
         Laravel\Sanctum\SanctumServiceProvider::class,
+        App\Providers\FakeGoogleServiceProvider::class,
         /*
          * Package Service Providers...
          */

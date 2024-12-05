@@ -283,4 +283,44 @@ public function updateBusinessHours($business, $specialHours)
     }
 }
 
+public function getBusinessInsights($businessId, $dateRange = '30daysAgo')
+{
+    try {
+        $this->setupClientToken(auth()->user());
+        
+        // Make the actual API call to Google My Business API
+        // This is a simplified example - you'll need to implement the actual API call
+        $response = $this->service->accounts_locations->getMetrics([
+            'name' => $businessId,
+            'dateRange' => $dateRange
+        ]);
+
+        return [
+            'views' => [
+                'total' => $response->views ?? 0,
+                'previous' => $response->previousViews ?? 0,
+                'trend' => $response->viewsTrend ?? 0
+            ],
+            'clicks' => [
+                'total' => $response->clicks ?? 0,
+                'previous' => $response->previousClicks ?? 0,
+                'trend' => $response->clicksTrend ?? 0
+            ],
+            'calls' => [
+                'total' => $response->calls ?? 0,
+                'previous' => $response->previousCalls ?? 0,
+                'trend' => $response->callsTrend ?? 0
+            ],
+            'direction_requests' => [
+                'total' => $response->directionRequests ?? 0,
+                'previous' => $response->previousDirectionRequests ?? 0,
+                'trend' => $response->directionRequestsTrend ?? 0
+            ]
+        ];
+    } catch (\Exception $e) {
+        \Log::error('Error fetching business insights: ' . $e->getMessage());
+        throw $e;
+    }
+}
+
 }
