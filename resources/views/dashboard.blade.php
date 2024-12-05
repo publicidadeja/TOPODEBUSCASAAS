@@ -10,6 +10,26 @@
 
     <div class="py-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Mensagem de erro do Google (Nova seção) -->
+            @if(session('google_error'))
+            <div class="mb-8">
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-yellow-700">
+                                {{ session('google_error') }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endif
+
             <!-- Performance Overview -->
             <div class="mb-8">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -102,6 +122,47 @@
                 </div>
             </div>
 
+            <!-- Análise de Concorrentes (Nova seção) -->
+            @if(!empty($competitors))
+            <div class="mb-8 bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-google-sans text-gray-800 mb-4">Análise de Concorrentes</h3>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead>
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Nome
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Distância
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Avaliação
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Visualizações
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Cliques
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            @foreach($competitors as $competitor)
+                            <tr>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ $competitor['name'] }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ $competitor['distance'] }} km</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ number_format($competitor['rating'], 1) }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ number_format($competitor['insights']['views'] ?? 0) }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ number_format($competitor['insights']['clicks'] ?? 0) }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            @endif
+
             <!-- Ações Rápidas -->
             <div class="mb-8">
                 <h3 class="text-lg font-google-sans text-gray-800 mb-4">Ações Rápidas</h3>
@@ -134,13 +195,13 @@
                     </a>
 
                     <!-- Exportar Relatório -->
-<a href="{{ route('analytics.export.pdf', ['business' => $selectedBusiness->id]) }}"
-   class="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow text-center group">
-    <svg class="h-6 w-6 mx-auto mb-2 text-gray-600 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-    </svg>
-    <span class="block text-sm font-google-sans text-gray-700 group-hover:text-blue-600">Exportar Relatório</span>
-</a>
+                    <a href="{{ route('analytics.export.pdf', ['business' => $selectedBusiness->id]) }}"
+                       class="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow text-center group">
+                        <svg class="h-6 w-6 mx-auto mb-2 text-gray-600 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <span class="block text-sm font-google-sans text-gray-700 group-hover:text-blue-600">Exportar Relatório</span>
+                    </a>
 
                     <!-- Configurações -->
                     <a href="{{ route('business.settings', ['business' => $selectedBusiness->id]) }}"

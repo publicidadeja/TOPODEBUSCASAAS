@@ -822,4 +822,5 @@ public function updateGeminiAnalysis(Business $business)
 
 
 
+
 }

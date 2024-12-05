@@ -4,11 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Models\Business;
 use App\Models\BusinessAnalytics;
+use App\Services\GoogleBusinessService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
+    protected $googleService;
+
+    public function __construct(GoogleBusinessService $googleService)
+    {
+        $this->googleService = $googleService;
+    }
+
     public function index(Request $request)
     {
         $user = auth()->user();
@@ -31,6 +39,17 @@ class DashboardController extends Controller
                 ->with('warning', 'Por favor, cadastre um negócio primeiro.');
         }
 
+        try {
+            // Tentar obter dados do Google
+            $googleInsights = $this->googleService->getBusinessInsights($selectedBusiness->id);
+            $competitors = $this->googleService->getCompetitors($selectedBusiness);
+        } catch (\Exception $e) {
+            \Log::error('Erro ao obter dados do Google: ' . $e->getMessage());
+            $googleInsights = null;
+            $competitors = [];
+            session()->flash('google_error', 'Não foi possível obter dados do Google My Business. Verifique sua conexão.');
+        }
+
         // Buscar analytics dos últimos 30 dias
         $endDate = Carbon::now();
         $startDate = Carbon::now()->subDays(30);
@@ -41,9 +60,9 @@ class DashboardController extends Controller
             ->get();
 
         // Calcular totais
-        $totalViews = $analytics->sum('views');
-        $totalClicks = $analytics->sum('clicks');
-        $totalCalls = $analytics->sum('calls');
+        $totalViews = $googleInsights ? $googleInsights['views']['total'] : $analytics->sum('views');
+        $totalClicks = $googleInsights ? $googleInsights['clicks']['total'] : $analytics->sum('clicks');
+        $totalCalls = $googleInsights ? $googleInsights['calls']['total'] : $analytics->sum('calls');
 
         // Calcular taxa de conversão
         $conversionRate = $totalViews > 0 
@@ -69,45 +88,23 @@ class DashboardController extends Controller
             'trends' => $this->calculateTrends($analytics)
         ];
 
-        // Preparar dados para o gráfico de comparação
-        $compareStartDate = Carbon::now()->subDays(60);
-        $previousPeriodAnalytics = BusinessAnalytics::where('business_id', $selectedBusiness->id)
-            ->whereBetween('date', [$compareStartDate, $startDate])
-            ->orderBy('date')
-            ->get();
-
-        // Calcular totais do período anterior
-        $previousTotalViews = $previousPeriodAnalytics->sum('views');
-        $previousTotalClicks = $previousPeriodAnalytics->sum('clicks');
-        $previousTotalCalls = $previousPeriodAnalytics->sum('calls');
-        $previousConversionRate = $previousTotalViews > 0 
-            ? round((($previousTotalClicks + $previousTotalCalls) / $previousTotalViews) * 100, 1)
-            : 0;
-
         // Calcular variações percentuais
-        $analyticsData['variations'] = [
-            'views' => $previousTotalViews > 0 
-                ? round((($totalViews - $previousTotalViews) / $previousTotalViews) * 100, 1)
-                : 0,
-            'clicks' => $previousTotalClicks > 0 
-                ? round((($totalClicks - $previousTotalClicks) / $previousTotalClicks) * 100, 1)
-                : 0,
-            'calls' => $previousTotalCalls > 0 
-                ? round((($totalCalls - $previousTotalCalls) / $previousTotalCalls) * 100, 1)
-                : 0,
-            'conversion' => $previousConversionRate > 0 
-                ? round((($conversionRate - $previousConversionRate) / $previousConversionRate) * 100, 1)
-                : 0
+        $analyticsData['trends'] = [
+            'views' => $googleInsights ? ($googleInsights['views']['trend'] ?? 0) : $analyticsData['trends']['views'],
+            'clicks' => $googleInsights ? ($googleInsights['clicks']['trend'] ?? 0) : $analyticsData['trends']['clicks'],
+            'calls' => $googleInsights ? ($googleInsights['calls']['trend'] ?? 0) : $analyticsData['trends']['calls'],
+            'conversion' => $analyticsData['trends']['conversion']
         ];
 
         // Gerar insights e sugestões
-        $suggestions = $this->generateSuggestions($analyticsData, $selectedBusiness);
+        $suggestions = $this->generateSuggestions($analyticsData, $selectedBusiness, $competitors);
 
         return view('dashboard', [
             'businesses' => $businesses,
             'selectedBusiness' => $selectedBusiness,
             'analytics' => $analyticsData,
-            'suggestions' => $suggestions
+            'suggestions' => $suggestions,
+            'competitors' => $competitors
         ]);
     }
 
@@ -173,12 +170,12 @@ class DashboardController extends Controller
         return round((($newValue - $oldValue) / $oldValue) * 100, 1);
     }
 
-    private function generateSuggestions($analyticsData, $selectedBusiness)
+    private function generateSuggestions($analyticsData, $selectedBusiness, $competitors = [])
     {
         $suggestions = [];
 
-        // Verificar tendências negativas de visualizações
-        if ($analyticsData['variations']['views'] < 0) {
+        // Verificar tendências negativas
+        if ($analyticsData['trends']['views'] < 0) {
             $suggestions[] = [
                 'type' => 'warning',
                 'message' => 'As visualizações diminuíram em comparação com o período anterior. Considere revisar suas palavras-chave e conteúdo.',
@@ -187,19 +184,24 @@ class DashboardController extends Controller
             ];
         }
 
-        // Verificar tendências de conversão
-        if ($analyticsData['variations']['conversion'] < 0) {
-            $suggestions[] = [
-                'type' => 'warning',
-                'message' => 'A taxa de conversão está menor que o período anterior. Verifique a experiência do usuário e chamadas para ação.',
-                'action' => 'Ver Análise Detalhada',
-                'action_url' => route('analytics', ['businessId' => $selectedBusiness->id])
-            ];
+        // Análise de concorrentes
+        if (!empty($competitors)) {
+            foreach ($competitors as $competitor) {
+                if (isset($competitor['insights']['views']) && 
+                    $competitor['insights']['views'] > $analyticsData['views']) {
+                    $suggestions[] = [
+                        'type' => 'info',
+                        'message' => "O concorrente {$competitor['name']} tem mais visualizações. Considere analisar suas estratégias de visibilidade.",
+                        'action' => 'Ver Análise Competitiva',
+                        'action_url' => route('analytics.competitive', ['business' => $selectedBusiness->id])
+                    ];
+                    break; // Limita a uma sugestão de concorrente
+                }
+            }
         }
 
-        // Verificar distribuição de dispositivos
-        $devices = $analyticsData['devices'];
-        if (($devices['mobile'] ?? 0) < 30) {
+        // Verificar dispositivos móveis
+        if (($analyticsData['devices']['mobile'] ?? 0) < 30) {
             $suggestions[] = [
                 'type' => 'info',
                 'message' => 'Seu site tem poucos acessos via dispositivos móveis. Certifique-se que está otimizado para smartphones.',
@@ -209,22 +211,12 @@ class DashboardController extends Controller
         }
 
         // Sugestões positivas
-        if ($analyticsData['variations']['views'] > 20) {
+        if ($analyticsData['trends']['views'] > 20) {
             $suggestions[] = [
                 'type' => 'success',
                 'message' => 'Parabéns! Suas visualizações aumentaram significativamente.',
                 'action' => 'Ver Detalhes',
-                'action_url' => route('analytics', ['businessId' => $selectedBusiness->id])
-            ];
-        }
-
-        // Verificar tendências de chamadas
-        if ($analyticsData['variations']['calls'] < -10) {
-            $suggestions[] = [
-                'type' => 'warning',
-                'message' => 'O número de chamadas diminuiu significativamente. Verifique a visibilidade do seu número de telefone.',
-                'action' => 'Verificar Contatos',
-                'action_url' => route('business.edit', ['business' => $selectedBusiness->id])
+                'action_url' => route('analytics.index', ['business' => $selectedBusiness->id])
             ];
         }
 
