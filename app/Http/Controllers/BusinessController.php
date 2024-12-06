@@ -8,6 +8,10 @@ use Illuminate\Http\Request;
 
 class BusinessController extends Controller
 {
+    public function create()
+    {
+        return view('business.create');
+    }
 
     public function update(Request $request, Business $business)
     {
@@ -136,4 +140,21 @@ class BusinessController extends Controller
             ]
         ]);
     }
+
+    public function store(Request $request)
+{
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'segment' => 'required|string|max:255',
+        'address' => 'required|string|max:255',
+        'phone' => 'required|string|max:255',
+        'website' => 'nullable|url|max:255',
+        'description' => 'nullable|string|max:1000',
+    ]);
+
+    $business = auth()->user()->businesses()->create($validated);
+
+    return redirect()->route('business.index')
+        ->with('success', 'Negócio cadastrado com sucesso!');
+}
 }
