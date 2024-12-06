@@ -200,4 +200,14 @@ public function actions()
 {
     return $this->hasMany(Action::class);
 }
+
+public function photos()
+{
+    return $this->hasMany(Photo::class);
+}
+
+public function reviews()
+{
+    return $this->hasMany(Review::class);
+}
 }
