@@ -188,205 +188,167 @@
 @endif
 
             <!-- Metrics Grid -->
-            <div class="analytics-grid mb-6">
-                <x-metric-card
-                    title="Visualizações"
-                    :value="number_format(!empty($analytics['views']) ? end($analytics['views']) : 0)"
-                    :growth="$growth['views'] ?? null"
-                    color="blue"
-                />
+<div class="analytics-grid mb-6">
+    <x-metric-card
+        title="Visualizações"
+        :value="number_format(!empty($analyticsData['views']) ? end($analyticsData['views']) : 0)"
+        :growth="$growth['views'] ?? null"
+        color="blue"
+        class="bg-white" {{-- Added bg-white class --}}
+    />
 
-                <x-metric-card
-                    title="Cliques"
-                    :value="number_format(!empty($analytics['clicks']) ? end($analytics['clicks']) : 0)"
-                    :growth="$growth['clicks'] ?? null"
-                    color="green"
-                />
+    <x-metric-card
+        title="Cliques"
+        :value="number_format(!empty($analyticsData['clicks']) ? end($analyticsData['clicks']) : 0)"
+        :growth="$growth['clicks'] ?? null"
+        color="green"
+        class="bg-white" {{-- Added bg-white class --}}
+    />
 
-                <x-metric-card
-                    title="Taxa de Conversão"
-                    :value="number_format($analytics['currentConversion'], 1) . '%'"
-                    :growth="$growth['conversion'] ?? null"
-                    color="yellow"
-                />
+    <x-metric-card
+        title="Taxa de Conversão"
+        :value="number_format($analyticsData['currentConversion'], 1) . '%'"
+        :growth="$growth['conversion'] ?? null"
+        color="yellow"
+        class="bg-white" {{-- Added bg-white class --}}
+    />
 
-                <x-metric-card
-                    title="Avaliação Média"
-                    :value="number_format($analytics['averageRating'], 1)"
-                    :growth="$growth['rating'] ?? null"
-                    color="red"
-                />
-            </div>
+    <x-metric-card
+        title="Avaliação Média"
+        :value="number_format($analyticsData['averageRating'], 1)"
+        :growth="$growth['rating'] ?? null"
+        color="red"
+        class="bg-white" {{-- Added bg-white class --}}
+    />
+</div>
 
-            <!-- Charts Grid -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                <div class="chart-container">
-                    <h3 class="text-lg font-google-sans mb-4 text-gray-800">Visualizações e Cliques</h3>
-                    <div id="views-clicks-chart" class="h-80"></div>
-                </div>
-
-                <div class="chart-container">
-                    <h3 class="text-lg font-google-sans mb-4 text-gray-800">Taxa de Conversão</h3>
-                    <div id="conversion-chart" class="h-80"></div>
-                </div>
-            </div>
-
-            <!-- Actions Table -->
-            <div class="bg-white rounded-lg border border-gray-200">
-                <div class="p-6">
-                    <h3 class="text-lg font-google-sans mb-4 text-gray-800">Histórico de Ações</h3>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead>
-                                <tr>
-                                    <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                                    <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ação</th>
-                                    <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resultado</th>
-                                    <th class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                @foreach($actions as $action)
-                                    <tr>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ $action->created_at->format('d/m/Y H:i') }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ $action->description }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {{ $action->result }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                                {{ $action->status === 'success' ? 'bg-green-100 text-green-800' : '' }}
-                                                {{ $action->status === 'pending' ? 'bg-yellow-100 text-yellow-800' : '' }}
-                                                {{ $action->status === 'failed' ? 'bg-red-100 text-red-800' : '' }}">
-                                                {{ ucfirst($action->status) }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+<!-- Charts Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="chart-container bg-white">
+        <h3 class="text-lg font-google-sans mb-4 text-gray-800">Visualizações e Cliques</h3>
+        <div id="views-clicks-chart" class="h-80"></div>
     </div>
 
-    @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-    <script>
-        // Charts Configuration
-        const viewsClicksChart = new ApexCharts(document.querySelector("#views-clicks-chart"), {
-            series: [{
-                name: 'Visualizações',
-                data: @json($analytics['views'])
-            }, {
-                name: 'Cliques',
-                data: @json($analytics['clicks'])
-            }],
-            chart: {
-                type: 'line',
-                height: 320,
-                toolbar: {
-                    show: false
-                },
-                background: 'transparent'
+    <div class="chart-container bg-white">
+        <h3 class="text-lg font-google-sans mb-4 text-gray-800">Taxa de Conversão</h3>
+        <div id="conversion-chart" class="h-80"></div>
+    </div>
+</div>
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+    // Views and Clicks Chart
+    const viewsClicksChart = new ApexCharts(document.querySelector("#views-clicks-chart"), {
+        series: [{
+            name: 'Visualizações',
+            data: @json($analyticsData['views'])
+        }, {
+            name: 'Cliques',
+            data: @json($analyticsData['clicks'])
+        }],
+        chart: {
+            type: 'line',
+            height: 320,
+            toolbar: {
+                show: false
             },
-            stroke: {
-                curve: 'smooth',
-                width: 2
-            },
-            colors: ['#4285F4', '#34A853'],
-            xaxis: {
-                categories: @json($analytics['dates']),
-                labels: {
-                    style: {
-                        colors: '#5F6368'
-                    }
+            background: 'transparent'
+        },
+        stroke: {
+            curve: 'smooth',
+            width: 2
+        },
+        colors: ['#4285F4', '#34A853'],
+        xaxis: {
+            categories: @json($analyticsData['dates']),
+            labels: {
+                style: {
+                    colors: '#5F6368'
                 }
-            },
-            yaxis: {
-                labels: {
-                    style: {
-                        colors: '#5F6368'
-                    }
-                }
-            },
-            legend: {
-                position: 'top',
-                horizontalAlign: 'right'
-            },
-            grid: {
-                borderColor: '#DADCE0'
             }
-        });
-        viewsClicksChart.render();
-
-        const conversionChart = new ApexCharts(document.querySelector("#conversion-chart"), {
-            series: [{
-                name: 'Taxa de Conversão',
-                data: @json($analytics['conversionRates'])
-            }],
-            chart: {
-                type: 'area',
-                height: 320,
-                toolbar: {
-                    show: false
-                },
-                background: 'transparent'
-            },
-            stroke: {
-                curve: 'smooth',
-                width: 2
-            },
-            colors: ['#4285F4'],
-            fill: {
-                type: 'gradient',
-                gradient: {
-                    shadeIntensity: 1,
-                    opacityFrom: 0.7,
-                    opacityTo: 0.3
+        },
+        yaxis: {
+            labels: {
+                style: {
+                    colors: '#5F6368'
                 }
-            },
-            xaxis: {
-                categories: @json($analytics['dates']),
-                labels: {
-                    style: {
-                        colors: '#5F6368'
-                    }
-                }
-            },
-            yaxis: {
-                labels: {
-                    style: {
-                        colors: '#5F6368'
-                    },
-                    formatter: function(value) {
-                        return value.toFixed(1) + '%'
-                    }
-                }
-            },
-            legend: {
-                position: 'top',
-                horizontalAlign: 'right'
-            },
-            grid: {
-                borderColor: '#DADCE0'
             }
-        });
-        conversionChart.render();
+        },
+        legend: {
+            position: 'top',
+            horizontalAlign: 'right'
+        },
+        grid: {
+            borderColor: '#DADCE0'
+        }
+    });
+    viewsClicksChart.render();
 
-        // Event Listeners
-        document.getElementById('business-selector').addEventListener('change', function(e) {
-            window.location.href = `/analytics/dashboard/${e.target.value}`;
-        });
+    // Conversion Rate Chart
+    const conversionChart = new ApexCharts(document.querySelector("#conversion-chart"), {
+        series: [{
+            name: 'Taxa de Conversão',
+            data: @json($analyticsData['conversionRates'])
+        }],
+        chart: {
+            type: 'area',
+            height: 320,
+            toolbar: {
+                show: false
+            },
+            background: 'transparent'
+        },
+        stroke: {
+            curve: 'smooth',
+            width: 2
+        },
+        colors: ['#4285F4'],
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.7,
+                opacityTo: 0.3
+            }
+        },
+        xaxis: {
+            categories: @json($analyticsData['dates']),
+            labels: {
+                style: {
+                    colors: '#5F6368'
+                }
+            }
+        },
+        yaxis: {
+            labels: {
+                style: {
+                    colors: '#5F6368'
+                },
+                formatter: function(value) {
+                    return value.toFixed(1) + '%'
+                }
+            }
+        },
+        legend: {
+            position: 'top',
+            horizontalAlign: 'right'
+        },
+        grid: {
+            borderColor: '#DADCE0'
+        }
+    });
+    conversionChart.render();
 
-        document.getElementById('period-selector').addEventListener('change', function(e) {
-            // Implement period change logic
-        });
-    </script>
-    @endpush
+    // Event Listeners
+    document.getElementById('business-selector').addEventListener('change', function(e) {
+        window.location.href = `/analytics/${e.target.value}`;
+    });
+
+    document.getElementById('period-selector').addEventListener('change', function(e) {
+        // Implement period change logic here
+        console.log('Period changed:', e.target.value);
+    });
+</script>
+@endpush
 </x-app-layout>

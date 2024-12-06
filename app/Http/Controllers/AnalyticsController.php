@@ -44,36 +44,84 @@ class AnalyticsController extends Controller
         ->orderBy('date')
         ->get();
 
+    // Divide os dados em períodos atual e anterior para comparação
+    $currentPeriodAnalytics = $analytics->take(15);
+    $previousPeriodAnalytics = $analytics->skip(15);
+
+    // Calcula taxa de conversão atual
+    $currentClicks = $currentPeriodAnalytics->sum('clicks');
+    $currentCalls = $currentPeriodAnalytics->sum('calls');
+    $currentConversion = $currentClicks > 0 ? ($currentCalls / $currentClicks) * 100 : 0;
+
+    // Calcula taxa de conversão anterior para comparação
+    $previousClicks = $previousPeriodAnalytics->sum('clicks');
+    $previousCalls = $previousPeriodAnalytics->sum('calls');
+    $previousConversion = $previousClicks > 0 ? ($previousCalls / $previousClicks) * 100 : 0;
+
     // Prepara dados para o dashboard
     $analyticsData = [
         'views' => $analytics->pluck('views')->toArray(),
         'clicks' => $analytics->pluck('clicks')->toArray(),
         'dates' => $analytics->pluck('date')->map(fn($date) => $date->format('d/m'))->toArray(),
-        'currentConversion' => $analytics->avg('conversion_rate') ?? 0,
-        'averageRating' => $analytics->avg('rating') ?? 0,
-        'conversionRates' => $analytics->pluck('conversion_rate')->toArray()
+        'currentConversion' => round($currentConversion, 1),
+        'averageRating' => (float) $selectedBusiness->rating,
+        'conversionRates' => $analytics->map(function($item) {
+            return $item->clicks > 0 ? round(($item->calls / $item->clicks) * 100, 1) : 0;
+        })->toArray()
     ];
 
     // Calcula crescimento
-    $growth = $this->calculateTrends($analytics);
+    $growth = [
+        'views' => $this->calculateGrowth(
+            $previousPeriodAnalytics->sum('views'),
+            $currentPeriodAnalytics->sum('views')
+        ),
+        'clicks' => $this->calculateGrowth(
+            $previousPeriodAnalytics->sum('clicks'),
+            $currentPeriodAnalytics->sum('clicks')
+        ),
+        'calls' => $this->calculateGrowth(
+            $previousPeriodAnalytics->sum('calls'),
+            $currentPeriodAnalytics->sum('calls')
+        ),
+        'conversion' => $this->calculateGrowth(
+            $previousConversion,
+            $currentConversion
+        )
+    ];
 
-    // Busca ações do negócio
+    // Busca ações recentes
     $actions = Action::where('business_id', $selectedBusiness->id)
         ->orderBy('created_at', 'desc')
         ->take(10)
         ->get();
 
-    // Gera análise AI se disponível
+        
+
+    // Gera ou recupera análise AI
     $aiAnalysis = $this->getOrGenerateAIAnalysis($selectedBusiness, $analytics);
 
-    return view('analytics.dashboard', [
-        'business' => $selectedBusiness,
-        'businesses' => $businesses,
-        'analytics' => $analyticsData,
-        'growth' => $growth,
-        'actions' => $actions,
-        'aiAnalysis' => $aiAnalysis
-    ]);
+    return view('analytics.dashboard', compact(
+        'business',
+        'businesses',
+        'analytics',
+        'analyticsData',
+        'growth',
+        'actions',
+        'aiAnalysis'
+    ));
+}
+
+private function calculateMetricsGrowth($previous, $current)
+{
+    return $this->calculateGrowth(
+        ['views' => $previous->sum('views'), 
+         'clicks' => $previous->sum('clicks'),
+         'calls' => $previous->sum('calls')],
+        ['views' => $current->sum('views'),
+         'clicks' => $current->sum('clicks'),
+         'calls' => $current->sum('calls')]
+    );
 }
 
     public function dashboard(Request $request)
@@ -547,28 +595,34 @@ private function generateCompetitorInsights($mainBusinessData, $competitorsData)
     );
 }
 
-    private function calculateGrowth($current, $previous, $currentConversion, $previousConversion)
-    {
+private function calculateGrowth($previous, $current, $currentConversion = null, $previousConversion = null)
+{
+    // Se os parâmetros são arrays (para métricas múltiplas)
+    if (is_array($previous) && is_array($current)) {
         $growth = [];
-
         foreach ($current as $metric => $value) {
             $previousValue = $previous[$metric];
             $growth[$metric] = $previousValue > 0 
                 ? round(($value - $previousValue) / $previousValue * 100, 1) 
-                : 0;
+                : ($value > 0 ? 100 : 0);
         }
 
-        // Adiciona crescimento da taxa de conversão
-        $growth['conversion'] = $previousConversion > 0
-            ? round(($currentConversion - $previousConversion) / $previousConversion * 100, 1)
-            : 0;
-
-        // Adiciona crescimento da avaliação
-        $growth['rating'] = 0;
+        // Adiciona crescimento da taxa de conversão se fornecida
+        if ($currentConversion !== null && $previousConversion !== null) {
+            $growth['conversion'] = $previousConversion > 0
+                ? round(($currentConversion - $previousConversion) / $previousConversion * 100, 1)
+                : ($currentConversion > 0 ? 100 : 0);
+        }
 
         return $growth;
     }
 
+    // Se os parâmetros são valores únicos
+    if ($previous == 0) {
+        return $current > 0 ? 100 : 0;
+    }
+    return round((($current - $previous) / $previous) * 100, 1);
+}
     private function generateInsights($growth, $devices, $locations, $keywords)
     {
         $insights = [];
