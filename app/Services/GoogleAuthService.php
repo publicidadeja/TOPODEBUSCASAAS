@@ -38,4 +38,11 @@ class GoogleAuthService
     {
         return $this->client;
     }
+
+    protected function getCachedBusinessData($businessId)
+{
+    return Cache::remember('business.'.$businessId, 3600, function() use ($businessId) {
+        return $this->fetchBusinessDataFromGoogle($businessId);
+    });
+}
 }

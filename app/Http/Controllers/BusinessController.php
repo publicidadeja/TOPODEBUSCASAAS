@@ -6,6 +6,7 @@ use App\Models\Business;
 use App\Services\FakeGoogleBusinessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class BusinessController extends Controller
 {
@@ -27,6 +28,7 @@ class BusinessController extends Controller
             'description' => 'nullable|string|max:1000',
             'cover_photo' => 'nullable|image|max:2048', // Máximo 2MB
         ]);
+        Log::info('Negócio atualizado', ['business_id' => $business->id, 'user_id' => auth()->id()]);
 
         if ($request->hasFile('cover_photo')) {
             // Remove a imagem antiga se existir
@@ -152,6 +154,8 @@ class BusinessController extends Controller
         'website' => 'nullable|url|max:255',
         'description' => 'nullable|string|max:1000',
     ]);
+    Log::info('Negócio criado', ['business_id' => $business->id, 'user_id' => auth()->id()]);
+
 
     $business = auth()->user()->businesses()->create($validated);
 
@@ -174,7 +178,7 @@ public function destroy(Business $business)
     if ($business->cover_photo) {
         Storage::delete($business->cover_photo);
     }
-
+    Log::info('Negócio excluído', ['business_id' => $business->id, 'user_id' => auth()->id()]);
     // Deleta o negócio
     $business->delete();
 

@@ -50,4 +50,11 @@ class GoogleController extends Controller
                 ->with('error', 'Erro ao importar negócios: ' . $e->getMessage());
         }
     }
+
+    protected function handleApiError(\Exception $e)
+{
+    Log::error('Google API Error: ' . $e->getMessage());
+    
+    return redirect()->back()->with('error', 'Ocorreu um erro ao comunicar com o Google. Por favor, tente novamente mais tarde.');
+}
 }
