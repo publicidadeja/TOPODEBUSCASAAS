@@ -64,6 +64,8 @@ class AnalyticsController extends Controller
     $analyticsData = [
         'views' => $analytics->pluck('views')->toArray(),
         'clicks' => $analytics->pluck('clicks')->toArray(),
+        'calls' => $analytics->pluck('calls')->toArray(),
+        'visits' => $analytics->pluck('visits')->toArray(), // Adicionar esta linha
         'dates' => $analytics->pluck('date')->map(fn($date) => $date->format('d/m'))->toArray(),
         'currentConversion' => round($currentConversion, 1),
         'averageRating' => (float) $selectedBusiness->rating,
@@ -74,24 +76,32 @@ class AnalyticsController extends Controller
 
 
     // Calcula crescimento
-    $trends = $growth = [
-        'views' => $this->calculateGrowth(
-            $previousPeriodAnalytics->sum('views'),
-            $currentPeriodAnalytics->sum('views')
-        ),
-        'clicks' => $this->calculateGrowth(
-            $previousPeriodAnalytics->sum('clicks'),
-            $currentPeriodAnalytics->sum('clicks')
-        ),
-        'calls' => $this->calculateGrowth(
-            $previousPeriodAnalytics->sum('calls'),
-            $currentPeriodAnalytics->sum('calls')
-        ),
-        'conversion' => $this->calculateGrowth(
-            $previousConversion,
-            $currentConversion
-        )
-    ];
+
+    $currentEngagement = $this->calculateEngagementRate($currentPeriodAnalytics);
+    $previousEngagement = $this->calculateEngagementRate($previousPeriodAnalytics);
+
+$trends = $growth = [
+    'views' => $this->calculateGrowth(
+        $previousPeriodAnalytics->sum('views'),
+        $currentPeriodAnalytics->sum('views')
+    ),
+    'clicks' => $this->calculateGrowth(
+        $previousPeriodAnalytics->sum('clicks'),
+        $currentPeriodAnalytics->sum('clicks')
+    ),
+    'calls' => $this->calculateGrowth(
+        $previousPeriodAnalytics->sum('calls'),
+        $currentPeriodAnalytics->sum('calls')
+    ),
+    'conversion' => $this->calculateGrowth(
+        $previousConversion,
+        $currentConversion
+    ),
+    'rating' => $this->calculateGrowth($previousRating, $currentRating),
+    'response_time' => 0
+];
+
+
 
     // Busca ações recentes
     $actions = Action::where('business_id', $selectedBusiness->id)
@@ -101,8 +111,11 @@ class AnalyticsController extends Controller
 
         $metrics = [
             'calls' => array_sum($analyticsData['calls'] ?? [0]),
-            'visits' => array_sum($analyticsData['visits'] ?? [0]),
-            'conversion_rate' => $analyticsData['currentConversion'] ?? 0
+            'visits' => $currentPeriodAnalytics->sum('visits'), // Usar diretamente a collection
+            'conversion_rate' => $analyticsData['currentConversion'] ?? 0,
+            'rating' => $analyticsData['averageRating'] ?? 0,
+            'response_time' => '24h', // Adicionar valor padrão se necessário
+            'engagement_rate' => 0 // Adicionar valor padrão se necessário
         ];
 
     // Gera ou recupera análise AI

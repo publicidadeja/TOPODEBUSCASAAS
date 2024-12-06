@@ -124,16 +124,18 @@
                 </div>
 
                 <!-- Visitas ao Local -->
-                <div class="metric-card">
-                    <h3 class="text-lg font-google-sans text-gray-600">Visitas ao Local</h3>
-                    <p class="text-3xl font-google-sans mt-2">{{ number_format($metrics['visits']) }}</p>
-                    <div class="mt-2">
-                        <span class="trend-indicator {{ $trends['visits'] >= 0 ? 'trend-up' : 'trend-down' }}">
-                            {{ $trends['visits'] }}%
-                        </span>
-                        <span class="text-sm text-gray-500 ml-2">vs. período anterior</span>
-                    </div>
-                </div>
+<div class="metric-card">
+    <h3 class="text-lg font-google-sans text-gray-600">Visitas ao Local</h3>
+    <p class="text-3xl font-google-sans mt-2">
+        {{ number_format($metrics['visits'] ?? 0) }}
+    </p>
+    <div class="mt-2">
+        <span class="trend-indicator {{ isset($trends['visits']) && $trends['visits'] >= 0 ? 'trend-up' : 'trend-down' }}">
+            {{ $trends['visits'] ?? 0 }}%
+        </span>
+        <span class="text-sm text-gray-500 ml-2">vs. período anterior</span>
+    </div>
+</div>
 
                 <!-- Taxa de Conversão -->
                 <div class="metric-card">
