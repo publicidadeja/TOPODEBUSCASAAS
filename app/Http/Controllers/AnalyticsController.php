@@ -24,10 +24,57 @@ class AnalyticsController extends Controller
     }
 
     public function index(Business $business)
-    {
-        // Use $this->geminiService ao invés de chamar diretamente
-        return redirect()->route('analytics.dashboard', $business);
+{
+    $user = auth()->user();
+    $businesses = $user->businesses;
+    
+    if (!$business->id) {
+        $selectedBusiness = $businesses->first();
+    } else {
+        $selectedBusiness = $business;
     }
+
+    // Define período de análise (últimos 30 dias)
+    $endDate = now();
+    $startDate = now()->subDays(30);
+
+    // Busca analytics do período
+    $analytics = BusinessAnalytics::where('business_id', $selectedBusiness->id)
+        ->whereBetween('date', [$startDate, $endDate])
+        ->orderBy('date')
+        ->get();
+
+    // Prepara dados para o dashboard
+    $analyticsData = [
+        'views' => $analytics->pluck('views')->toArray(),
+        'clicks' => $analytics->pluck('clicks')->toArray(),
+        'dates' => $analytics->pluck('date')->map(fn($date) => $date->format('d/m'))->toArray(),
+        'currentConversion' => $analytics->avg('conversion_rate') ?? 0,
+        'averageRating' => $analytics->avg('rating') ?? 0,
+        'conversionRates' => $analytics->pluck('conversion_rate')->toArray()
+    ];
+
+    // Calcula crescimento
+    $growth = $this->calculateTrends($analytics);
+
+    // Busca ações do negócio
+    $actions = Action::where('business_id', $selectedBusiness->id)
+        ->orderBy('created_at', 'desc')
+        ->take(10)
+        ->get();
+
+    // Gera análise AI se disponível
+    $aiAnalysis = $this->getOrGenerateAIAnalysis($selectedBusiness, $analytics);
+
+    return view('analytics.dashboard', [
+        'business' => $selectedBusiness,
+        'businesses' => $businesses,
+        'analytics' => $analyticsData,
+        'growth' => $growth,
+        'actions' => $actions,
+        'aiAnalysis' => $aiAnalysis
+    ]);
+}
 
     public function dashboard(Request $request)
 {

@@ -135,26 +135,57 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <!-- AI Analysis Section -->
             @if(isset($aiAnalysis))
-                <div class="mb-6 p-6 bg-white rounded-lg border border-gray-200">
-                    <h3 class="text-lg font-google-sans mb-4 text-gray-800">Análise Inteligente</h3>
-                    <div class="prose">
-                        @if(is_array($aiAnalysis['analysis']))
-                            @if(isset($aiAnalysis['analysis']['content']))
-                                {!! nl2br(e($aiAnalysis['analysis']['content'])) !!}
-                            @else
-                                {!! nl2br(e(json_encode($aiAnalysis['analysis'], JSON_PRETTY_PRINT))) !!}
-                            @endif
-                        @else
-                            {!! nl2br(e($aiAnalysis['analysis'])) !!}
-                        @endif
-                    </div>
-                    <div class="text-sm text-gray-500 mt-4">
-                        Última atualização: {{ isset($aiAnalysis['timestamp']) ? 
-                            \Carbon\Carbon::parse($aiAnalysis['timestamp'])->diffForHumans() : 
-                            'Não disponível' }}
-                    </div>
+    <div class="mb-6 p-6 bg-white rounded-lg border border-gray-200">
+        <h3 class="text-lg font-google-sans mb-4 text-gray-800">Análise Inteligente</h3>
+        <div class="prose">
+            @if(isset($aiAnalysis['market_overview']))
+                <div class="mb-4">
+                    <h4 class="text-md font-semibold">Visão Geral do Mercado</h4>
+                    <p>{!! nl2br(e($aiAnalysis['market_overview'])) !!}</p>
                 </div>
             @endif
+
+            @if(isset($aiAnalysis['competitor_insights']))
+                <div class="mb-4">
+                    <h4 class="text-md font-semibold">Insights dos Competidores</h4>
+                    @foreach($aiAnalysis['competitor_insights'] as $insight)
+                        @if(is_string($insight))
+                            <p>{!! nl2br(e($insight)) !!}</p>
+                        @endif
+                    @endforeach
+                </div>
+            @endif
+
+            @if(isset($aiAnalysis['recommendations']))
+                <div class="mb-4">
+                    <h4 class="text-md font-semibold">Recomendações</h4>
+                    @foreach($aiAnalysis['recommendations'] as $recommendation)
+                        @if(is_string($recommendation))
+                            <p>{!! nl2br(e($recommendation)) !!}</p>
+                        @endif
+                    @endforeach
+                </div>
+            @endif
+
+            @if(isset($aiAnalysis['alerts']))
+                <div class="mb-4">
+                    <h4 class="text-md font-semibold">Alertas</h4>
+                    @foreach($aiAnalysis['alerts'] as $alert)
+                        @if(is_string($alert))
+                            <p>{!! nl2br(e($alert)) !!}</p>
+                        @endif
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        <div class="text-sm text-gray-500 mt-4">
+            Última atualização: {{ isset($aiAnalysis['timestamp']) ? 
+                \Carbon\Carbon::parse($aiAnalysis['timestamp'])->diffForHumans() : 
+                'Não disponível' }}
+        </div>
+    </div>
+@endif
 
             <!-- Metrics Grid -->
             <div class="analytics-grid mb-6">
