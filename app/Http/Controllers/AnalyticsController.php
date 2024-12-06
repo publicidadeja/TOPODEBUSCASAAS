@@ -25,6 +25,8 @@ class AnalyticsController extends Controller
 
     public function index(Business $business)
 {
+
+    
     $user = auth()->user();
     $businesses = $user->businesses;
     
@@ -70,8 +72,9 @@ class AnalyticsController extends Controller
         })->toArray()
     ];
 
+
     // Calcula crescimento
-    $growth = [
+    $trends = $growth = [
         'views' => $this->calculateGrowth(
             $previousPeriodAnalytics->sum('views'),
             $currentPeriodAnalytics->sum('views')
@@ -96,7 +99,11 @@ class AnalyticsController extends Controller
         ->take(10)
         ->get();
 
-        
+        $metrics = [
+            'calls' => array_sum($analyticsData['calls'] ?? [0]),
+            'visits' => array_sum($analyticsData['visits'] ?? [0]),
+            'conversion_rate' => $analyticsData['currentConversion'] ?? 0
+        ];
 
     // Gera ou recupera análise AI
     $aiAnalysis = $this->getOrGenerateAIAnalysis($selectedBusiness, $analytics);
@@ -107,8 +114,10 @@ class AnalyticsController extends Controller
         'analytics',
         'analyticsData',
         'growth',
+        'trends',
         'actions',
-        'aiAnalysis'
+        'aiAnalysis',
+        'metrics'
     ));
 }
 
