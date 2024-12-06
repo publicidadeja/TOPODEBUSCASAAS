@@ -120,6 +120,19 @@ class FakeGoogleBusinessService
             ],
         ];
     }
+
+    public function getMetrics($businessId)
+    {
+        // Gera métricas fictícias consistentes
+        return [
+            'views' => random_int(1000, 5000),
+            'clicks' => random_int(500, 2000),
+            'calls' => random_int(100, 500),
+            'rating' => 4.7,
+            'reviewCount' => 3
+        ];
+    }
+
     public function getInsights($businessId, $startDate = null, $endDate = null)
     {
         // Se não houver datas definidas, use os últimos 30 dias

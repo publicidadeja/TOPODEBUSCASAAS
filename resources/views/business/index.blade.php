@@ -79,6 +79,18 @@
                                 $clicks = 0;
                                 $calls = 0;
                             }
+
+                            // Código de log das métricas
+                            \Log::info('Métricas carregadas para negócio: ' . $business->name, [
+                                'business_id' => $business->id,
+                                'metrics' => [
+                                    'views' => $views,
+                                    'clicks' => $clicks,
+                                    'calls' => $calls,
+                                    'rating' => $rating,
+                                    'reviewCount' => $reviewCount
+                                ]
+                            ]);
                         @endphp
                     
                         <div class="bg-white rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow">

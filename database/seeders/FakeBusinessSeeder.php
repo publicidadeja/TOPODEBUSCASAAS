@@ -10,35 +10,28 @@ class FakeBusinessSeeder extends Seeder
 {
     public function run()
     {
-        // Encontra o usuário admin ou cria um novo se não existir
-        $user = User::where('email', 'admin@example.com')->first();
-        
-        if (!$user) {
-            $user = User::create([
-                'name' => 'Admin',
-                'email' => 'admin@example.com',
+        // Garante que existe um usuário
+        $user = User::firstOrCreate(
+            ['email' => 'teste@exemplo.com'],
+            [
+                'name' => 'Usuário Teste',
                 'password' => bcrypt('password'),
-                'email_verified_at' => now(),
-            ]);
-        }
-
-        // Verifica se já existe um negócio com o mesmo nome
-        $existingBusiness = Business::where('name', 'Café Aroma Brasileiro')->first();
-        if ($existingBusiness) {
-            $existingBusiness->delete(); // Remove o negócio existente
-        }
+            ]
+        );
 
         // Cria o negócio fictício
         $business = Business::create([
             'user_id' => $user->id,
             'name' => 'Café Aroma Brasileiro',
             'segment' => 'Cafeteria',
-            'address' => 'Rua das Flores, 123 - Jardins, São Paulo - SP, 01410-000',
-            'phone' => '(11) 3456-7890',
+            'description' => 'O melhor café artesanal da região, com ambiente acolhedor e wifi grátis para nossos clientes.',
+            'address' => 'Rua das Flores, 123 - Centro, São Paulo - SP',
+            'phone' => '(11) 98765-4321',
             'website' => 'https://cafearomabrasileiro.com.br',
-            'description' => 'Cafeteria artesanal especializada em grãos selecionados, ambiente acolhedor e experiência única.',
             'is_verified' => true,
             'status' => 'active',
+            'rating' => 4.7,
+            'review_count' => 3,
             'settings' => [
                 'notifications' => [
                     'views' => true,
@@ -48,12 +41,12 @@ class FakeBusinessSeeder extends Seeder
                     'variation_threshold' => 10
                 ],
                 'business_hours' => [
-                    'monday' => ['09:00-18:00'],
-                    'tuesday' => ['09:00-18:00'],
-                    'wednesday' => ['09:00-18:00'],
-                    'thursday' => ['09:00-18:00'],
-                    'friday' => ['09:00-18:00'],
-                    'saturday' => ['10:00-16:00'],
+                    'monday' => ['08:00-18:00'],
+                    'tuesday' => ['08:00-18:00'],
+                    'wednesday' => ['08:00-18:00'],
+                    'thursday' => ['08:00-18:00'],
+                    'friday' => ['08:00-18:00'],
+                    'saturday' => ['09:00-15:00'],
                     'sunday' => ['closed']
                 ],
                 'social_media' => [
@@ -62,24 +55,21 @@ class FakeBusinessSeeder extends Seeder
                     'twitter' => 'https://twitter.com/cafearomabr'
                 ],
                 'location' => [
-                    'latitude' => -23.561684,
-                    'longitude' => -46.655866,
+                    'latitude' => -23.550520,
+                    'longitude' => -46.633308,
                 ],
                 'attributes' => [
                     'wifi' => true,
                     'wheelchair_accessible' => true,
                     'outdoor_seating' => true,
-                    'accepts_credit_cards' => true,
                     'parking' => true,
                     'delivery' => true,
                     'takeout' => true
                 ]
-            ],
-            'created_at' => now(),
-            'updated_at' => now(),
+            ]
         ]);
 
-        // Adiciona fotos fictícias
+        // Adiciona fotos
         $photos = [
             [
                 'url' => '/images/fake/cafe-exterior.jpg',
@@ -105,27 +95,24 @@ class FakeBusinessSeeder extends Seeder
             $business->photos()->create($photo);
         }
 
-        // Adiciona avaliações fictícias
+        // Adiciona avaliações
         $reviews = [
             [
                 'author' => 'Maria Silva',
                 'rating' => 5,
-                'comment' => 'Melhor café da região! Atendimento impecável e ambiente perfeito para trabalhar.',
-                'created_at' => now()->subDays(5),
+                'comment' => 'Excelente café! Ambiente muito agradável e atendimento impecável.',
                 'business_id' => $business->id
             ],
             [
                 'author' => 'João Santos',
                 'rating' => 4,
-                'comment' => 'Ótimo ambiente para trabalhar. WiFi excelente e café delicioso.',
-                'created_at' => now()->subDays(10),
+                'comment' => 'Ótimo lugar para trabalhar. Wifi rápido e café delicioso.',
                 'business_id' => $business->id
             ],
             [
-                'author' => 'Ana Paula',
+                'author' => 'Ana Oliveira',
                 'rating' => 5,
-                'comment' => 'Adorei o espaço! Café maravilhoso e atendimento nota 10.',
-                'created_at' => now()->subDays(15),
+                'comment' => 'Os doces são maravilhosos! Super recomendo.',
                 'business_id' => $business->id
             ]
         ];
@@ -133,11 +120,5 @@ class FakeBusinessSeeder extends Seeder
         foreach ($reviews as $review) {
             $business->reviews()->create($review);
         }
-
-        // Atualiza as métricas do negócio
-        $business->update([
-            'rating' => 4.7,
-            'review_count' => 3
-        ]);
     }
 }

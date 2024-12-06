@@ -186,4 +186,9 @@ public function destroy(Business $business)
     return redirect()->route('business.index')
         ->with('success', 'Negócio excluído com sucesso.');
 }
+
+public function edit(Business $business)
+{
+    return view('business.edit', compact('business'));
+}
 }
