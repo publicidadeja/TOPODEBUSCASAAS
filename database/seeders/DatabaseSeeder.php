@@ -8,6 +8,14 @@ class DatabaseSeeder extends Seeder
 {
     public function run()
     {
+        $this->call([
+            FakeBusinessSeeder::class,
+            BusinessAnalyticsSeeder::class
+        ]);
+    }
+}
+
+        // Depois, configure os competidores
         $businesses = Business::all();
 
         foreach ($businesses as $business) {

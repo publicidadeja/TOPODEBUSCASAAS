@@ -4,7 +4,10 @@ namespace Database\Seeders;
 
 use App\Models\Business;
 use App\Models\User;
+use App\Models\BusinessAnalytics;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
+
 
 class FakeBusinessSeeder extends Seeder
 {
@@ -68,6 +71,20 @@ class FakeBusinessSeeder extends Seeder
                 ]
             ]
         ]);
+
+        // Adiciona métricas dos últimos 30 dias
+        $startDate = Carbon::now()->subDays(30);
+for ($i = 0; $i <= 30; $i++) {
+    BusinessAnalytics::create([
+        'business_id' => $business->id,
+        'date' => $startDate->copy()->addDays($i),
+        'views' => rand(50, 200),
+        'clicks' => rand(20, 80),
+        'calls' => rand(5, 20),
+        'website_visits' => rand(15, 50),
+        'photo_views' => rand(30, 100)
+    ]);
+        }
 
         // Adiciona fotos
         $photos = [
