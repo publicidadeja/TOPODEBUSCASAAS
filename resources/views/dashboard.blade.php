@@ -10,7 +10,7 @@
 
     <div class="py-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <!-- Mensagem de erro do Google (Nova seção) -->
+            <!-- Mensagem de erro do Google -->
             @if(session('google_error'))
             <div class="mb-8">
                 <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
@@ -29,6 +29,17 @@
                 </div>
             </div>
             @endif
+
+            <!-- Período de Análise -->
+            <div class="mb-8">
+                <div class="flex justify-end">
+                    <select id="period-selector" class="form-select rounded-md shadow-sm border-gray-300 focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                        <option value="7">Últimos 7 dias</option>
+                        <option value="30" selected>Últimos 30 dias</option>
+                        <option value="90">Últimos 90 dias</option>
+                    </select>
+                </div>
+            </div>
 
             <!-- Performance Overview -->
             <div class="mb-8">
@@ -104,25 +115,13 @@
                 <!-- Principais Localizações -->
                 <div class="bg-white rounded-lg shadow-sm p-6">
                     <h3 class="text-lg font-google-sans text-gray-800 mb-4">Principais Localizações</h3>
-                    <div class="h-[300px] overflow-y-auto">
-                        <div class="space-y-4">
-                            @foreach($analytics['top_locations'] as $location => $percentage)
-                            <div class="flex items-center">
-                                <span class="text-sm text-gray-600 w-24">{{ $location }}</span>
-                                <div class="flex-1 mx-4">
-                                    <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                        <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ $percentage }}%"></div>
-                                    </div>
-                                </div>
-                                <span class="text-sm text-gray-600">{{ $percentage }}%</span>
-                            </div>
-                            @endforeach
-                        </div>
+                    <div class="h-[300px]">
+                        <canvas id="locationsChart"></canvas>
                     </div>
                 </div>
             </div>
 
-            <!-- Análise de Concorrentes (Nova seção) -->
+            <!-- Análise de Concorrentes -->
             @if(!empty($competitors))
             <div class="mb-8 bg-white rounded-lg shadow-sm p-6">
                 <h3 class="text-lg font-google-sans text-gray-800 mb-4">Análise de Concorrentes</h3>
@@ -263,10 +262,11 @@
     </div>
 
     @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         // Performance Chart
-        const ctx = document.getElementById('performanceChart').getContext('2d');
-        new Chart(ctx, {
+        const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+        new Chart(performanceCtx, {
             type: 'line',
             data: {
                 labels: {!! json_encode($analytics['dates']) !!},
@@ -375,6 +375,60 @@
                     }
                 }
             }
+        });
+
+        // Locations Chart
+        const locationsCtx = document.getElementById('locationsChart').getContext('2d');
+        new Chart(locationsCtx, {
+            type: 'bar',
+            data: {
+                labels: {!! json_encode(array_keys($analytics['top_locations'])) !!},
+                datasets: [{
+                    label: 'Visualizações por Localização',
+                    data: {!! json_encode(array_values($analytics['top_locations'])) !!},
+                    backgroundColor: '#4285F4',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                family: 'Google Sans'
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: {
+                                family: 'Google Sans'
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Period Selector Event Listener
+        document.getElementById('period-selector').addEventListener('change', function() {
+            const period = this.value;
+            window.location.href = `{{ route('dashboard') }}?business={{ $selectedBusiness->id }}&period=${period}`;
         });
     </script>
     @endpush
