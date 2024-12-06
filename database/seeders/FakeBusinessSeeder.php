@@ -22,6 +22,12 @@ class FakeBusinessSeeder extends Seeder
             ]);
         }
 
+        // Verifica se já existe um negócio com o mesmo nome
+        $existingBusiness = Business::where('name', 'Café Aroma Brasileiro')->first();
+        if ($existingBusiness) {
+            $existingBusiness->delete(); // Remove o negócio existente
+        }
+
         // Cria o negócio fictício
         $business = Business::create([
             'user_id' => $user->id,
@@ -73,22 +79,25 @@ class FakeBusinessSeeder extends Seeder
             'updated_at' => now(),
         ]);
 
-        // Adiciona algumas fotos fictícias
+        // Adiciona fotos fictícias
         $photos = [
             [
                 'url' => '/images/fake/cafe-exterior.jpg',
                 'type' => 'EXTERIOR',
-                'caption' => 'Fachada do Café'
+                'caption' => 'Fachada do Café',
+                'business_id' => $business->id
             ],
             [
                 'url' => '/images/fake/cafe-interior.jpg',
                 'type' => 'INTERIOR',
-                'caption' => 'Ambiente interno'
+                'caption' => 'Ambiente interno',
+                'business_id' => $business->id
             ],
             [
                 'url' => '/images/fake/cafe-produtos.jpg',
                 'type' => 'PRODUCT',
-                'caption' => 'Nossos cafés especiais'
+                'caption' => 'Nossos cafés especiais',
+                'business_id' => $business->id
             ]
         ];
 
@@ -96,30 +105,39 @@ class FakeBusinessSeeder extends Seeder
             $business->photos()->create($photo);
         }
 
-        // Adiciona algumas avaliações fictícias
+        // Adiciona avaliações fictícias
         $reviews = [
             [
                 'author' => 'Maria Silva',
                 'rating' => 5,
                 'comment' => 'Melhor café da região! Atendimento impecável e ambiente perfeito para trabalhar.',
                 'created_at' => now()->subDays(5),
+                'business_id' => $business->id
             ],
             [
                 'author' => 'João Santos',
                 'rating' => 4,
                 'comment' => 'Ótimo ambiente para trabalhar. WiFi excelente e café delicioso.',
                 'created_at' => now()->subDays(10),
+                'business_id' => $business->id
             ],
             [
                 'author' => 'Ana Paula',
                 'rating' => 5,
                 'comment' => 'Adorei o espaço! Café maravilhoso e atendimento nota 10.',
                 'created_at' => now()->subDays(15),
+                'business_id' => $business->id
             ]
         ];
 
         foreach ($reviews as $review) {
             $business->reviews()->create($review);
         }
+
+        // Atualiza as métricas do negócio
+        $business->update([
+            'rating' => 4.7,
+            'review_count' => 3
+        ]);
     }
 }

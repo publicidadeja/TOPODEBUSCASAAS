@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Business;
 use App\Services\FakeGoogleBusinessService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class BusinessController extends Controller
 {
@@ -156,5 +157,29 @@ class BusinessController extends Controller
 
     return redirect()->route('business.index')
         ->with('success', 'Negócio cadastrado com sucesso!');
+}
+
+/**
+ * Remove the specified business from storage.
+ *
+ * @param  \App\Models\Business  $business
+ * @return \Illuminate\Http\RedirectResponse
+ */
+public function destroy(Business $business)
+{
+    // Autoriza a ação de exclusão
+    $this->authorize('delete', $business);
+
+    // Remove a foto de capa se existir
+    if ($business->cover_photo) {
+        Storage::delete($business->cover_photo);
+    }
+
+    // Deleta o negócio
+    $business->delete();
+
+    // Redireciona com mensagem de sucesso
+    return redirect()->route('business.index')
+        ->with('success', 'Negócio excluído com sucesso.');
 }
 }
