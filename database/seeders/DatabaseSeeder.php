@@ -28,5 +28,3 @@ class DatabaseSeeder extends Seeder
 
             $business->competitors()->attach($competitors->pluck('id'));
         }
-    }
-}
