@@ -16,6 +16,18 @@ use Illuminate\Support\Facades\Cache;
 
 class AnalyticsController extends Controller
 {
+
+    protected function calculateEngagementRate($analytics)
+    {
+        $totalViews = $analytics->sum('views');
+        $totalInteractions = $analytics->sum('clicks') + $analytics->sum('calls');
+        
+        if ($totalViews == 0) {
+            return 0;
+        }
+        
+        return round(($totalInteractions / $totalViews) * 100, 1);
+    }
     protected $geminiService;
     
     public function __construct(GeminiService $geminiService)
@@ -25,7 +37,6 @@ class AnalyticsController extends Controller
 
     public function index(Business $business)
 {
-
     
     $user = auth()->user();
     $businesses = $user->businesses;
@@ -77,8 +88,8 @@ class AnalyticsController extends Controller
 
     // Calcula crescimento
 
-    $currentEngagement = $this->calculateEngagementRate($currentPeriodAnalytics);
-    $previousEngagement = $this->calculateEngagementRate($previousPeriodAnalytics);
+    $currentRating = (float) $selectedBusiness->rating;
+$previousRating = (float) $selectedBusiness->rating;
 
 $trends = $growth = [
     'views' => $this->calculateGrowth(
@@ -98,7 +109,12 @@ $trends = $growth = [
         $currentConversion
     ),
     'rating' => $this->calculateGrowth($previousRating, $currentRating),
-    'response_time' => 0
+    'response_time' => 0,
+    // Add this new line
+    'engagement' => $this->calculateGrowth(
+        $this->calculateEngagementRate($previousPeriodAnalytics),
+        $this->calculateEngagementRate($currentPeriodAnalytics)
+    )
 ];
 
 
@@ -109,17 +125,47 @@ $trends = $growth = [
         ->take(10)
         ->get();
 
+        // Calculate metrics first
+        $totalCalls = $analytics->sum('calls');
+        $totalVisits = $analytics->sum('visits');
+        $conversionRate = $selectedBusiness->getConversionRate($startDate, $endDate);
+        $engagementRate = $this->calculateEngagementRate($currentPeriodAnalytics);
+        
+        // Initialize the metrics array with calculated values
         $metrics = [
-            'calls' => array_sum($analyticsData['calls'] ?? [0]),
-            'visits' => $currentPeriodAnalytics->sum('visits'), // Usar diretamente a collection
-            'conversion_rate' => $analyticsData['currentConversion'] ?? 0,
-            'rating' => $analyticsData['averageRating'] ?? 0,
-            'response_time' => '24h', // Adicionar valor padrão se necessário
-            'engagement_rate' => 0 // Adicionar valor padrão se necessário
+            'calls' => $totalCalls,
+            'visits' => $totalVisits,
+            'conversion_rate' => $conversionRate,
+            'rating' => $selectedBusiness->rating,
+            'response_time' => '24h', // You might want to calculate this dynamically
+            'engagement_rate' => $engagementRate,
+            'devices' => [
+                'desktop' => 0,
+                'mobile' => 0,
+                'tablet' => 0
+            ],
+            'traffic' => [
+                'search' => 0,
+                'maps' => 0,
+                'direct' => 0,
+                'referral' => 0
+            ]
         ];
 
     // Gera ou recupera análise AI
     $aiAnalysis = $this->getOrGenerateAIAnalysis($selectedBusiness, $analytics);
+
+    $dailyData = $analytics->map(function ($record) {
+    return [
+        'date' => $record->date,
+        'views' => $record->views,
+        'clicks' => $record->clicks,
+        'calls' => $record->calls,
+        'visits' => 0, // Add this line with a default value of 0
+        'conversion' => $record->clicks > 0 ? 
+            round(($record->calls / $record->clicks) * 100, 2) : 0
+    ];
+})->toArray();
 
     return view('analytics.dashboard', compact(
         'business',
@@ -130,7 +176,8 @@ $trends = $growth = [
         'trends',
         'actions',
         'aiAnalysis',
-        'metrics'
+        'metrics',
+        'dailyData'
     ));
 }
 
@@ -907,16 +954,6 @@ private function prepareCompetitorData($analytics)
         ? round((($totalClicks + $totalCalls) / $totalViews) * 100, 1) 
         : 0;
 
-    $dailyData = [];
-    foreach ($analytics as $record) {
-        $date = Carbon::parse($record->date)->format('d/m');
-        $dailyData[$date] = [
-            'views' => $record->views,
-            'clicks' => $record->clicks,
-            'calls' => $record->calls
-        ];
-    }
-
     // Calcular tendência
     $trend = [
         'views' => 0,
@@ -951,6 +988,18 @@ private function prepareCompetitorData($analytics)
         'mobile' => 0,
         'tablet' => 0
     ];
+
+    // Preparar dados diários
+    $dailyData = $analytics->map(function($item) {
+        return [
+            'date' => $item->date->format('d/m'),
+            'views' => $item->views,
+            'clicks' => $item->clicks,
+            'calls' => $item->calls,
+            'visits' => $item->visits ?? 0,
+            'conversion' => $item->clicks > 0 ? round(($item->calls / $item->clicks) * 100, 1) : 0
+        ];
+    })->toArray();
 
     return [
         'total_views' => $totalViews,

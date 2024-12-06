@@ -278,28 +278,27 @@
         new Chart(ctx, {
             type: 'line',
             data: {
-                labels: {!! json_encode($chartData['dates']) !!},
-                datasets: [
-                    {
-                        label: 'Visualizações',
-                        data: {!! json_encode($chartData['views']) !!},
-                        borderColor: '#4285F4',
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Cliques',
-                        data: {!! json_encode($chartData['clicks']) !!},
-                        borderColor: '#0F9D58',
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Ligações',
-                        data: {!! json_encode($chartData['calls']) !!},
-                        borderColor: '#DB4437',
-                        tension: 0.4
-                    }
-                ]
-            },
+    labels: {!! json_encode($analyticsData['dates']) !!},
+    datasets: [
+    {
+        label: 'Visualizações',
+        data: {!! json_encode($analyticsData['views']) !!},
+        borderColor: '#4285F4',
+        tension: 0.4
+    },
+    {
+        label: 'Cliques',
+        data: {!! json_encode($analyticsData['clicks']) !!},
+        borderColor: '#0F9D58',
+        tension: 0.4
+    },
+    {
+        label: 'Ligações',
+        data: {!! json_encode($analyticsData['calls']) !!},
+        borderColor: '#DB4437',
+        tension: 0.4
+    }
+]
             options: {
                 responsive: true,
                 interaction: {
