@@ -12,6 +12,12 @@ use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SettingsController;
 
+Route::prefix('automation')->group(function () {
+    Route::get('/suggestions/{business}', 'AutomationController@getAIAssistantSuggestions');
+    Route::get('/segment-trends', 'AutomationController@getSegmentTrends');
+    Route::get('/segment-events/{business}', 'AutomationController@getSeasonalEvents');
+});
+
 Route::middleware(['auth'])->group(function () {
     Route::prefix('automation')->group(function () {
         Route::get('/', [AutomationController::class, 'index'])->name('automation.index');

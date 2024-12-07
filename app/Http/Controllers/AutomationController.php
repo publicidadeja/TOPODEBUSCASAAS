@@ -53,7 +53,9 @@ private function getBusinessMetrics($business)
         'clicks' => $business->analytics()->sum('clicks'),
         'calls' => $business->analytics()->sum('calls'),
         'conversion_rate' => $business->getConversionRate(),
-        'growth_rate' => $business->getGrowthRate()
+        'growth_rate' => $business->getGrowthRate(),
+        'reviews_count' => $business->reviews()->count(),
+        'average_rating' => $business->reviews()->avg('rating')
     ];
 }
 
@@ -738,17 +740,143 @@ private function getRestaurantSuggestions($currentMonth)
 
 public function getAIAssistantSuggestions()
 {
-    $business = Business::where('user_id', auth()->id())->first();
+    try {
+        $business = Business::where('user_id', auth()->id())->first();
+        
+        if (!$business) {
+            return response()->json(['error' => 'Negócio não encontrado'], 404);
+        }
+
+        // Buscar dados dos concorrentes com Serper
+        $competitors = $this->serper->search("{$business->name} concorrentes {$business->segment} {$business->address}");
+        
+        // Analisar dados com Gemini
+        $analysis = $this->gemini->analyzeBusinessData($business, [
+            'competitors' => $competitors,
+            'metrics' => $this->getBusinessMetrics($business)
+        ]);
+
+        return response()->json([
+            'suggestions' => $analysis['suggestions']
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Erro ao gerar sugestões'], 500);
+    }
+}
+
+public function getSegmentTrends()
+{
+    try {
+        $business = Business::where('user_id', auth()->id())->first();
+        
+        if (!$business) {
+            return response()->json(['error' => 'Negócio não encontrado'], 404);
+        }
+
+        // Buscar tendências do segmento com Serper
+        $searchResults = $this->serper->search("tendências {$business->segment} {$business->address}");
+        
+        // Analisar resultados com Gemini
+        $prompt = "Analise estas tendências do segmento e forneça insights: " . json_encode($searchResults);
+        $analysis = $this->gemini->generateContent($prompt);
+
+        return response()->json([
+            'trends' => $this->formatTrends($analysis)
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Erro ao buscar tendências'], 500);
+    }
+}
+
+public function getSeasonalEvents()
+{
+    try {
+        $business = Business::where('user_id', auth()->id())->first();
+        
+        if (!$business) {
+            return response()->json(['error' => 'Negócio não encontrado'], 404);
+        }
+
+        // Gerar eventos sazonais com Gemini
+        $prompt = "Gere eventos sazonais relevantes para um negócio do segmento {$business->segment}";
+        $events = $this->gemini->generateContent($prompt);
+
+        return response()->json([
+            'events' => $this->formatSeasonalEvents($events)
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Erro ao buscar eventos sazonais'], 500);
+    }
+}
+
+private function formatTrends($analysis)
+{
+    // Formatar análise do Gemini em tendências estruturadas
+    $content = $analysis['content'];
+    $trends = [];
     
-    if (!$business) {
-        return response()->json(['error' => 'Negócio não encontrado'], 404);
+    // Dividir o conteúdo em linhas
+    $lines = explode("\n", $content);
+    
+    $currentTrend = null;
+    foreach ($lines as $line) {
+        if (strpos($line, 'Tendência:') === 0) {
+            if ($currentTrend) {
+                $trends[] = $currentTrend;
+            }
+            $currentTrend = [
+                'title' => trim(str_replace('Tendência:', '', $line)),
+                'description' => '',
+                'tags' => []
+            ];
+        } elseif ($currentTrend && strpos($line, 'Tags:') === 0) {
+            $currentTrend['tags'] = array_map('trim', explode(',', str_replace('Tags:', '', $line)));
+        } elseif ($currentTrend && !empty(trim($line))) {
+            $currentTrend['description'] .= trim($line) . ' ';
+        }
+    }
+    
+    if ($currentTrend) {
+        $trends[] = $currentTrend;
     }
 
-    // Analyze business data and generate AI suggestions
-    $suggestions = $this->analyzeBusinessData($business);
-
-    return response()->json(['suggestions' => $suggestions]);
+    return $trends;
 }
+
+private function formatSeasonalEvents($events)
+{
+    // Formatar eventos gerados pelo Gemini
+    $content = $events['content'];
+    $formattedEvents = [];
+    
+    $lines = explode("\n", $content);
+    
+    $currentEvent = null;
+    foreach ($lines as $line) {
+        if (strpos($line, 'Evento:') === 0) {
+            if ($currentEvent) {
+                $formattedEvents[] = $currentEvent;
+            }
+            $currentEvent = [
+                'title' => trim(str_replace('Evento:', '', $line)),
+                'description' => '',
+                'date' => null
+            ];
+        } elseif ($currentEvent && strpos($line, 'Data:') === 0) {
+            $currentEvent['date'] = trim(str_replace('Data:', '', $line));
+        } elseif ($currentEvent && !empty(trim($line))) {
+            $currentEvent['description'] .= trim($line) . ' ';
+        }
+    }
+    
+    if ($currentEvent) {
+        $formattedEvents[] = $currentEvent;
+    }
+
+    return $formattedEvents;
+}
+
+
 
 private function analyzeBusinessData($business)
 {

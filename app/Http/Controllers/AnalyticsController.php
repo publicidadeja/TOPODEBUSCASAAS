@@ -37,7 +37,7 @@ class AnalyticsController extends Controller
 
     public function index(Business $business)
 {
-    
+    // 1. Inicialização e configuração básica
     $user = auth()->user();
     $businesses = $user->businesses;
     
@@ -47,36 +47,35 @@ class AnalyticsController extends Controller
         $selectedBusiness = $business;
     }
 
-    // Define período de análise (últimos 30 dias)
+    // 2. Definição do período de análise
     $endDate = now();
     $startDate = now()->subDays(30);
 
-    // Busca analytics do período
+    // 3. Busca e processamento dos dados analíticos
     $analytics = BusinessAnalytics::where('business_id', $selectedBusiness->id)
         ->whereBetween('date', [$startDate, $endDate])
         ->orderBy('date')
         ->get();
 
-    // Divide os dados em períodos atual e anterior para comparação
+    // 4. Separação dos períodos para comparação
     $currentPeriodAnalytics = $analytics->take(15);
     $previousPeriodAnalytics = $analytics->skip(15);
 
-    // Calcula taxa de conversão atual
+    // 5. Cálculo das taxas de conversão
     $currentClicks = $currentPeriodAnalytics->sum('clicks');
     $currentCalls = $currentPeriodAnalytics->sum('calls');
     $currentConversion = $currentClicks > 0 ? ($currentCalls / $currentClicks) * 100 : 0;
 
-    // Calcula taxa de conversão anterior para comparação
     $previousClicks = $previousPeriodAnalytics->sum('clicks');
     $previousCalls = $previousPeriodAnalytics->sum('calls');
     $previousConversion = $previousClicks > 0 ? ($previousCalls / $previousClicks) * 100 : 0;
 
-    // Prepara dados para o dashboard
+    // 6. Preparação dos dados analíticos
     $analyticsData = [
         'views' => $analytics->pluck('views')->toArray(),
         'clicks' => $analytics->pluck('clicks')->toArray(),
         'calls' => $analytics->pluck('calls')->toArray(),
-        'visits' => $analytics->pluck('visits')->toArray(), // Adicionar esta linha
+        'visits' => $analytics->pluck('visits')->toArray(),
         'dates' => $analytics->pluck('date')->map(fn($date) => $date->format('d/m'))->toArray(),
         'currentConversion' => round($currentConversion, 1),
         'averageRating' => (float) $selectedBusiness->rating,
@@ -85,88 +84,95 @@ class AnalyticsController extends Controller
         })->toArray()
     ];
 
-
-    // Calcula crescimento
-
+    // 7. Cálculo de crescimento e tendências
     $currentRating = (float) $selectedBusiness->rating;
-$previousRating = (float) $selectedBusiness->rating;
+    $previousRating = (float) $selectedBusiness->rating;
 
-$trends = $growth = [
-    'views' => $this->calculateGrowth(
-        $previousPeriodAnalytics->sum('views'),
-        $currentPeriodAnalytics->sum('views')
-    ),
-    'clicks' => $this->calculateGrowth(
-        $previousPeriodAnalytics->sum('clicks'),
-        $currentPeriodAnalytics->sum('clicks')
-    ),
-    'calls' => $this->calculateGrowth(
-        $previousPeriodAnalytics->sum('calls'),
-        $currentPeriodAnalytics->sum('calls')
-    ),
-    'conversion' => $this->calculateGrowth(
-        $previousConversion,
-        $currentConversion
-    ),
-    'rating' => $this->calculateGrowth($previousRating, $currentRating),
-    'response_time' => 0,
-    // Add this new line
-    'engagement' => $this->calculateGrowth(
-        $this->calculateEngagementRate($previousPeriodAnalytics),
-        $this->calculateEngagementRate($currentPeriodAnalytics)
-    )
-];
+    $growth = $trends = [
+        'views' => $this->calculateGrowth(
+            $previousPeriodAnalytics->sum('views'),
+            $currentPeriodAnalytics->sum('views')
+        ),
+        'clicks' => $this->calculateGrowth(
+            $previousPeriodAnalytics->sum('clicks'),
+            $currentPeriodAnalytics->sum('clicks')
+        ),
+        'calls' => $this->calculateGrowth(
+            $previousPeriodAnalytics->sum('calls'),
+            $currentPeriodAnalytics->sum('calls')
+        ),
+        'conversion' => $this->calculateGrowth($previousConversion, $currentConversion),
+        'rating' => $this->calculateGrowth($previousRating, $currentRating),
+        'response_time' => 0,
+        'engagement' => $this->calculateGrowth(
+            $this->calculateEngagementRate($previousPeriodAnalytics),
+            $this->calculateEngagementRate($currentPeriodAnalytics)
+        )
+    ];
 
+    // 8. Cálculo de métricas
+    $totalCalls = $analytics->sum('calls');
+    $totalVisits = $analytics->sum('visits');
+    $conversionRate = $selectedBusiness->getConversionRate($startDate, $endDate);
+    $engagementRate = $this->calculateEngagementRate($currentPeriodAnalytics);
+    $totalViews = $analytics->sum('views') ?? 0;
+    $totalClicks = $analytics->sum('clicks') ?? 0;
 
+    $metrics = [
+        'views' => $totalViews,
+        'clicks' => $totalClicks,
+        'calls' => $totalCalls,
+        'visits' => $totalVisits,
+        'conversion_rate' => $conversionRate,
+        'rating' => $selectedBusiness->rating,
+        'response_time' => '24h',
+        'engagement_rate' => $engagementRate,
+        'devices' => ['desktop' => 0, 'mobile' => 0, 'tablet' => 0],
+        'traffic' => ['search' => 0, 'maps' => 0, 'direct' => 0, 'referral' => 0]
+    ];
 
-    // Busca ações recentes
+    // 9. Busca de ações recentes
     $actions = Action::where('business_id', $selectedBusiness->id)
         ->orderBy('created_at', 'desc')
         ->take(10)
         ->get();
 
-        // Calculate metrics first
-        $totalCalls = $analytics->sum('calls');
-        $totalVisits = $analytics->sum('visits');
-        $conversionRate = $selectedBusiness->getConversionRate($startDate, $endDate);
-        $engagementRate = $this->calculateEngagementRate($currentPeriodAnalytics);
-        
-        // Initialize the metrics array with calculated values
-        $metrics = [
-            'calls' => $totalCalls,
-            'visits' => $totalVisits,
-            'conversion_rate' => $conversionRate,
-            'rating' => $selectedBusiness->rating,
-            'response_time' => '24h', // You might want to calculate this dynamically
-            'engagement_rate' => $engagementRate,
-            'devices' => [
-                'desktop' => 0,
-                'mobile' => 0,
-                'tablet' => 0
-            ],
-            'traffic' => [
-                'search' => 0,
-                'maps' => 0,
-                'direct' => 0,
-                'referral' => 0
-            ]
-        ];
-
-    // Gera ou recupera análise AI
-    $aiAnalysis = $this->getOrGenerateAIAnalysis($selectedBusiness, $analytics);
-
+    // 10. Geração de dados diários
     $dailyData = $analytics->map(function ($record) {
-    return [
-        'date' => $record->date,
-        'views' => $record->views,
-        'clicks' => $record->clicks,
-        'calls' => $record->calls,
-        'visits' => 0, // Add this line with a default value of 0
-        'conversion' => $record->clicks > 0 ? 
-            round(($record->calls / $record->clicks) * 100, 2) : 0
-    ];
-})->toArray();
+        return [
+            'date' => $record->date,
+            'views' => $record->views,
+            'clicks' => $record->clicks,
+            'calls' => $record->calls,
+            'visits' => 0,
+            'conversion' => $record->clicks > 0 ? round(($record->calls / $record->clicks) * 100, 2) : 0
+        ];
+    })->toArray();
 
+    // 11. Análise AI e Insights
+    $aiAnalysis = $this->getOrGenerateAIAnalysis($selectedBusiness, $analytics);
+    
+    $insights = [];
+    if (isset($aiAnalysis['market_overview'])) {
+        $insights[] = $aiAnalysis['market_overview'];
+    }
+    if (isset($aiAnalysis['competitor_insights']) && is_array($aiAnalysis['competitor_insights'])) {
+        $insights = array_merge($insights, $aiAnalysis['competitor_insights']);
+    }
+    if (isset($aiAnalysis['recommendations']) && is_array($aiAnalysis['recommendations'])) {
+        $insights = array_merge($insights, $aiAnalysis['recommendations']);
+    }
+    if (isset($aiAnalysis['alerts']) && is_array($aiAnalysis['alerts'])) {
+        foreach ($aiAnalysis['alerts'] as $alert) {
+            if (isset($alert['message'])) {
+                $insights[] = $alert['message'];
+            }
+        }
+    }
+    $recommendations = isset($aiAnalysis['recommendations']) ? $aiAnalysis['recommendations'] : [];
+
+    $locationData = [];
+    // 12. Retorno da view com todos os dados
     return view('analytics.dashboard', compact(
         'business',
         'businesses',
@@ -177,7 +183,10 @@ $trends = $growth = [
         'actions',
         'aiAnalysis',
         'metrics',
-        'dailyData'
+        'dailyData',
+        'insights',
+        'recommendations',
+        'locationData'
     ));
 }
 
@@ -484,55 +493,86 @@ private function generateCompetitorInsights($mainBusinessData, $competitorsData)
 {
     $insights = [];
     
-    // Verifica se a chave market_share existe antes de acessá-la
-    if (isset($mainBusinessData['market_share']) && isset($mainBusinessData['market_share']['views'])) {
-        $marketShareViews = $mainBusinessData['market_share']['views'];
-        if ($marketShareViews > 50) {
-            $insights[] = "Seu negócio é líder em visualizações com {$marketShareViews}% do mercado.";
-        } elseif ($marketShareViews < 30) {
-            $insights[] = "Oportunidade de crescimento: sua participação nas visualizações está em {$marketShareViews}%.";
+    // Análise de Market Share
+    if (isset($mainBusinessData['market_share'])) {
+        if (isset($mainBusinessData['market_share']['views'])) {
+            $marketShareViews = $mainBusinessData['market_share']['views'];
+            if ($marketShareViews > 50) {
+                $insights[] = "Seu negócio é líder em visualizações com {$marketShareViews}% do mercado.";
+            } elseif ($marketShareViews < 30) {
+                $insights[] = "Oportunidade de crescimento: sua participação nas visualizações está em {$marketShareViews}%. Considere aumentar sua presença online.";
+            }
+        }
+
+        if (isset($mainBusinessData['market_share']['clicks'])) {
+            $marketShareClicks = $mainBusinessData['market_share']['clicks'];
+            if ($marketShareClicks > $marketShareViews) {
+                $insights[] = "Excelente taxa de engajamento: sua participação em cliques ({$marketShareClicks}%) é maior que em visualizações.";
+            }
         }
     }
 
-    // Verifica se existe taxa de conversão antes de comparar
+    // Análise de Conversão
     if (isset($mainBusinessData['conversion_rate'])) {
         $avgCompetitorConversion = collect($competitorsData)->avg('conversion_rate');
-        if ($mainBusinessData['conversion_rate'] > $avgCompetitorConversion) {
-            $difference = round($mainBusinessData['conversion_rate'] - $avgCompetitorConversion, 1);
-            $insights[] = "Sua taxa de conversão está {$difference}% acima da média dos concorrentes.";
+        $difference = round($mainBusinessData['conversion_rate'] - $avgCompetitorConversion, 1);
+        
+        if ($difference > 0) {
+            $insights[] = "Sua taxa de conversão está {$difference}% acima da média dos concorrentes - continue com as boas práticas!";
         } else {
-            $difference = round($avgCompetitorConversion - $mainBusinessData['conversion_rate'], 1);
-            $insights[] = "Oportunidade de melhoria: sua taxa de conversão está {$difference}% abaixo da média.";
+            $insights[] = "Oportunidade de melhoria: sua taxa de conversão está " . abs($difference) . "% abaixo da média. Considere otimizar sua página.";
         }
     }
 
-    // Verifica se existem dados de dispositivos antes de comparar
-    if (isset($mainBusinessData['devices']) && isset($mainBusinessData['devices']['mobile'])) {
-        $mainMobileShare = $mainBusinessData['devices']['mobile'];
+    // Análise de Dispositivos
+    if (isset($mainBusinessData['devices'])) {
+        $mainMobileShare = $mainBusinessData['devices']['mobile'] ?? 0;
         $avgCompetitorMobile = collect($competitorsData)->avg(function($competitor) {
             return $competitor['devices']['mobile'] ?? 0;
         });
         
-        if (abs($mainMobileShare - $avgCompetitorMobile) > 10) {
-            $insights[] = "Sua distribuição de dispositivos móveis difere significativamente da concorrência.";
+        $mobileDifference = abs($mainMobileShare - $avgCompetitorMobile);
+        if ($mobileDifference > 10) {
+            if ($mainMobileShare > $avgCompetitorMobile) {
+                $insights[] = "Seu site tem forte presença mobile ({$mainMobileShare}% dos acessos) - {$mobileDifference}% acima da média do mercado.";
+            } else {
+                $insights[] = "Oportunidade: Otimize para dispositivos móveis. Sua taxa de acesso mobile está {$mobileDifference}% abaixo da média.";
+            }
         }
     }
 
-    // Verifica se existem dados de tendência antes de comparar
-    if (isset($mainBusinessData['trend']) && 
-        isset($mainBusinessData['trend']['views']) && 
-        isset($mainBusinessData['trend']['clicks'])) {
+    // Análise de Tendências
+    if (isset($mainBusinessData['trend'])) {
+        $viewsTrend = $mainBusinessData['trend']['views'] ?? 0;
+        $clicksTrend = $mainBusinessData['trend']['clicks'] ?? 0;
+        $callsTrend = $mainBusinessData['trend']['calls'] ?? 0;
+
+        if ($viewsTrend > 10 && $clicksTrend > 10) {
+            $insights[] = "Crescimento expressivo: aumento de {$viewsTrend}% em visualizações e {$clicksTrend}% em cliques.";
+        } elseif ($viewsTrend < -10 && $clicksTrend < -10) {
+            $insights[] = "Alerta: Queda significativa de " . abs($viewsTrend) . "% em visualizações e " . abs($clicksTrend) . "% em cliques.";
+        }
+
+        if ($callsTrend > 0) {
+            $insights[] = "Aumento de {$callsTrend}% nas ligações recebidas - bom indicador de interesse dos clientes.";
+        }
+    }
+
+    // Análise de Rating (se disponível)
+    if (isset($mainBusinessData['rating']) && isset($competitorsData[0]['rating'])) {
+        $avgCompetitorRating = collect($competitorsData)->avg('rating');
+        $ratingDifference = round($mainBusinessData['rating'] - $avgCompetitorRating, 1);
         
-        if ($mainBusinessData['trend']['views'] > 0 && $mainBusinessData['trend']['clicks'] > 0) {
-            $insights[] = "Seu negócio está em crescimento tanto em visualizações quanto em cliques.";
-        } elseif ($mainBusinessData['trend']['views'] < 0 && $mainBusinessData['trend']['clicks'] < 0) {
-            $insights[] = "Atenção: tendência de queda em visualizações e cliques.";
+        if ($ratingDifference > 0) {
+            $insights[] = "Sua avaliação média ({$mainBusinessData['rating']}) está {$ratingDifference} pontos acima da concorrência.";
+        } elseif ($ratingDifference < 0) {
+            $insights[] = "Oportunidade: Sua avaliação está " . abs($ratingDifference) . " pontos abaixo da média. Foque em melhorar a satisfação dos clientes.";
         }
     }
 
-    // Se não houver insights, adiciona uma mensagem padrão
+    // Mensagem padrão se não houver insights
     if (empty($insights)) {
-        $insights[] = "Dados insuficientes para gerar insights comparativos.";
+        $insights[] = "Dados insuficientes para gerar insights comparativos. Continue coletando dados para análises mais precisas.";
     }
 
     return $insights;
