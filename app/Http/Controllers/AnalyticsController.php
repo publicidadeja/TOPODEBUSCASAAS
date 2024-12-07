@@ -118,6 +118,7 @@ class AnalyticsController extends Controller
     $totalViews = $analytics->sum('views') ?? 0;
     $totalClicks = $analytics->sum('clicks') ?? 0;
 
+
     $metrics = [
         'views' => $totalViews,
         'clicks' => $totalClicks,
@@ -128,7 +129,13 @@ class AnalyticsController extends Controller
         'response_time' => '24h',
         'engagement_rate' => $engagementRate,
         'devices' => ['desktop' => 0, 'mobile' => 0, 'tablet' => 0],
-        'traffic' => ['search' => 0, 'maps' => 0, 'direct' => 0, 'referral' => 0]
+        'traffic' => ['search' => 0, 'maps' => 0, 'direct' => 0, 'referral' => 0],
+        'views_trend' => $trends['views'] ?? 0,
+        'clicks_trend' => $trends['clicks'] ?? 0,
+        'calls_trend' => $trends['calls'] ?? 0,
+        'total_views' => $totalViews,
+        'total_clicks' => $totalClicks,
+        'total_calls' => $totalCalls
     ];
 
     // 9. Busca de ações recentes
