@@ -178,6 +178,8 @@ class AnalyticsController extends Controller
     }
     $recommendations = isset($aiAnalysis['recommendations']) ? $aiAnalysis['recommendations'] : [];
 
+    $totalViews = $metrics['total_views'];
+
     $locationData = [];
     // 12. Retorno da view com todos os dados
     return view('analytics.dashboard', compact(

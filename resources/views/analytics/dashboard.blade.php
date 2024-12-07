@@ -9,11 +9,11 @@
         }
 
         .metric-card {
-            @apply bg-white rounded-lg shadow-sm p-4 md:p-6 hover:shadow-md transition-shadow dark:bg-gray-800 flex flex-col h-full;
+            @apply bg-white rounded-lg shadow-sm p-4 md:p-6 hover:shadow-md transition-shadow flex flex-col h-full border border-gray-100;
         }
 
         .chart-container {
-            @apply bg-white rounded-lg shadow-sm p-4 md:p-6 dark:bg-gray-800 h-full;
+            @apply bg-white rounded-lg shadow-sm p-4 md:p-6 h-full border border-gray-100;
         }
 
         .trend-indicator {
@@ -21,15 +21,15 @@
         }
 
         .trend-up {
-            @apply bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+            @apply bg-green-50 text-green-600;
         }
 
         .trend-down {
-            @apply bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+            @apply bg-red-50 text-red-600;
         }
         
         .loading-overlay {
-            @apply absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center dark:bg-gray-800 dark:bg-opacity-75;
+            @apply absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center;
         }
 
         .loading-spinner {
@@ -37,7 +37,7 @@
         }
 
         .dashboard-header {
-            @apply sticky top-0 z-10 bg-white dark:bg-gray-900 shadow-sm;
+            @apply sticky top-0 z-10 bg-white border-b border-gray-200;
         }
 
         .dashboard-controls {
@@ -45,15 +45,31 @@
         }
 
         .select-control {
-            @apply w-full md:w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200;
+            @apply w-full md:w-auto rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-200;
         }
 
         .btn-primary {
             @apply bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition flex items-center justify-center;
         }
 
-        .btn-success {
-            @apply bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition flex items-center justify-center;
+        .stats-grid {
+            @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6;
+        }
+
+        .chart-grid {
+            @apply grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6;
+        }
+
+        .insights-section {
+            @apply bg-white rounded-lg shadow-sm p-6 mb-6 border border-gray-100;
+        }
+
+        .dropdown-menu {
+            @apply absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5;
+        }
+
+        .dropdown-item {
+            @apply block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50;
         }
     </style>
     @endpush
@@ -62,7 +78,7 @@
         <div class="dashboard-header">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <h2 class="text-xl font-google-sans text-gray-800 dark:text-gray-200">
+                    <h2 class="text-xl font-semibold text-gray-800">
                         Analytics - {{ $business->name }}
                     </h2>
                     
@@ -83,253 +99,281 @@
                         </select>
 
                         <div class="relative" x-data="{ open: false }">
-                            <button @click="open = !open" class="btn-primary w-full md:w-auto">
+                            <button @click="open = !open" class="btn-primary">
                                 Exportar
                                 <svg class="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>
                             </button>
-                            <div x-show="open" @click.away="open = false" 
-                                 class="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 dark:bg-gray-700">
-                                <div class="py-1">
-                                    <a href="{{ route('analytics.export.pdf', $business->id) }}" 
-                                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600">
-                                        Exportar PDF
-                                    </a>
-                                    <a href="{{ route('analytics.export.excel', $business->id) }}" 
-                                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-600">
-                                        Exportar Excel
-                                    </a>
-                                </div>
+                            <div x-show="open" @click.away="open = false" class="dropdown-menu">
+                                <a href="{{ route('analytics.export.pdf', $business->id) }}" class="dropdown-item">
+                                    Exportar PDF
+                                </a>
+                                <a href="{{ route('analytics.export.excel', $business->id) }}" class="dropdown-item">
+                                    Exportar Excel
+                                </a>
                             </div>
                         </div>
-
-                        <a href="{{ route('analytics.competitors', $business->id) }}" 
-                           class="btn-success w-full md:w-auto">
-                            Análise de Concorrentes
-                        </a>
                     </div>
                 </div>
             </div>
         </div>
     </x-slot>
+
     <div class="py-6">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Grid de métricas principais -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <!-- Visualizações -->
-            <div class="metric-card">
-                <div class="flex items-center justify-between mb-4">
-                    <h4 class="text-gray-600 font-google-sans">Visualizações</h4>
-                    <div class="trend-indicator {{ $metrics['views_trend'] >= 0 ? 'trend-up' : 'trend-down' }}">
-                        <span>{{ $metrics['views_trend'] }}%</span>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="metric-card">
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Visualizações Totais</h3>
+                    <div class="flex items-baseline">
+                    <span class="text-2xl font-semibold text-gray-900">{{ number_format($metrics['total_views']) }}</span>
+                        <span class="trend-indicator trend-up ml-2">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 9.707l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 8.414V15a1 1 0 11-2 0V8.414L6.707 11.121a1 1 0 01-1.414-1.414z" clip-rule="evenodd" />
+                            </svg>
+                            12.5%
+                        </span>
                     </div>
                 </div>
-                <p class="text-3xl font-google-sans mb-2">{{ number_format($metrics['total_views']) }}</p>
-                <span class="text-sm text-gray-500">vs. período anterior</span>
-            </div>
 
-            <!-- Cliques -->
-            <div class="metric-card">
-                <div class="flex items-center justify-between mb-4">
-                    <h4 class="text-gray-600 font-google-sans">Cliques</h4>
-                    <div class="trend-indicator {{ $metrics['clicks_trend'] >= 0 ? 'trend-up' : 'trend-down' }}">
-                        <span>{{ $metrics['clicks_trend'] }}%</span>
+                <div class="metric-card">
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Cliques</h3>
+                    <div class="flex items-baseline">
+                    <span class="text-2xl font-semibold text-gray-900">{{ number_format($metrics['total_clicks']) }}</span>
+                        <span class="trend-indicator trend-up ml-2">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 9.707l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 8.414V15a1 1 0 11-2 0V8.414L6.707 11.121a1 1 0 01-1.414-1.414z" clip-rule="evenodd" />
+                            </svg>
+                            8.3%
+                        </span>
                     </div>
                 </div>
-                <p class="text-3xl font-google-sans mb-2">{{ number_format($metrics['total_clicks']) }}</p>
-                <span class="text-sm text-gray-500">vs. período anterior</span>
-            </div>
 
-            <!-- Ligações -->
-            <div class="metric-card">
-                <div class="flex items-center justify-between mb-4">
-                    <h4 class="text-gray-600 font-google-sans">Ligações</h4>
-                    <div class="trend-indicator {{ $metrics['calls_trend'] >= 0 ? 'trend-up' : 'trend-down' }}">
-                        <span>{{ $metrics['calls_trend'] }}%</span>
+                <div class="metric-card">
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Taxa de Conversão</h3>
+                    <div class="flex items-baseline">
+                    <span class="text-2xl font-semibold text-gray-900">{{ number_format($metrics['conversion_rate'], 2) }}%</span>
+                        <span class="trend-indicator trend-up ml-2">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.293 9.707l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 8.414V15a1 1 0 11-2 0V8.414L6.707 11.121a1 1 0 01-1.414-1.414z" clip-rule="evenodd" />
+                            </svg>
+                            2.1%
+                        </span>
                     </div>
                 </div>
-                <p class="text-3xl font-google-sans mb-2">{{ number_format($metrics['total_calls']) }}</p>
-                <span class="text-sm text-gray-500">vs. período anterior</span>
-            </div>
-        </div>
 
-        <!-- Gráficos -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <!-- Gráfico de Tendências -->
-            <div class="chart-container">
-                <h3 class="text-lg font-google-sans mb-4">Tendências</h3>
-                <div class="relative h-[300px] md:h-[400px]">
-                    <canvas id="trendsChart"></canvas>
-                    <div class="loading-overlay hidden" id="trendsChartLoader">
-                        <div class="loading-spinner"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Gráfico de Conversões -->
-            <div class="chart-container">
-                <h3 class="text-lg font-google-sans mb-4">Conversões</h3>
-                <div class="relative h-[300px] md:h-[400px]">
-                    <canvas id="conversionsChart"></canvas>
-                    <div class="loading-overlay hidden" id="conversionsChartLoader">
-                        <div class="loading-spinner"></div>
+                <div class="metric-card">
+                    <h3 class="text-sm font-medium text-gray-500 mb-2">Tempo Médio</h3>
+                    <div class="flex items-baseline">
+                    <span class="text-2xl font-semibold text-gray-900">{{ $metrics['response_time'] }}</span>
+                        <span class="trend-indicator trend-down ml-2">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M14.707 10.293l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 11.586V5a1 1 0 012 0v6.586l2.293-2.293a1 1 0 111.414 1.414z" clip-rule="evenodd" />
+                            </svg>
+                            1.2%
+                        </span>
                     </div>
                 </div>
             </div>
-        </div>
+                        <!-- Charts Grid -->
+                        <div class="chart-grid">
+                <!-- Performance Chart -->
+                <div class="chart-container">
+                    <h3 class="text-lg font-semibold mb-4">Performance</h3>
+                    <div class="relative h-[400px]">
+                        <canvas id="performanceChart"></canvas>
+                        <div class="loading-overlay hidden" id="performanceChartLoader">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- Insights -->
-        <div class="bg-white rounded-lg shadow-sm p-6 dark:bg-gray-800">
-            <h3 class="text-lg font-google-sans mb-4">Insights</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="insights-container">
-            @foreach($insights as $insight)
-<div class="p-4 bg-gray-50 rounded-lg dark:bg-gray-700">
-    <div class="flex items-start gap-3">
-        <div class="flex-shrink-0">
-            <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-        </div>
-        <div>
-            <p class="text-sm text-gray-600 dark:text-gray-300">{{ $insight }}</p>
+                <!-- Engagement Chart -->
+                <div class="chart-container">
+                    <h3 class="text-lg font-semibold mb-4">Engajamento</h3>
+                    <div class="relative h-[400px]">
+                        <canvas id="engagementChart"></canvas>
+                        <div class="loading-overlay hidden" id="engagementChartLoader">
+                            <div class="loading-spinner"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insights Section -->
+            <div class="insights-section">
+                <h3 class="text-lg font-semibold mb-4">Insights</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    @foreach($insights as $insight)
+                    <div class="p-4 bg-gray-50 rounded-lg">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0">
+                                <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">{{ $insight }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
         </div>
     </div>
-</div>
-@endforeach
-            </div>
-        </div>
-    </div>
-</div>
 
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    // Configurações globais do Chart.js
-    Chart.defaults.font.family = 'Google Sans';
-    Chart.defaults.color = '#666';
-    Chart.defaults.responsive = true;
-    Chart.defaults.maintainAspectRatio = false;
+    @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Chart.js Configuration
+        Chart.defaults.font.family = 'Inter var, sans-serif';
+        Chart.defaults.color = '#6B7280';
+        Chart.defaults.responsive = true;
+        Chart.defaults.maintainAspectRatio = false;
 
-    // Função para mostrar/esconder loader
-    function toggleLoader(chartId, show) {
-        const loader = document.getElementById(`${chartId}Loader`);
-        loader.classList.toggle('hidden', !show);
-    }
-
-    // Função para atualizar dados
-    async function updateChartData(period, businessId) {
-        toggleLoader('trendsChart', true);
-        toggleLoader('conversionsChart', true);
-
-        try {
-            const response = await fetch(`/analytics/data/${businessId}?period=${period}`);
-            const data = await response.json();
-            
-            // Atualiza gráfico de tendências
-            trendsChart.data = {
-                labels: data.trends.labels,
-                datasets: [
-                    {
-                        label: 'Visualizações',
-                        data: data.trends.views,
-                        borderColor: '#4285F4',
-                        backgroundColor: '#4285F4',
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Cliques',
-                        data: data.trends.clicks,
-                        borderColor: '#0F9D58',
-                        backgroundColor: '#0F9D58',
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Ligações',
-                        data: data.trends.calls,
-                        borderColor: '#F4B400',
-                        backgroundColor: '#F4B400',
-                        tension: 0.4
-                    }
-                ]
-            };
-            trendsChart.update();
-
-            // Atualiza gráfico de conversões
-            conversionsChart.data = {
-                labels: ['Visualizações', 'Cliques', 'Ligações'],
-                datasets: [{
-                    data: [
-                        data.conversions.views,
-                        data.conversions.clicks,
-                        data.conversions.calls
-                    ],
-                    backgroundColor: ['#4285F4', '#0F9D58', '#F4B400']
-                }]
-            };
-            conversionsChart.update();
-
-            // Atualiza métricas e insights
-            updateMetrics(data.metrics);
-            updateInsights(data.insights);
-
-        } catch (error) {
-            console.error('Erro ao atualizar dados:', error);
-        } finally {
-            toggleLoader('trendsChart', false);
-            toggleLoader('conversionsChart', false);
+        // Performance Chart
+const performanceChart = new Chart(
+    document.getElementById('performanceChart').getContext('2d'),
+    {
+        type: 'line',
+        data: {
+            labels: {!! json_encode($analyticsData['dates']) !!},
+            datasets: [
+                {
+                    label: 'Visualizações',
+                    data: {!! json_encode($analyticsData['views']) !!},
+                    borderColor: '#4285F4',
+                    backgroundColor: '#4285F4',
+                    tension: 0.4
+                },
+                {
+                    label: 'Cliques',
+                    data: {!! json_encode($analyticsData['clicks']) !!},
+                    borderColor: '#0F9D58',
+                    backgroundColor: '#0F9D58',
+                    tension: 0.4
+                }
+            ]
         }
     }
+);
 
-    // Inicialização dos gráficos
-    const trendsChart = new Chart('trendsChart', {
-        type: 'line',
+        // Engagement Chart
+const engagementChart = new Chart(
+    document.getElementById('engagementChart').getContext('2d'),
+    {
+        type: 'bar',
+        data: {
+            labels: {!! json_encode($analyticsData['dates']) !!},
+            datasets: [
+                {
+                    label: 'Taxa de Conversão',
+                    data: {!! json_encode($analyticsData['conversionRates']) !!},
+                    backgroundColor: '#DB4437'
+                }
+            ]
+        },
         options: {
             plugins: {
                 legend: {
                     position: 'bottom'
                 }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
             }
         }
-    });
+    }
+);
 
-    const conversionsChart = new Chart('conversionsChart', {
-        type: 'bar',
-        options: {
-            plugins: {
-                legend: {
-                    display: false
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
+        // Event Handlers
+        document.getElementById('period-selector').addEventListener('change', function(e) {
+            updateDashboardData(e.target.value);
+        });
+
+        document.getElementById('business-selector').addEventListener('change', function(e) {
+            window.location.href = `/analytics/dashboard/${e.target.value}`;
+        });
+
+        // Update Dashboard Data
+        async function updateDashboardData(period) {
+            const businessId = document.getElementById('business-selector').value;
+            
+            showLoaders();
+            
+            try {
+                const response = await fetch(`/analytics/data/${businessId}?period=${period}`);
+                const data = await response.json();
+                
+                updateCharts(data);
+                updateMetrics(data.metrics);
+                updateInsights(data.insights);
+                
+            } catch (error) {
+                console.error('Error fetching dashboard data:', error);
+                showError('Erro ao atualizar dados do dashboard');
+            } finally {
+                hideLoaders();
             }
         }
-    });
 
-    // Event Listeners
-    document.getElementById('period-selector').addEventListener('change', function(e) {
-        const businessId = document.getElementById('business-selector').value;
-        updateChartData(e.target.value, businessId);
-    });
+        // Helper Functions
+        function showLoaders() {
+            document.querySelectorAll('.loading-overlay').forEach(loader => {
+                loader.classList.remove('hidden');
+            });
+        }
 
-    document.getElementById('business-selector').addEventListener('change', function(e) {
-        const period = document.getElementById('period-selector').value;
-        updateChartData(period, e.target.value);
-    });
+        function hideLoaders() {
+            document.querySelectorAll('.loading-overlay').forEach(loader => {
+                loader.classList.add('hidden');
+            });
+        }
 
-    // Inicialização
-    updateChartData(
-        document.getElementById('period-selector').value,
-        document.getElementById('business-selector').value
-    );
-</script>
-@endpush
+        function updateCharts(data) {
+            // Update Performance Chart
+            performanceChart.data.labels = data.performance.labels;
+            performanceChart.data.datasets[0].data = data.performance.views;
+            performanceChart.data.datasets[1].data = data.performance.clicks;
+            performanceChart.update();
+
+            // Update Engagement Chart
+            engagementChart.data.labels = data.engagement.labels;
+            engagementChart.data.datasets[0].data = data.engagement.rates;
+            engagementChart.update();
+        }
+
+        function updateMetrics(metrics) {
+            // Update metrics display
+            Object.keys(metrics).forEach(key => {
+                const element = document.getElementById(`metric-${key}`);
+                if (element) {
+                    element.textContent = metrics[key];
+                }
+            });
+        }
+
+        function updateInsights(insights) {
+            const container = document.querySelector('.insights-section .grid');
+            container.innerHTML = insights.map(insight => `
+                <div class="p-4 bg-gray-50 rounded-lg">
+                    <div class="flex items-start gap-3">
+                        <div class="flex-shrink-0">
+                            <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-600">${insight}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showError(message) {
+            // Implement error notification
+            alert(message);
+        }
+    </script>
+    @endpush
 </x-app-layout>
