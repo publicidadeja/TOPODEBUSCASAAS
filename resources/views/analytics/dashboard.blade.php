@@ -439,26 +439,39 @@ function refreshCompetitorAnalysis() {
     loadingElement.classList.remove('hidden');
     contentElement.classList.add('opacity-50');
 
-    // Make API request to refresh analysis
+    // Faz a requisição
     fetch(`/analytics/competitors/${businessId}/refresh`, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            'Accept': 'application/json'
-        }
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        credentials: 'same-origin' // Importante para cookies/sessão
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erro na resposta do servidor');
+        }
+        return response.json();
+    })
     .then(data => {
-        // Update the UI with new data
+        if (data.error) {
+            throw new Error(data.message || 'Erro ao atualizar análise');
+        }
+        
+        // Atualiza o conteúdo
         updateCompetitorAnalysis(data);
+        
+        // Mostra mensagem de sucesso
+        alert('Análise atualizada com sucesso!');
     })
     .catch(error => {
-        console.error('Error:', error);
-        // Show error message to user
-        alert('Erro ao atualizar análise de concorrentes. Por favor, tente novamente.');
+        console.error('Erro:', error);
+        alert('Erro ao atualizar análise. Por favor, tente novamente.');
     })
     .finally(() => {
-        // Hide loading state
+        // Esconde loading
         loadingElement.classList.add('hidden');
         contentElement.classList.remove('opacity-50');
     });

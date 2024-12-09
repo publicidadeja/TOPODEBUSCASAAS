@@ -12,6 +12,10 @@ use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SettingsController;
 
+Route::post('/analytics/update-gemini-analysis/{business}', 
+    [AnalyticsController::class, 'updateGeminiAnalysis'])
+    ->name('analytics.update-gemini');
+
 Route::post('/analytics/competitors/{business}/refresh', [AnalyticsController::class, 'refreshCompetitorAnalysis']);
 
 Route::prefix('automation')->group(function () {

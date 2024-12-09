@@ -15,6 +15,8 @@ class GeminiService
         $this->apiKey = config('services.gemini.api_key');
     }
 
+    
+
     public function generateContent($prompt)
     {
         try {
