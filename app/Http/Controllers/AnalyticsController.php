@@ -551,21 +551,30 @@ private function generateCompetitorInsights($mainBusinessData, $competitorsData)
 {
     $insights = [];
     
-    // Análise de Market Share
+    // Performance Geral
     if (isset($mainBusinessData['market_share'])) {
         if (isset($mainBusinessData['market_share']['views'])) {
             $marketShareViews = $mainBusinessData['market_share']['views'];
             if ($marketShareViews > 50) {
-                $insights[] = "Seu negócio é líder em visualizações com {$marketShareViews}% do mercado.";
+                $insights[] = [
+                    'type' => 'performance',
+                    'message' => "Seu negócio é líder em visualizações com {$marketShareViews}% do mercado."
+                ];
             } elseif ($marketShareViews < 30) {
-                $insights[] = "Oportunidade de crescimento: sua participação nas visualizações está em {$marketShareViews}%. Considere aumentar sua presença online.";
+                $insights[] = [
+                    'type' => 'opportunity',
+                    'message' => "Oportunidade de crescimento: sua participação nas visualizações está em {$marketShareViews}%. Considere aumentar sua presença online."
+                ];
             }
         }
 
         if (isset($mainBusinessData['market_share']['clicks'])) {
             $marketShareClicks = $mainBusinessData['market_share']['clicks'];
             if ($marketShareClicks > $marketShareViews) {
-                $insights[] = "Excelente taxa de engajamento: sua participação em cliques ({$marketShareClicks}%) é maior que em visualizações.";
+                $insights[] = [
+                    'type' => 'performance',
+                    'message' => "Excelente taxa de engajamento: sua participação em cliques ({$marketShareClicks}%) é maior que em visualizações."
+                ];
             }
         }
     }
@@ -576,13 +585,19 @@ private function generateCompetitorInsights($mainBusinessData, $competitorsData)
         $difference = round($mainBusinessData['conversion_rate'] - $avgCompetitorConversion, 1);
         
         if ($difference > 0) {
-            $insights[] = "Sua taxa de conversão está {$difference}% acima da média dos concorrentes - continue com as boas práticas!";
+            $insights[] = [
+                'type' => 'performance',
+                'message' => "Sua taxa de conversão está {$difference}% acima da média dos concorrentes - continue com as boas práticas!"
+            ];
         } else {
-            $insights[] = "Oportunidade de melhoria: sua taxa de conversão está " . abs($difference) . "% abaixo da média. Considere otimizar sua página.";
+            $insights[] = [
+                'type' => 'opportunity',
+                'message' => "Oportunidade de melhoria: sua taxa de conversão está " . abs($difference) . "% abaixo da média. Considere otimizar sua página."
+            ];
         }
     }
 
-    // Análise de Dispositivos
+    // Análise de Dispositivos e Tendências de Mercado
     if (isset($mainBusinessData['devices'])) {
         $mainMobileShare = $mainBusinessData['devices']['mobile'] ?? 0;
         $avgCompetitorMobile = collect($competitorsData)->avg(function($competitor) {
@@ -592,9 +607,15 @@ private function generateCompetitorInsights($mainBusinessData, $competitorsData)
         $mobileDifference = abs($mainMobileShare - $avgCompetitorMobile);
         if ($mobileDifference > 10) {
             if ($mainMobileShare > $avgCompetitorMobile) {
-                $insights[] = "Seu site tem forte presença mobile ({$mainMobileShare}% dos acessos) - {$mobileDifference}% acima da média do mercado.";
+                $insights[] = [
+                    'type' => 'trend',
+                    'message' => "Seu site tem forte presença mobile ({$mainMobileShare}% dos acessos) - {$mobileDifference}% acima da média do mercado."
+                ];
             } else {
-                $insights[] = "Oportunidade: Otimize para dispositivos móveis. Sua taxa de acesso mobile está {$mobileDifference}% abaixo da média.";
+                $insights[] = [
+                    'type' => 'alert',
+                    'message' => "Otimize para dispositivos móveis. Sua taxa de acesso mobile está {$mobileDifference}% abaixo da média."
+                ];
             }
         }
     }
@@ -606,36 +627,71 @@ private function generateCompetitorInsights($mainBusinessData, $competitorsData)
         $callsTrend = $mainBusinessData['trend']['calls'] ?? 0;
 
         if ($viewsTrend > 10 && $clicksTrend > 10) {
-            $insights[] = "Crescimento expressivo: aumento de {$viewsTrend}% em visualizações e {$clicksTrend}% em cliques.";
+            $insights[] = [
+                'type' => 'trend',
+                'message' => "Crescimento expressivo: aumento de {$viewsTrend}% em visualizações e {$clicksTrend}% em cliques."
+            ];
         } elseif ($viewsTrend < -10 && $clicksTrend < -10) {
-            $insights[] = "Alerta: Queda significativa de " . abs($viewsTrend) . "% em visualizações e " . abs($clicksTrend) . "% em cliques.";
+            $insights[] = [
+                'type' => 'alert',
+                'message' => "Alerta: Queda significativa de " . abs($viewsTrend) . "% em visualizações e " . abs($clicksTrend) . "% em cliques."
+            ];
         }
 
         if ($callsTrend > 0) {
-            $insights[] = "Aumento de {$callsTrend}% nas ligações recebidas - bom indicador de interesse dos clientes.";
+            $insights[] = [
+                'type' => 'performance',
+                'message' => "Aumento de {$callsTrend}% nas ligações recebidas - bom indicador de interesse dos clientes."
+            ];
         }
     }
 
-    // Análise de Rating (se disponível)
+    // Análise de Rating e Ações Recomendadas
     if (isset($mainBusinessData['rating']) && isset($competitorsData[0]['rating'])) {
         $avgCompetitorRating = collect($competitorsData)->avg('rating');
         $ratingDifference = round($mainBusinessData['rating'] - $avgCompetitorRating, 1);
         
         if ($ratingDifference > 0) {
-            $insights[] = "Sua avaliação média ({$mainBusinessData['rating']}) está {$ratingDifference} pontos acima da concorrência.";
+            $insights[] = [
+                'type' => 'performance',
+                'message' => "Sua avaliação média ({$mainBusinessData['rating']}) está {$ratingDifference} pontos acima da concorrência."
+            ];
         } elseif ($ratingDifference < 0) {
-            $insights[] = "Oportunidade: Sua avaliação está " . abs($ratingDifference) . " pontos abaixo da média. Foque em melhorar a satisfação dos clientes.";
+            $insights[] = [
+                'type' => 'action',
+                'title' => 'Melhorar Avaliações',
+                'message' => "Sua avaliação está " . abs($ratingDifference) . " pontos abaixo da média. Implemente um programa de feedback de clientes."
+            ];
         }
+    }
+
+    // Ações Recomendadas Baseadas em Análises
+    if (isset($mainBusinessData['conversion_rate']) && $mainBusinessData['conversion_rate'] < 2) {
+        $insights[] = [
+            'type' => 'action',
+            'title' => 'Otimização de Conversão',
+            'message' => "Implemente call-to-actions mais efetivos e melhore a experiência do usuário para aumentar conversões."
+        ];
+    }
+
+    if (isset($mainBusinessData['response_time']) && $mainBusinessData['response_time'] > 24) {
+        $insights[] = [
+            'type' => 'action',
+            'title' => 'Melhorar Tempo de Resposta',
+            'message' => "Configure respostas automáticas e organize uma escala de atendimento para reduzir o tempo de resposta."
+        ];
     }
 
     // Mensagem padrão se não houver insights
     if (empty($insights)) {
-        $insights[] = "Dados insuficientes para gerar insights comparativos. Continue coletando dados para análises mais precisas.";
+        $insights[] = [
+            'type' => 'alert',
+            'message' => "Dados insuficientes para gerar insights comparativos. Continue coletando dados para análises mais precisas."
+        ];
     }
 
     return $insights;
 }
-
     private function calculateTrend($analytics)
     {
         if ($analytics->count() < 2) {
