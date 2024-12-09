@@ -12,6 +12,8 @@ use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SettingsController;
 
+Route::post('/analytics/competitors/{business}/refresh', [AnalyticsController::class, 'refreshCompetitorAnalysis']);
+
 Route::prefix('automation')->group(function () {
     Route::get('/suggestions/{business}', 'AutomationController@getAIAssistantSuggestions');
     Route::get('/segment-trends', 'AutomationController@getSegmentTrends');

@@ -381,6 +381,216 @@
     </div>
 </div>
 
+
+<!-- Análise de Concorrentes -->
+<div class="mt-8">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-gray-800">
+                <span class="flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    Análise de Concorrentes
+                </span>
+            </h2>
+            <button onclick="refreshCompetitorAnalysis()" class="text-sm text-blue-500 hover:text-blue-700 flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Atualizar Análise
+            </button>
+        </div>
+
+        <!-- Loading State -->
+        <div id="competitor-loading" class="hidden">
+            <div class="flex justify-center items-center py-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <span class="ml-2 text-gray-600">Analisando concorrentes...</span>
+            </div>
+        </div>
+
+        <!-- Content Grid -->
+        <div id="competitor-content" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Principais Concorrentes -->
+            <div class="bg-gradient-to-br from-purple-50 to-white rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-purple-800 mb-3">Principais Concorrentes</h3>
+                <div class="space-y-4" id="top-competitors">
+                    @foreach($competitors ?? [] as $competitor)
+                        <div class="bg-white rounded-lg p-4 shadow-sm">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-medium text-gray-900">{{ $competitor['name'] }}</h4>
+                                    <p class="text-sm text-gray-500">{{ $competitor['location'] }}</p>
+                                </div>
+                                <span class="px-2 py-1 text-xs font-medium rounded-full 
+                                    {{ $competitor['score'] >= 8 ? 'bg-red-100 text-red-800' : 
+                                       ($competitor['score'] >= 5 ? 'bg-yellow-100 text-yellow-800' : 
+                                        'bg-green-100 text-green-800') }}">
+                                    Score: {{ $competitor['score'] }}/10
+                                </span>
+                            </div>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-600">{{ $competitor['summary'] }}</p>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <!-- Análise de Mercado -->
+            <div class="bg-gradient-to-br from-blue-50 to-white rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-blue-800 mb-3">Análise de Mercado</h3>
+                <div class="space-y-4" id="market-analysis">
+                    @foreach($marketAnalysis ?? [] as $analysis)
+                        <div class="bg-white rounded-lg p-4 shadow-sm">
+                            <h4 class="font-medium text-gray-900 mb-2">{{ $analysis['title'] }}</h4>
+                            <p class="text-sm text-gray-600">{{ $analysis['description'] }}</p>
+                            @if(isset($analysis['metrics']))
+                                <div class="mt-2 grid grid-cols-2 gap-2">
+                                    @foreach($analysis['metrics'] as $metric)
+                                        <div class="bg-gray-50 p-2 rounded">
+                                            <span class="text-xs text-gray-500">{{ $metric['label'] }}</span>
+                                            <div class="font-medium">{{ $metric['value'] }}</div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+
+<!-- Recomendações Estratégicas -->
+<div class="mt-6">
+    <h3 class="text-lg font-semibold text-gray-800 mb-4">Recomendações Estratégicas</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="strategic-recommendations">
+        @foreach($suggestions ?? [] as $suggestion)
+            <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-center space-x-3">
+                    <div class="flex-shrink-0">
+                        <svg class="w-6 h-6 {{ isset($suggestion['priority']) && $suggestion['priority'] === 'high' ? 'text-red-500' : 
+                            (isset($suggestion['priority']) && $suggestion['priority'] === 'medium' ? 'text-yellow-500' : 'text-green-500') }}"
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-900">{{ $suggestion['title'] ?? '' }}</h4>
+                        <p class="text-sm text-gray-500">{{ $suggestion['description'] ?? '' }}</p>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+    </div>
+</div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+function refreshCompetitorAnalysis() {
+    const businessId = document.getElementById('business-selector').value;
+    const loadingElement = document.getElementById('competitor-loading');
+    const contentElement = document.getElementById('competitor-content');
+
+    // Show loading state
+    loadingElement.classList.remove('hidden');
+    contentElement.classList.add('opacity-50');
+
+    // Make API request to refresh analysis
+    fetch(`/analytics/competitors/${businessId}/refresh`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Update the UI with new data
+        updateCompetitorAnalysis(data);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // Show error message to user
+        alert('Erro ao atualizar análise de concorrentes. Por favor, tente novamente.');
+    })
+    .finally(() => {
+        // Hide loading state
+        loadingElement.classList.add('hidden');
+        contentElement.classList.remove('opacity-50');
+    });
+}
+
+function updateCompetitorAnalysis(data) {
+    // Update top competitors
+    const topCompetitorsElement = document.getElementById('top-competitors');
+    topCompetitorsElement.innerHTML = data.competitors.map(competitor => `
+        <div class="bg-white rounded-lg p-4 shadow-sm">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h4 class="font-medium text-gray-900">${competitor.name}</h4>
+                    <p class="text-sm text-gray-500">${competitor.location}</p>
+                </div>
+                <span class="px-2 py-1 text-xs font-medium rounded-full 
+                    ${competitor.score >= 8 ? 'bg-red-100 text-red-800' : 
+                      (competitor.score >= 5 ? 'bg-yellow-100 text-yellow-800' : 
+                       'bg-green-100 text-green-800')}">
+                    Score: ${competitor.score}/10
+                </span>
+            </div>
+            <div class="mt-2">
+                <p class="text-sm text-gray-600">${competitor.summary}</p>
+            </div>
+        </div>
+    `).join('');
+
+    // Update market analysis
+    const marketAnalysisElement = document.getElementById('market-analysis');
+    marketAnalysisElement.innerHTML = data.marketAnalysis.map(analysis => `
+        <div class="bg-white rounded-lg p-4 shadow-sm">
+            <h4 class="font-medium text-gray-900 mb-2">${analysis.title}</h4>
+            <p class="text-sm text-gray-600">${analysis.description}</p>
+            ${analysis.metrics ? `
+                <div class="mt-2 grid grid-cols-2 gap-2">
+                    ${analysis.metrics.map(metric => `
+                        <div class="bg-gray-50 p-2 rounded">
+                            <span class="text-xs text-gray-500">${metric.label}</span>
+                            <div class="font-medium">${metric.value}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
+
+    // Update recommendations
+    const recommendationsElement = document.getElementById('strategic-recommendations');
+    recommendationsElement.innerHTML = data.recommendations.map(recommendation => `
+        <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-center space-x-3">
+                <div class="flex-shrink-0">
+                    <svg class="w-6 h-6 ${recommendation.priority === 'high' ? 'text-red-500' : 
+                        (recommendation.priority === 'medium' ? 'text-yellow-500' : 'text-green-500')}" 
+                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                            d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h4 class="text-sm font-medium text-gray-900">${recommendation.title}</h4>
+                    <p class="text-sm text-gray-500">${recommendation.description}</p>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+</script>
+@endpush
+
     @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/moment"></script>
