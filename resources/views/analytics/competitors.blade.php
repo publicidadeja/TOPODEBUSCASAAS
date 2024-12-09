@@ -187,7 +187,7 @@
                         </div>
                         <div class="ml-3">
                             <p class="text-sm text-blue-700">
-                                {{ $insight }}
+                                {{ $insight['message'] }}
                             </p>
                         </div>
                     </div>
