@@ -1,5 +1,6 @@
 <?php
 
+
 namespace App\Http\Controllers;
 
 use App\Services\AIAnalysisService;
@@ -47,4 +48,6 @@ class CompetitorAnalysisController extends Controller
         $query = "{$business->segment} em {$business->city} {$business->state}";
         return $this->serper->search($query);
     }
+
+    
 }

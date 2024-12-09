@@ -1,4 +1,5 @@
 <x-app-layout>
+<meta name="csrf-token" content="{{ csrf_token() }}">
     @push('styles')
     <style>
         :root {
@@ -435,12 +436,12 @@ function refreshCompetitorAnalysis() {
     const loadingElement = document.getElementById('competitor-loading');
     const contentElement = document.getElementById('competitor-content');
 
-    // Show loading state
+    // Mostra loading
     loadingElement.classList.remove('hidden');
     contentElement.classList.add('opacity-50');
 
     // Faz a requisição
-    fetch('/analytics/competitors/analyze', {
+    fetch('/competitor-analysis/analyze', {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -449,20 +450,22 @@ function refreshCompetitorAnalysis() {
         },
         body: JSON.stringify({
             business_id: businessId
-        }),
-        credentials: 'same-origin'
+        })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erro na resposta do servidor');
+        }
+        return response.json();
+    })
     .then(data => {
-        if (data.error) {
+        if (data.success) {
+            // Atualiza os concorrentes
+            updateCompetitorSection(data);
+            alert('Análise atualizada com sucesso!');
+        } else {
             throw new Error(data.message || 'Erro ao atualizar análise');
         }
-        
-        // Atualiza o conteúdo
-        updateCompetitorAnalysis(data);
-        
-        // Mostra mensagem de sucesso
-        alert('Análise atualizada com sucesso!');
     })
     .catch(error => {
         console.error('Erro:', error);
@@ -470,11 +473,80 @@ function refreshCompetitorAnalysis() {
     })
     .finally(() => {
         // Esconde loading
-        loadingElement.classList.add('hidden');
-        contentElement.classList.remove('opacity-50');
+        loadingElement.classList.remove('opacity-50');
+        contentElement.classList.add('hidden');
     });
 }
 
+function updateCompetitorSection(data) {
+    // Atualiza seção de concorrentes
+    const topCompetitorsElement = document.getElementById('top-competitors');
+    if (data.competitors && topCompetitorsElement) {
+        topCompetitorsElement.innerHTML = data.competitors.map(competitor => `
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="font-medium text-gray-900">${competitor.name}</h4>
+                        <p class="text-sm text-gray-500">${competitor.location}</p>
+                    </div>
+                    <span class="px-2 py-1 text-xs font-medium rounded-full ${getScoreClass(competitor.score)}">
+                        Score: ${competitor.score}/10
+                    </span>
+                </div>
+                <div class="mt-2">
+                    <p class="text-sm text-gray-600">${competitor.summary}</p>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // Atualiza análise de mercado
+    const marketAnalysisElement = document.getElementById('market-analysis');
+    if (data.marketAnalysis && marketAnalysisElement) {
+        marketAnalysisElement.innerHTML = data.marketAnalysis.map(analysis => `
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+                <h4 class="font-medium text-gray-900 mb-2">${analysis.title}</h4>
+                <p class="text-sm text-gray-600">${analysis.description}</p>
+            </div>
+        `).join('');
+    }
+
+    // Atualiza recomendações
+    const recommendationsElement = document.getElementById('strategic-recommendations');
+    if (data.recommendations && recommendationsElement) {
+        recommendationsElement.innerHTML = data.recommendations.map(recommendation => `
+            <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div class="flex items-center space-x-3">
+                    <div class="flex-shrink-0">
+                        <svg class="w-6 h-6 ${getPriorityClass(recommendation.priority)}" 
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-medium text-gray-900">${recommendation.title}</h4>
+                        <p class="text-sm text-gray-500">${recommendation.description}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+}
+
+function getScoreClass(score) {
+    if (score >= 8) return 'bg-red-100 text-red-800';
+    if (score >= 5) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-green-100 text-green-800';
+}
+
+function getPriorityClass(priority) {
+    switch (priority) {
+        case 'high': return 'text-red-500';
+        case 'medium': return 'text-yellow-500';
+        default: return 'text-green-500';
+    }
+}
 function updateCompetitorAnalysis(data) {
     // Update top competitors
     const topCompetitorsElement = document.getElementById('top-competitors');
