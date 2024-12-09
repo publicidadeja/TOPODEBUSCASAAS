@@ -24,5 +24,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         Blade::component('toggle-switch', \App\View\Components\ToggleSwitch::class);
+        Blade::component('analytics.components.period-selector', 'analytics.components.period-selector');
     }
 }
