@@ -11,6 +11,7 @@ use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\CompetitorAnalysisController;
 
 Route::post('/competitor-analysis/analyze', [CompetitorAnalysisController::class, 'analyze'])
     ->name('competitor.analyze')

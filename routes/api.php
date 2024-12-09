@@ -3,8 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/competitors/analyze', [CompetitorAnalysisController::class, 'analyze'])
-    ->middleware('auth');
+
+
 
 /*
 |--------------------------------------------------------------------------

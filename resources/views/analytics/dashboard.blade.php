@@ -441,7 +441,7 @@ function refreshCompetitorAnalysis() {
     contentElement.classList.add('opacity-50');
 
     // Faz a requisição
-    fetch(`/competitor-analysis/analyze`, {
+    fetch('/competitor-analysis/analyze', {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -459,14 +459,16 @@ function refreshCompetitorAnalysis() {
         return response.json();
     })
     .then(data => {
+        if (!data.success) {
+            throw new Error(data.message || 'Erro ao atualizar análise');
+        }
         updateCompetitorContent(data);
-        // Esconde loading
         loadingElement.classList.add('hidden');
         contentElement.classList.remove('opacity-50');
     })
     .catch(error => {
         console.error('Erro:', error);
-        alert('Erro ao atualizar análise. Por favor, tente novamente.');
+        alert('Erro ao atualizar análise: ' + error.message);
         loadingElement.classList.add('hidden');
         contentElement.classList.remove('opacity-50');
     });

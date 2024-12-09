@@ -21,14 +21,26 @@ class CompetitorAnalysisController extends Controller
     public function analyze(Request $request)
 {
     try {
+        $request->validate([
+            'business_id' => 'required|exists:businesses,id'
+        ]);
+
         $business = Business::findOrFail($request->business_id);
         
         // Busca concorrentes usando o Serper
         $competitors = $this->searchCompetitors($business);
         
+        if (empty($competitors)) {
+            throw new \Exception('Não foi possível encontrar concorrentes');
+        }
+        
         // Analisa os dados com o Gemini
         $analysis = $this->aiAnalysis->analyzeCompetitors($business, $competitors);
         
+        if (empty($analysis)) {
+            throw new \Exception('Erro ao analisar dados dos concorrentes');
+        }
+
         return response()->json([
             'success' => true,
             'competitors' => $analysis['competitors'] ?? [],
@@ -36,18 +48,35 @@ class CompetitorAnalysisController extends Controller
             'recommendations' => $analysis['recommendations'] ?? []
         ]);
     } catch (\Exception $e) {
+        \Log::error('Erro na análise de concorrentes: ' . $e->getMessage());
         return response()->json([
             'success' => false,
-            'message' => $e->getMessage()
+            'message' => 'Erro ao atualizar análise: ' . $e->getMessage()
         ], 500);
     }
 }
 
-    private function searchCompetitors($business)
-    {
-        $query = "{$business->segment} em {$business->city} {$business->state}";
-        return $this->serper->search($query);
+private function searchCompetitors($business)
+{
+    if (empty($business->segment) || empty($business->city) || empty($business->state)) {
+        throw new \Exception('Dados do negócio incompletos para busca de concorrentes');
     }
+
+    $query = sprintf(
+        '%s em %s %s',
+        trim($business->segment),
+        trim($business->city),
+        trim($business->state)
+    );
+
+    $results = $this->serper->search($query);
+
+    if (empty($results)) {
+        throw new \Exception('Nenhum resultado encontrado para a busca');
+    }
+
+    return $results;
+}
 
     
 }
