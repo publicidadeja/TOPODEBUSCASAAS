@@ -12,6 +12,9 @@ use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SettingsController;
 
+Route::post('/analytics/competitors/analyze', [CompetitorAnalysisController::class, 'analyze'])
+    ->name('analytics.competitors.analyze');
+
 Route::post('/analytics/update-gemini-analysis/{business}', 
     [AnalyticsController::class, 'updateGeminiAnalysis'])
     ->name('analytics.update-gemini');

@@ -440,21 +440,19 @@ function refreshCompetitorAnalysis() {
     contentElement.classList.add('opacity-50');
 
     // Faz a requisição
-    fetch(`/analytics/competitors/${businessId}/refresh`, {
+    fetch('/analytics/competitors/analyze', {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         },
-        credentials: 'same-origin' // Importante para cookies/sessão
+        body: JSON.stringify({
+            business_id: businessId
+        }),
+        credentials: 'same-origin'
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Erro na resposta do servidor');
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
         if (data.error) {
             throw new Error(data.message || 'Erro ao atualizar análise');

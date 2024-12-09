@@ -18,30 +18,29 @@ class CompetitorAnalysisController extends Controller
     }
 
     public function analyze(Request $request)
-    {
-        try {
-            $business = Business::findOrFail($request->business_id);
-            
-            // Busca concorrentes usando o Serper
-            $competitors = $this->searchCompetitors($business);
-            
-            // Analisa os dados com o Gemini
-            $analysis = $this->aiAnalysis->analyzeCompetitors($business, $competitors);
-            
-            // Salva a análise no banco de dados
-            $business->competitor_analyses()->create([
-                'data' => $analysis,
-                'analyzed_at' => now()
-            ]);
-
-            return response()->json(['success' => true]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
+{
+    try {
+        $business = Business::findOrFail($request->business_id);
+        
+        // Busca concorrentes usando o Serper
+        $competitors = $this->searchCompetitors($business);
+        
+        // Analisa os dados com o Gemini
+        $analysis = $this->aiAnalysis->analyzeCompetitors($business, $competitors);
+        
+        return response()->json([
+            'success' => true,
+            'competitors' => $analysis['competitors'] ?? [],
+            'marketAnalysis' => $analysis['market_analysis'] ?? [],
+            'recommendations' => $analysis['recommendations'] ?? []
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
+        ], 500);
     }
+}
 
     private function searchCompetitors($business)
     {
