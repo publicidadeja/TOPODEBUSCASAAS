@@ -175,4 +175,22 @@ class AIAnalysisService
                 2. Oportunidades de melhoria
                 3. Alertas importantes";
     }
+
+    public function analyzeCompetitors($business, $competitors)
+{
+    $prompt = "Analise os seguintes concorrentes para o negócio {$business->name} 
+               no segmento {$business->segment} em {$business->city}:\n\n";
+    
+    foreach ($competitors as $competitor) {
+        $prompt .= "Concorrente: {$competitor['title']}\n";
+        $prompt .= "Descrição: {$competitor['snippet']}\n\n";
+    }
+    
+    $prompt .= "Forneça uma análise detalhada incluindo:\n";
+    $prompt .= "1. Principais concorrentes\n";
+    $prompt .= "2. Análise de mercado\n";
+    $prompt .= "3. Recomendações estratégicas\n";
+    
+    return $this->gemini->analyze($prompt);
+}
 }

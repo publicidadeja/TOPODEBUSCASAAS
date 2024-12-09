@@ -540,7 +540,10 @@ function updateCompetitorAnalysis(data) {
         </div>
     `).join('');
 }
+
 </script>
+
+
 @endpush
 
     @push('scripts')
