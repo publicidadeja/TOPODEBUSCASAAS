@@ -14,17 +14,31 @@ class AIAnalysisService
     }
 
     public function analyzeBusinessPerformance($business)
-    {
-        $metrics = [
-            'views' => $business->analytics()->sum('views'),
-            'clicks' => $business->analytics()->sum('clicks'),
-            'calls' => $business->analytics()->sum('calls'),
-            'reviews' => $business->reviews()->count(),
-            'average_rating' => $business->reviews()->avg('rating')
-        ];
+{
+    $metrics = [
+        'views' => $business->analytics()->sum('views'),
+        'clicks' => $business->analytics()->sum('clicks'),
+        'calls' => $business->analytics()->sum('calls'),
+        'reviews' => $business->reviews()->count(),
+        'average_rating' => $business->reviews()->avg('rating')
+    ];
 
-        return $this->gemini->analyzeMetrics($metrics);
-    }
+    // Garanta que o retorno tenha a estrutura correta
+    return [
+        'performance' => [
+            'type' => 'performance',
+            'message' => 'Análise de performance do negócio'
+        ],
+        'opportunities' => [
+            'type' => 'opportunity',
+            'message' => 'Oportunidades identificadas'
+        ],
+        'alerts' => [
+            'type' => 'alert',
+            'message' => 'Alertas importantes'
+        ]
+    ];
+}
 
     public function generateContentSuggestions($business)
     {

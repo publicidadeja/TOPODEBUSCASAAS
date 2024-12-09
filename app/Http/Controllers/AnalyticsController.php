@@ -13,6 +13,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Action;
 use App\Services\GeminiService;
 use Illuminate\Support\Facades\Cache;
+use App\Services\AIAnalysisService;
 
 class AnalyticsController extends Controller
 {
@@ -29,10 +30,12 @@ class AnalyticsController extends Controller
         return round(($totalInteractions / $totalViews) * 100, 1);
     }
     protected $geminiService;
+    protected $aiAnalysisService;
     
-    public function __construct(GeminiService $geminiService)
+    public function __construct(GeminiService $geminiService, AIAnalysisService $aiAnalysisService)
     {
         $this->geminiService = $geminiService;
+        $this->aiAnalysisService = $aiAnalysisService;
     }
 
     public function index(Business $business)
@@ -174,8 +177,19 @@ class AnalyticsController extends Controller
 
     // 12. Análise AI e Insights
     $aiAnalysis = $this->getOrGenerateAIAnalysis($selectedBusiness, $analytics);
+    $aiAnalysis = $this->aiAnalysisService->analyzeBusinessPerformance($selectedBusiness);
     
     $insights = [];
+
+    if (isset($aiAnalysis['performance'])) {
+        $insights[] = $aiAnalysis['performance'];
+    }
+    if (isset($aiAnalysis['opportunities'])) {
+        $insights[] = $aiAnalysis['opportunities'];
+    }
+    if (isset($aiAnalysis['alerts'])) {
+        $insights[] = $aiAnalysis['alerts'];
+    }
     if (isset($aiAnalysis['market_overview'])) {
         $insights[] = $aiAnalysis['market_overview'];
     }
@@ -208,24 +222,64 @@ class AnalyticsController extends Controller
         ];
     }
 
-    // 14. Geração de sugestões
-    $suggestions = [];
-    foreach ($recommendations as $recommendation) {
-        $suggestions[] = [
-            'type' => 'info',
-            'message' => $recommendation
-        ];
-    }
+// 14. Geração de sugestões
+$suggestions = [];
 
-    if (isset($aiAnalysis['alerts'])) {
-        foreach ($aiAnalysis['alerts'] as $alert) {
+// Initialize recommendations if not set
+$recommendations = $recommendations ?? [];
+
+// Handle recommendations with type checking
+if (!empty($recommendations) && is_array($recommendations)) {
+    foreach ($recommendations as $recommendation) {
+        if (is_string($recommendation)) {
             $suggestions[] = [
-                'type' => $alert['type'] === 'attention' ? 'warning' : 'info',
-                'message' => $alert['message']
+                'type' => 'info',
+                'message' => $recommendation
             ];
         }
     }
+}
 
+// Initialize aiAnalysis if not set
+$aiAnalysis = $aiAnalysis ?? [];
+
+// Handle alerts with proper validation and error handling
+try {
+    if (!empty($aiAnalysis) && is_array($aiAnalysis)) {
+        if (isset($aiAnalysis['alerts']) && is_array($aiAnalysis['alerts'])) {
+            foreach ($aiAnalysis['alerts'] as $alert) {
+                if (is_array($alert) && isset($alert['type'], $alert['message'])) {
+                    $suggestions[] = [
+                        'type' => $alert['type'] === 'attention' ? 'warning' : 'info',
+                        'message' => $alert['message']
+                    ];
+                }
+            }
+        }
+    }
+} catch (\Exception $e) {
+    \Log::error('Error processing AI analysis alerts:', [
+        'error' => $e->getMessage(),
+        'aiAnalysis' => $aiAnalysis
+    ]);
+}
+
+// Add debugging information
+\Log::info('AI Analysis Structure:', [
+    'aiAnalysis' => $aiAnalysis,
+    'type' => gettype($aiAnalysis),
+    'isArray' => is_array($aiAnalysis),
+    'hasAlerts' => isset($aiAnalysis['alerts']),
+    'alertsType' => isset($aiAnalysis['alerts']) ? gettype($aiAnalysis['alerts']) : 'not set'
+]);
+
+// Add fallback content if no suggestions were generated
+if (empty($suggestions)) {
+    $suggestions[] = [
+        'type' => 'info',
+        'message' => 'Nenhuma sugestão ou alerta disponível no momento.'
+    ];
+}
     // 15. Retorno da view com todos os dados
     return view('analytics.dashboard', compact(
         'business',
