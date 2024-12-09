@@ -262,125 +262,78 @@
     @endif
 </div>
 
-<!-- Insights Section -->
+<!-- Seção de Insights e Análises -->
 <div class="mt-8">
-    <div class="bg-white rounded-lg shadow-lg p-6">
-        <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold text-gray-800">
-                <span class="flex items-center">
-                    <svg class="w-6 h-6 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+    <h3 class="text-lg font-semibold mb-4">Insights e Análises</h3>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Performance -->
+        @if(isset($aiAnalysis['performance']))
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div class="flex items-center mb-2">
+                <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
+                    <svg class="w-4 h-4 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                     </svg>
-                    Insights Estratégicos
-                </span>
-            </h2>
-            <span class="text-sm text-gray-500">Atualizado em tempo real</span>
+                </div>
+                <h4 class="text-lg font-semibold">Performance</h4>
+            </div>
+            <p class="text-gray-600 dark:text-gray-300">{{ $aiAnalysis['performance']['message'] }}</p>
         </div>
+        @endif
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Performance Geral -->
-            <div class="bg-gradient-to-br from-blue-50 to-white rounded-lg p-4">
-                <h3 class="text-lg font-semibold text-blue-800 mb-3">Performance Geral</h3>
-                <div class="space-y-3">
-                    @foreach($insights as $insight)
-                        @if(isset($insight['type']) && $insight['type'] === 'performance')
-                            <div class="flex items-start space-x-3">
-                                <div class="flex-shrink-0">
-                                    <svg class="w-5 h-5 text-blue-500 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                <p class="text-gray-700">{{ $insight['message'] }}</p>
-                            </div>
-                        @endif
-                    @endforeach
+        <!-- Oportunidades -->
+        @if(isset($aiAnalysis['opportunities']))
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div class="flex items-center mb-2">
+                <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mr-3">
+                    <svg class="w-4 h-4 text-green-600 dark:text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
                 </div>
+                <h4 class="text-lg font-semibold">Oportunidades</h4>
             </div>
-
-            <!-- Oportunidades de Melhoria -->
-            <div class="bg-gradient-to-br from-green-50 to-white rounded-lg p-4">
-                <h3 class="text-lg font-semibold text-green-800 mb-3">Oportunidades de Melhoria</h3>
-                <div class="space-y-3">
-                    @foreach($insights as $insight)
-                        @if(isset($insight['type']) && $insight['type'] === 'opportunity')
-                            <div class="flex items-start space-x-3">
-                                <div class="flex-shrink-0">
-                                    <svg class="w-5 h-5 text-green-500 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                <p class="text-gray-700">{{ $insight['message'] }}</p>
-                            </div>
-                        @endif
-                    @endforeach
-                </div>
-            </div>
-
-            <!-- Alertas e Recomendações -->
-            <div class="bg-gradient-to-br from-yellow-50 to-white rounded-lg p-4">
-                <h3 class="text-lg font-semibold text-yellow-800 mb-3">Alertas e Recomendações</h3>
-                <div class="space-y-3">
-                    @foreach($insights as $insight)
-                        @if(isset($insight['type']) && $insight['type'] === 'alert')
-                            <div class="flex items-start space-x-3">
-                                <div class="flex-shrink-0">
-                                    <svg class="w-5 h-5 text-yellow-500 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                <p class="text-gray-700">{{ $insight['message'] }}</p>
-                            </div>
-                        @endif
-                    @endforeach
-                </div>
-            </div>
-
-            <!-- Tendências de Mercado -->
-            <div class="bg-gradient-to-br from-purple-50 to-white rounded-lg p-4">
-                <h3 class="text-lg font-semibold text-purple-800 mb-3">Tendências de Mercado</h3>
-                <div class="space-y-3">
-                    @foreach($insights as $insight)
-                        @if(isset($insight['type']) && $insight['type'] === 'trend')
-                            <div class="flex items-start space-x-3">
-                                <div class="flex-shrink-0">
-                                    <svg class="w-5 h-5 text-purple-500 mt-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd"/>
-                                    </svg>
-                                </div>
-                                <p class="text-gray-700">{{ $insight['message'] }}</p>
-                            </div>
-                        @endif
-                    @endforeach
-                </div>
-            </div>
+            <p class="text-gray-600 dark:text-gray-300">{{ $aiAnalysis['opportunities']['message'] }}</p>
         </div>
+        @endif
 
-        <!-- Ações Recomendadas -->
-        <div class="mt-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Ações Recomendadas</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                @foreach($insights as $insight)
-                    @if(isset($insight['type']) && $insight['type'] === 'action')
-                        <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                            <div class="flex items-center space-x-3">
-                                <div class="flex-shrink-0">
-                                    <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                    </svg>
-                                </div>
-                                <div>
-                                    <h4 class="text-sm font-medium text-gray-900">{{ $insight['title'] }}</h4>
-                                    <p class="text-sm text-gray-500">{{ $insight['message'] }}</p>
-                                </div>
-                            </div>
-                        </div>
-                    @endif
-                @endforeach
+        <!-- Alertas -->
+        @if(isset($aiAnalysis['alerts']))
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div class="flex items-center mb-2">
+                <div class="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center mr-3">
+                    <svg class="w-4 h-4 text-red-600 dark:text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <h4 class="text-lg font-semibold">Alertas</h4>
             </div>
+            <p class="text-gray-600 dark:text-gray-300">{{ $aiAnalysis['alerts']['message'] }}</p>
+        </div>
+        @endif
+    </div>
+
+    <!-- Sugestões -->
+    @if(!empty($suggestions))
+    <div class="mt-8">
+        <h3 class="text-lg font-semibold mb-4">Sugestões</h3>
+        <div class="space-y-4">
+            @foreach($suggestions as $suggestion)
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 rounded-full {{ $suggestion['type'] === 'warning' ? 'bg-yellow-100 dark:bg-yellow-900' : 'bg-blue-100 dark:bg-blue-900' }} flex items-center justify-center mr-3">
+                        <svg class="w-4 h-4 {{ $suggestion['type'] === 'warning' ? 'text-yellow-600 dark:text-yellow-300' : 'text-blue-600 dark:text-blue-300' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <p class="text-gray-600 dark:text-gray-300">{{ $suggestion['message'] }}</p>
+                </div>
+            </div>
+            @endforeach
         </div>
     </div>
+    @endif
 </div>
-
 
 <!-- Análise de Concorrentes -->
 <div class="mt-8">

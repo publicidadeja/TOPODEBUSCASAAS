@@ -310,6 +310,109 @@ private function buildAnalysisPrompt($business, $analytics, $competitors)
             'timestamp' => now() 
         ];
     }
+/**
+ * Analisa os dados do negócio usando o Gemini API
+ * 
+ * @param string $prompt
+ * @return array
+ */
+public function analyze($prompt)
+{
+    try {
+        $response = Http::post($this->apiEndpoint, [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $prompt]
+                    ]
+                ]
+            ],
+            'generationConfig' => [
+                'temperature' => 0.7,
+                'topK' => 40,
+                'topP' => 0.95,
+                'maxOutputTokens' => 1024,
+            ]
+        ])->throw()->json();
 
+        if (!isset($response['candidates'][0]['content']['parts'][0]['text'])) {
+            throw new \Exception('Resposta inválida da API');
+        }
+
+        $analysis = $response['candidates'][0]['content']['parts'][0]['text'];
+        
+        return [
+            'performance' => $this->extractPerformanceInsight($analysis),
+            'opportunities' => $this->extractOpportunityInsight($analysis),
+            'alerts' => $this->extractAlertInsight($analysis)
+        ];
+
+    } catch (\Exception $e) {
+        Log::error('Erro ao analisar dados com Gemini: ' . $e->getMessage());
+        
+        return [
+            'performance' => [
+                'type' => 'performance',
+                'message' => 'Não foi possível gerar análise de performance no momento.'
+            ],
+            'opportunities' => [
+                'type' => 'opportunity',
+                'message' => 'Não foi possível identificar oportunidades no momento.'
+            ],
+            'alerts' => [
+                'type' => 'alert',
+                'message' => 'Não foi possível gerar alertas no momento.'
+            ]
+        ];
+    }
+}
+
+/**
+ * Extrai insights de performance da análise
+ */
+private function extractPerformanceInsight($analysis)
+{
+    // Implementar lógica de extração de performance
+    return [
+        'type' => 'performance',
+        'message' => $this->extractSection($analysis, 'Performance')
+    ];
+}
+
+/**
+ * Extrai insights de oportunidades da análise
+ */
+private function extractOpportunityInsight($analysis)
+{
+    // Implementar lógica de extração de oportunidades
+    return [
+        'type' => 'opportunity',
+        'message' => $this->extractSection($analysis, 'Opportunities')
+    ];
+}
+
+/**
+ * Extrai alertas da análise
+ */
+private function extractAlertInsight($analysis)
+{
+    // Implementar lógica de extração de alertas
+    return [
+        'type' => 'alert',
+        'message' => $this->extractSection($analysis, 'Alerts')
+    ];
+}
+
+/**
+ * Extrai uma seção específica da análise
+ */
+private function extractSection($analysis, $sectionName)
+{
+    $pattern = "/#$sectionName#\s*(.*?)\s*(?=#|$)/s";
+    if (preg_match($pattern, $analysis, $matches)) {
+        return trim($matches[1]);
+    }
+    return "Não foi possível extrair informações de $sectionName.";
+}
     
 }

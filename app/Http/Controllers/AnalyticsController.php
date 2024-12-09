@@ -175,131 +175,104 @@ class AnalyticsController extends Controller
         ];
     })->toArray();
 
-    // 12. Análise AI e Insights
-    $aiAnalysis = $this->getOrGenerateAIAnalysis($selectedBusiness, $analytics);
-    $aiAnalysis = $this->aiAnalysisService->analyzeBusinessPerformance($selectedBusiness);
-    
-    $insights = [];
+  // 12. Análise AI e Insights - Atualização
+  try {
+    $aiAnalysis = Cache::remember(
+        "business_{$selectedBusiness->id}_ai_analysis",
+        now()->addHours(6), // Cache por 6 horas
+        function () use ($selectedBusiness) {
+            return $this->aiAnalysisService->analyzeBusinessPerformance($selectedBusiness);
+        }
+    );
 
+    // Estrutura os insights para a view
+    $insights = [];
+    
     if (isset($aiAnalysis['performance'])) {
         $insights[] = $aiAnalysis['performance'];
     }
+    
     if (isset($aiAnalysis['opportunities'])) {
         $insights[] = $aiAnalysis['opportunities'];
     }
+    
     if (isset($aiAnalysis['alerts'])) {
         $insights[] = $aiAnalysis['alerts'];
     }
-    if (isset($aiAnalysis['market_overview'])) {
-        $insights[] = $aiAnalysis['market_overview'];
-    }
-    if (isset($aiAnalysis['competitor_insights']) && is_array($aiAnalysis['competitor_insights'])) {
-        $insights = array_merge($insights, $aiAnalysis['competitor_insights']);
-    }
-    if (isset($aiAnalysis['recommendations']) && is_array($aiAnalysis['recommendations'])) {
-        $insights = array_merge($insights, $aiAnalysis['recommendations']);
-    }
-    if (isset($aiAnalysis['alerts']) && is_array($aiAnalysis['alerts'])) {
-        foreach ($aiAnalysis['alerts'] as $alert) {
-            if (isset($alert['message'])) {
-                $insights[] = $alert['message'];
-            }
-        }
-    }
 
-    $recommendations = isset($aiAnalysis['recommendations']) ? $aiAnalysis['recommendations'] : [];
-
-    // 13. Dados de localização
-    $locationData = [];
-    $topLocations = [];
-    if (!empty($analytics)) {
-        $topLocations = [
-            'São Paulo' => 45.5,
-            'Rio de Janeiro' => 25.3,
-            'Belo Horizonte' => 15.2,
-            'Curitiba' => 8.5,
-            'Porto Alegre' => 5.5
+    // Gera sugestões baseadas na análise
+    $suggestions = [];
+    foreach ($insights as $insight) {
+        $suggestions[] = [
+            'type' => $insight['type'] ?? 'info',
+            'message' => $insight['message'] ?? ''
         ];
     }
 
-// 14. Geração de sugestões
-$suggestions = [];
-
-// Initialize recommendations if not set
-$recommendations = $recommendations ?? [];
-
-// Handle recommendations with type checking
-if (!empty($recommendations) && is_array($recommendations)) {
-    foreach ($recommendations as $recommendation) {
-        if (is_string($recommendation)) {
-            $suggestions[] = [
-                'type' => 'info',
-                'message' => $recommendation
-            ];
-        }
-    }
-}
-
-// Initialize aiAnalysis if not set
-$aiAnalysis = $aiAnalysis ?? [];
-
-// Handle alerts with proper validation and error handling
-try {
-    if (!empty($aiAnalysis) && is_array($aiAnalysis)) {
-        if (isset($aiAnalysis['alerts']) && is_array($aiAnalysis['alerts'])) {
-            foreach ($aiAnalysis['alerts'] as $alert) {
-                if (is_array($alert) && isset($alert['type'], $alert['message'])) {
-                    $suggestions[] = [
-                        'type' => $alert['type'] === 'attention' ? 'warning' : 'info',
-                        'message' => $alert['message']
-                    ];
-                }
-            }
-        }
-    }
 } catch (\Exception $e) {
-    \Log::error('Error processing AI analysis alerts:', [
-        'error' => $e->getMessage(),
-        'aiAnalysis' => $aiAnalysis
-    ]);
-}
-
-// Add debugging information
-\Log::info('AI Analysis Structure:', [
-    'aiAnalysis' => $aiAnalysis,
-    'type' => gettype($aiAnalysis),
-    'isArray' => is_array($aiAnalysis),
-    'hasAlerts' => isset($aiAnalysis['alerts']),
-    'alertsType' => isset($aiAnalysis['alerts']) ? gettype($aiAnalysis['alerts']) : 'not set'
-]);
-
-// Add fallback content if no suggestions were generated
-if (empty($suggestions)) {
-    $suggestions[] = [
-        'type' => 'info',
-        'message' => 'Nenhuma sugestão ou alerta disponível no momento.'
+    \Log::error('Erro ao gerar análise de IA: ' . $e->getMessage());
+    
+    $aiAnalysis = [
+        'performance' => ['type' => 'info', 'message' => 'Análise temporariamente indisponível'],
+        'opportunities' => ['type' => 'info', 'message' => 'Oportunidades temporariamente indisponíveis'],
+        'alerts' => ['type' => 'info', 'message' => 'Alertas temporariamente indisponíveis']
     ];
+    
+    $insights = [];
+    $suggestions = [[
+        'type' => 'warning',
+        'message' => 'Não foi possível gerar análises no momento. Tente novamente mais tarde.'
+    ]];
 }
-    // 15. Retorno da view com todos os dados
-    return view('analytics.dashboard', compact(
-        'business',
-        'businesses',
-        'analytics',
-        'analyticsData',
-        'growth',
-        'trends',
-        'actions',
-        'aiAnalysis',
-        'metrics',
-        'dailyData',
-        'insights',
-        'recommendations',
-        'selectedBusiness',
-        'locationData',
-        'topLocations',
-        'suggestions',
-        'keywords'
-    ));
+
+$recommendations = [];
+// Get location data from analytics
+$locationData = $analytics->pluck('user_locations')
+    ->filter()
+    ->flatten(1)
+    ->groupBy('city')
+    ->map(function ($locations) {
+        return [
+            'count' => $locations->count(),
+            'percentage' => $locations->count() / $analytics->count() * 100
+        ];
+    })
+    ->sortByDesc('count');
+
+// Get top locations
+$topLocations = $locationData
+    ->take(5)
+    ->map(function ($data, $city) {
+        return [
+            'city' => $city,
+            'count' => $data['count'],
+            'percentage' => round($data['percentage'], 1)
+        ];
+    })
+    ->values()
+    ->toArray();
+
+
+// 15. Retorno da view com dados atualizados
+return view('analytics.dashboard', compact(
+    'business',
+    'businesses',
+    'analytics',
+    'analyticsData',
+    'growth',
+    'trends',
+    'actions',
+    'aiAnalysis',
+    'metrics',
+    'dailyData',
+    'insights',
+    'recommendations',
+    'selectedBusiness',
+    'locationData',
+    'topLocations',
+    'suggestions',
+    'keywords'
+));
 }
 
 private function calculateMetricsGrowth($previous, $current)
