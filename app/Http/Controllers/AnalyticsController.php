@@ -37,7 +37,6 @@ class AnalyticsController extends Controller
 
     public function index(Business $business)
 {
-
     // 1. Inicialização e configuração básica
     $user = auth()->user();
     $businesses = $user->businesses;
@@ -52,17 +51,31 @@ class AnalyticsController extends Controller
     $endDate = now();
     $startDate = now()->subDays(30);
 
-    // 3. Busca e processamento dos dados analíticos
+    // 3. Busca palavras-chave do Google Meu Negócio (NOVO)
+    try {
+        $keywords = Cache::remember(
+            "business_{$selectedBusiness->id}_keywords",
+            now()->addHours(24),
+            function () use ($selectedBusiness, $startDate, $endDate) {
+                return $this->getKeywordAnalytics($selectedBusiness, $startDate, $endDate);
+            }
+        );
+    } catch (\Exception $e) {
+        \Log::error('Erro ao buscar palavras-chave: ' . $e->getMessage());
+        $keywords = [];
+    }
+
+    // 4. Busca e processamento dos dados analíticos
     $analytics = BusinessAnalytics::where('business_id', $selectedBusiness->id)
         ->whereBetween('date', [$startDate, $endDate])
         ->orderBy('date')
         ->get();
 
-    // 4. Separação dos períodos para comparação
+    // 5. Separação dos períodos para comparação
     $currentPeriodAnalytics = $analytics->take(15);
     $previousPeriodAnalytics = $analytics->skip(15);
 
-    // 5. Cálculo das taxas de conversão
+    // 6. Cálculo das taxas de conversão
     $currentClicks = $currentPeriodAnalytics->sum('clicks');
     $currentCalls = $currentPeriodAnalytics->sum('calls');
     $currentConversion = $currentClicks > 0 ? ($currentCalls / $currentClicks) * 100 : 0;
@@ -71,7 +84,7 @@ class AnalyticsController extends Controller
     $previousCalls = $previousPeriodAnalytics->sum('calls');
     $previousConversion = $previousClicks > 0 ? ($previousCalls / $previousClicks) * 100 : 0;
 
-    // 6. Preparação dos dados analíticos
+    // 7. Preparação dos dados analíticos
     $analyticsData = [
         'views' => $analytics->pluck('views')->toArray(),
         'clicks' => $analytics->pluck('clicks')->toArray(),
@@ -82,10 +95,11 @@ class AnalyticsController extends Controller
         'averageRating' => (float) $selectedBusiness->rating,
         'conversionRates' => $analytics->map(function($item) {
             return $item->clicks > 0 ? round(($item->calls / $item->clicks) * 100, 1) : 0;
-        })->toArray()
+        })->toArray(),
+        'keywords' => $keywords // Adicionado keywords aos dados analíticos
     ];
 
-    // 7. Cálculo de crescimento e tendências
+    // 8. Cálculo de crescimento e tendências
     $currentRating = (float) $selectedBusiness->rating;
     $previousRating = (float) $selectedBusiness->rating;
 
@@ -111,14 +125,13 @@ class AnalyticsController extends Controller
         )
     ];
 
-    // 8. Cálculo de métricas
+    // 9. Cálculo de métricas
     $totalCalls = $analytics->sum('calls');
     $totalVisits = $analytics->sum('visits');
     $conversionRate = $selectedBusiness->getConversionRate($startDate, $endDate);
     $engagementRate = $this->calculateEngagementRate($currentPeriodAnalytics);
     $totalViews = $analytics->sum('views') ?? 0;
     $totalClicks = $analytics->sum('clicks') ?? 0;
-
 
     $metrics = [
         'views' => $totalViews,
@@ -137,16 +150,17 @@ class AnalyticsController extends Controller
         'total_views' => $totalViews,
         'total_clicks' => $totalClicks,
         'total_calls' => $totalCalls,
-        'trends' => $trends
+        'trends' => $trends,
+        'popular_keywords' => $keywords // Adicionado keywords às métricas
     ];
 
-    // 9. Busca de ações recentes
+    // 10. Busca de ações recentes
     $actions = Action::where('business_id', $selectedBusiness->id)
         ->orderBy('created_at', 'desc')
         ->take(10)
         ->get();
 
-    // 10. Geração de dados diários
+    // 11. Geração de dados diários
     $dailyData = $analytics->map(function ($record) {
         return [
             'date' => $record->date,
@@ -158,7 +172,7 @@ class AnalyticsController extends Controller
         ];
     })->toArray();
 
-    // 11. Análise AI e Insights
+    // 12. Análise AI e Insights
     $aiAnalysis = $this->getOrGenerateAIAnalysis($selectedBusiness, $analytics);
     
     $insights = [];
@@ -178,43 +192,41 @@ class AnalyticsController extends Controller
             }
         }
     }
+
     $recommendations = isset($aiAnalysis['recommendations']) ? $aiAnalysis['recommendations'] : [];
 
-    $totalViews = $metrics['total_views'];
-
+    // 13. Dados de localização
     $locationData = [];
     $topLocations = [];
-if (!empty($analytics)) {
-    $topLocations = [
-        'São Paulo' => 45.5,
-        'Rio de Janeiro' => 25.3,
-        'Belo Horizonte' => 15.2,
-        'Curitiba' => 8.5,
-        'Porto Alegre' => 5.5
-    ];
-}
-
-// Adicione este código antes do return view
-$suggestions = [];
-
-// Transforme as recomendações em sugestões
-foreach ($recommendations as $recommendation) {
-    $suggestions[] = [
-        'type' => 'info',
-        'message' => $recommendation
-    ];
-}
-
-// Adicione alertas do aiAnalysis como sugestões
-if (isset($aiAnalysis['alerts'])) {
-    foreach ($aiAnalysis['alerts'] as $alert) {
-        $suggestions[] = [
-            'type' => $alert['type'] === 'attention' ? 'warning' : 'info',
-            'message' => $alert['message']
+    if (!empty($analytics)) {
+        $topLocations = [
+            'São Paulo' => 45.5,
+            'Rio de Janeiro' => 25.3,
+            'Belo Horizonte' => 15.2,
+            'Curitiba' => 8.5,
+            'Porto Alegre' => 5.5
         ];
     }
-}
-    // 12. Retorno da view com todos os dados
+
+    // 14. Geração de sugestões
+    $suggestions = [];
+    foreach ($recommendations as $recommendation) {
+        $suggestions[] = [
+            'type' => 'info',
+            'message' => $recommendation
+        ];
+    }
+
+    if (isset($aiAnalysis['alerts'])) {
+        foreach ($aiAnalysis['alerts'] as $alert) {
+            $suggestions[] = [
+                'type' => $alert['type'] === 'attention' ? 'warning' : 'info',
+                'message' => $alert['message']
+            ];
+        }
+    }
+
+    // 15. Retorno da view com todos os dados
     return view('analytics.dashboard', compact(
         'business',
         'businesses',
@@ -231,8 +243,8 @@ if (isset($aiAnalysis['alerts'])) {
         'selectedBusiness',
         'locationData',
         'topLocations',
-        'suggestions'
-        
+        'suggestions',
+        'keywords'
     ));
 }
 
@@ -1301,6 +1313,34 @@ protected function generateSuggestions($analyticsData, Business $business)
 
     return $suggestions;
 }
+private function getKeywordAnalytics($business, $startDate, $endDate)
+{
+    try {
+        // Busca palavras-chave do Google My Business
+        $keywords = $this->googleBusinessService->getSearchKeywords(
+            $business->google_business_id,
+            $startDate,
+            $endDate
+        );
 
+        // Organiza as palavras-chave por frequência
+        $keywordStats = [];
+        foreach ($keywords as $keyword) {
+            $term = strtolower($keyword['term']);
+            if (!isset($keywordStats[$term])) {
+                $keywordStats[$term] = 0;
+            }
+            $keywordStats[$term] += $keyword['count'];
+        }
+
+        // Ordena por frequência e pega os top 10
+        arsort($keywordStats);
+        return array_slice($keywordStats, 0, 10, true);
+
+    } catch (\Exception $e) {
+        \Log::error('Erro ao buscar palavras-chave: ' . $e->getMessage());
+        return [];
+    }
+}
 
 }

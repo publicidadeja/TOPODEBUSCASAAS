@@ -323,4 +323,36 @@ public function getBusinessInsights($businessId, $dateRange = '30daysAgo')
     }
 }
 
+public function getSearchKeywords($business, $dateRange = '30daysAgo')
+{
+    try {
+        $this->setupClientToken($business->user);
+        
+        $locationName = $business->google_business_id;
+        
+        // Chamada à API do Google My Business para buscar palavras-chave de pesquisa
+        $response = $this->service->accounts_locations_searchkeywords->list([
+            'name' => $locationName,
+            'timeRange' => [
+                'startTime' => $dateRange,
+                'endTime' => 'today'
+            ]
+        ]);
+
+        $keywords = [];
+        foreach ($response->getSearchKeywords() as $keyword) {
+            $keywords[$keyword->getKeyword()] = [
+                'count' => $keyword->getSearchCount(),
+                'trend' => $keyword->getTrend()
+            ];
+        }
+
+        return $keywords;
+
+    } catch (Exception $e) {
+        Log::error('Erro ao buscar palavras-chave: ' . $e->getMessage());
+        return [];
+    }
+}
+
 }

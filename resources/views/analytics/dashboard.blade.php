@@ -139,6 +139,7 @@
                 </div>
             </div>
 
+
             <!-- Conversion Rate Metric -->
             <div class="metric-card">
                 <h3 class="text-sm font-medium text-gray-500 mb-2">Taxa de Conversão</h3>
@@ -163,6 +164,8 @@
                     @endif
                 </div>
             </div>
+
+            
 
             <!-- Response Time Metric -->
             <div class="metric-card">
@@ -189,6 +192,7 @@
                 </div>
             </div>
         </div>
+        
 
         <!-- Charts Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -217,6 +221,24 @@
     </div>
 </div>
     </div>
+
+    <!-- Seção de Palavras-chave -->
+<div class="card p-6 bg-white rounded-lg shadow-sm">
+    <h3 class="text-lg font-semibold mb-4">Palavras-chave Populares</h3>
+    
+    @if(!empty($keywords))
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            @foreach($keywords as $term => $count)
+                <div class="bg-gray-50 p-3 rounded">
+                    <span class="text-sm text-gray-600">{{ $term }}</span>
+                    <div class="text-lg font-semibold">{{ $count }}</div>
+                </div>
+            @endforeach
+        </div>
+    @else
+        <p class="text-gray-500">Nenhuma palavra-chave encontrada no período.</p>
+    @endif
+</div>
 
     @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
