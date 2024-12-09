@@ -263,77 +263,63 @@
 </div>
 
 <!-- Seção de Insights e Análises -->
-<div class="mt-8">
-    <h3 class="text-lg font-semibold mb-4">Insights e Análises</h3>
+<div class="mt-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <h3 class="text-2xl font-bold text-gray-900 mb-6">Insights e Análises</h3>
     
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Performance -->
         @if(isset($aiAnalysis['performance']))
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <div class="flex items-center mb-2">
-                <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mr-3">
-                    <svg class="w-4 h-4 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
-                    </svg>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
+            <div class="p-6">
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mr-4">
+                        <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                        </svg>
+                    </div>
+                    <h4 class="text-xl font-semibold text-gray-900">Performance</h4>
                 </div>
-                <h4 class="text-lg font-semibold">Performance</h4>
+                <p class="text-gray-600 leading-relaxed">{{ $aiAnalysis['performance']['message'] }}</p>
             </div>
-            <p class="text-gray-600 dark:text-gray-300">{{ $aiAnalysis['performance']['message'] }}</p>
         </div>
         @endif
 
         <!-- Oportunidades -->
         @if(isset($aiAnalysis['opportunities']))
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <div class="flex items-center mb-2">
-                <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center mr-3">
-                    <svg class="w-4 h-4 text-green-600 dark:text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
+            <div class="p-6">
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mr-4">
+                        <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h4 class="text-xl font-semibold text-gray-900">Oportunidades</h4>
                 </div>
-                <h4 class="text-lg font-semibold">Oportunidades</h4>
+                <p class="text-gray-600 leading-relaxed">{{ $aiAnalysis['opportunities']['message'] }}</p>
             </div>
-            <p class="text-gray-600 dark:text-gray-300">{{ $aiAnalysis['opportunities']['message'] }}</p>
         </div>
         @endif
 
         <!-- Alertas -->
         @if(isset($aiAnalysis['alerts']))
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <div class="flex items-center mb-2">
-                <div class="w-8 h-8 rounded-full bg-red-100 dark:bg-red-900 flex items-center justify-center mr-3">
-                    <svg class="w-4 h-4 text-red-600 dark:text-red-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                    </svg>
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
+            <div class="p-6">
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center mr-4">
+                        <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                    </div>
+                    <h4 class="text-xl font-semibold text-gray-900">Alertas</h4>
                 </div>
-                <h4 class="text-lg font-semibold">Alertas</h4>
+                <p class="text-gray-600 leading-relaxed">{{ $aiAnalysis['alerts']['message'] }}</p>
             </div>
-            <p class="text-gray-600 dark:text-gray-300">{{ $aiAnalysis['alerts']['message'] }}</p>
         </div>
         @endif
     </div>
 
-    <!-- Sugestões -->
-    @if(!empty($suggestions))
-    <div class="mt-8">
-        <h3 class="text-lg font-semibold mb-4">Sugestões</h3>
-        <div class="space-y-4">
-            @foreach($suggestions as $suggestion)
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-                <div class="flex items-center">
-                    <div class="w-8 h-8 rounded-full {{ $suggestion['type'] === 'warning' ? 'bg-yellow-100 dark:bg-yellow-900' : 'bg-blue-100 dark:bg-blue-900' }} flex items-center justify-center mr-3">
-                        <svg class="w-4 h-4 {{ $suggestion['type'] === 'warning' ? 'text-yellow-600 dark:text-yellow-300' : 'text-blue-600 dark:text-blue-300' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                    </div>
-                    <p class="text-gray-600 dark:text-gray-300">{{ $suggestion['message'] }}</p>
-                </div>
-            </div>
-            @endforeach
-        </div>
-    </div>
-    @endif
-</div>
+   
 
 <!-- Análise de Concorrentes -->
 <div class="mt-8">
