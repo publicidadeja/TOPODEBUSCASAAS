@@ -441,7 +441,7 @@ function refreshCompetitorAnalysis() {
     contentElement.classList.add('opacity-50');
 
     // Faz a requisição
-    fetch('/competitor-analysis/analyze', {
+    fetch(`/competitor-analysis/analyze`, {
         method: 'POST',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -459,27 +459,21 @@ function refreshCompetitorAnalysis() {
         return response.json();
     })
     .then(data => {
-        if (data.success) {
-            // Atualiza os concorrentes
-            updateCompetitorSection(data);
-            alert('Análise atualizada com sucesso!');
-        } else {
-            throw new Error(data.message || 'Erro ao atualizar análise');
-        }
+        updateCompetitorContent(data);
+        // Esconde loading
+        loadingElement.classList.add('hidden');
+        contentElement.classList.remove('opacity-50');
     })
     .catch(error => {
         console.error('Erro:', error);
         alert('Erro ao atualizar análise. Por favor, tente novamente.');
-    })
-    .finally(() => {
-        // Esconde loading
-        loadingElement.classList.remove('opacity-50');
-        contentElement.classList.add('hidden');
+        loadingElement.classList.add('hidden');
+        contentElement.classList.remove('opacity-50');
     });
 }
 
-function updateCompetitorSection(data) {
-    // Atualiza seção de concorrentes
+function updateCompetitorContent(data) {
+    // Atualiza concorrentes
     const topCompetitorsElement = document.getElementById('top-competitors');
     if (data.competitors && topCompetitorsElement) {
         topCompetitorsElement.innerHTML = data.competitors.map(competitor => `
