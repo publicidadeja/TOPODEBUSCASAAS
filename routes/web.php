@@ -17,6 +17,8 @@ Route::post('/competitor-analysis/analyze', [CompetitorAnalysisController::class
     ->name('competitor.analyze')
     ->middleware('auth');
 
+    
+
 
 Route::post('/analytics/update-gemini-analysis/{business}', 
     [AnalyticsController::class, 'updateGeminiAnalysis'])

@@ -24,20 +24,26 @@ class SerperService
         ])->post($this->apiEndpoint, [
             'q' => $query,
             'gl' => 'br',
-            'num' => 10, // Número de resultados
+            'num' => 10,
             'type' => 'search'
+        ]);
+
+        // Add detailed logging
+        \Log::info('Serper API Response:', [
+            'status' => $response->status(),
+            'body' => $response->body()
         ]);
 
         if ($response->successful()) {
             return $this->formatResults($response->json());
         }
 
-        Log::error('Erro na busca Serper: ' . $response->body());
-        return null;
+        \Log::error('Erro na busca Serper: ' . $response->body());
+        throw new \Exception('Erro na busca de concorrentes: ' . $response->body());
 
     } catch (\Exception $e) {
-        Log::error('Erro ao fazer busca: ' . $e->getMessage());
-        return null;
+        \Log::error('Erro ao fazer busca: ' . $e->getMessage());
+        throw $e;
     }
 }
 

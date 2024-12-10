@@ -432,13 +432,21 @@
 @push('scripts')
 <script>
 function refreshCompetitorAnalysis() {
+    // Log inicial
+    console.log('Iniciando atualização da análise de concorrentes');
+    
     const businessId = document.getElementById('business-selector').value;
+    console.log('ID do negócio selecionado:', businessId); // Log do ID selecionado
+
     const loadingElement = document.getElementById('competitor-loading');
     const contentElement = document.getElementById('competitor-content');
 
     // Mostra loading
     loadingElement.classList.remove('hidden');
     contentElement.classList.add('opacity-50');
+
+    // Log antes da requisição
+    console.log('Enviando requisição para o servidor...');
 
     // Faz a requisição
     fetch('/competitor-analysis/analyze', {
@@ -453,21 +461,38 @@ function refreshCompetitorAnalysis() {
         })
     })
     .then(response => {
+        // Log do status da resposta
+        console.log('Status da resposta:', response.status);
+        console.log('Headers da resposta:', Object.fromEntries(response.headers));
+        
         if (!response.ok) {
-            throw new Error('Erro na resposta do servidor');
+            throw new Error(`Erro HTTP: ${response.status} ${response.statusText}`);
         }
         return response.json();
     })
     .then(data => {
+        // Log dos dados recebidos
+        console.log('Dados recebidos do servidor:', data);
+        
         if (!data.success) {
             throw new Error(data.message || 'Erro ao atualizar análise');
         }
+        
+        console.log('Atualizando conteúdo na página...');
         updateCompetitorContent(data);
+        
         loadingElement.classList.add('hidden');
         contentElement.classList.remove('opacity-50');
+        
+        console.log('Atualização concluída com sucesso');
     })
     .catch(error => {
-        console.error('Erro:', error);
+        // Log detalhado do erro
+        console.error('Erro detalhado:', {
+            message: error.message,
+            stack: error.stack
+        });
+        
         alert('Erro ao atualizar análise: ' + error.message);
         loadingElement.classList.add('hidden');
         contentElement.classList.remove('opacity-50');
