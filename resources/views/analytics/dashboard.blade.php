@@ -741,6 +741,42 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    async function refreshCompetitorAnalysis() {
+    try {
+        const loadingElement = document.getElementById('competitor-loading');
+        const contentElement = document.getElementById('competitor-content');
+        
+        loadingElement.classList.remove('hidden');
+        contentElement.classList.add('opacity-50');
+        
+        const response = await fetch('/competitor-analysis/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                business_id: businessId
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Atualiza a view com os dados
+            updateCompetitorContent(data);
+        } else {
+            throw new Error(data.message || 'Erro ao atualizar análise');
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        showNotification('Erro ao atualizar análise: ' + error.message, 'error');
+    } finally {
+        loadingElement.classList.add('hidden');
+        contentElement.classList.remove('opacity-50');
+    }
+}
+
     // Event Handlers
     const periodSelector = document.getElementById('period-selector');
     const businessSelector = document.getElementById('business-selector');

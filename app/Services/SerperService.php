@@ -28,21 +28,17 @@ class SerperService
             'type' => 'search'
         ]);
 
-        // Add detailed logging
-        \Log::info('Serper API Response:', [
-            'status' => $response->status(),
-            'body' => $response->body()
-        ]);
-
         if ($response->successful()) {
-            return $this->formatResults($response->json());
+            $results = $this->formatResults($response->json());
+            if (empty($results)) {
+                throw new \Exception('Nenhum resultado encontrado');
+            }
+            return $results;
         }
 
-        \Log::error('Erro na busca Serper: ' . $response->body());
-        throw new \Exception('Erro na busca de concorrentes: ' . $response->body());
-
+        throw new \Exception('Erro na busca: ' . $response->body());
     } catch (\Exception $e) {
-        \Log::error('Erro ao fazer busca: ' . $e->getMessage());
+        \Log::error('Erro na busca Serper: ' . $e->getMessage());
         throw $e;
     }
 }

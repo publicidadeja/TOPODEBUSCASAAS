@@ -453,11 +453,24 @@ private function extractAlertInsight($analysis)
  */
 private function extractSection($analysis, $sectionName)
 {
+    // Verifica se a análise é uma string
+    if (!is_string($analysis)) {
+        $analysis = json_encode($analysis, JSON_UNESCAPED_UNICODE);
+    }
+    
+    // Tenta encontrar a seção no formato atual
     $pattern = "/#$sectionName#\s*(.*?)\s*(?=#|$)/s";
     if (preg_match($pattern, $analysis, $matches)) {
         return trim($matches[1]);
     }
-    return "Não foi possível extrair informações de $sectionName.";
+    
+    // Tenta encontrar a seção em formato alternativo
+    $pattern = "\"$sectionName\":\s*\"(.*?)\"";
+    if (preg_match($pattern, $analysis, $matches)) {
+        return trim($matches[1]);
+    }
+    
+    return null;
 }
 
 // Em GeminiService.php
