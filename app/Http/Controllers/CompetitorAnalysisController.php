@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 use App\Services\AIAnalysisService;
 use App\Services\SerperService;
 use App\Models\Business;
+use Illuminate\Http\Request;
 
 class CompetitorAnalysisController extends Controller
 {

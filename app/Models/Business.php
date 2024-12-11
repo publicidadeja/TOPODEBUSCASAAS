@@ -18,7 +18,9 @@ class Business extends Model
         'description',
         'website',
         'user_id',
-        'settings', // Adicione esta linha aos fillable
+        'settings',
+        'city',
+        'state',
     ];
 
     protected $casts = [

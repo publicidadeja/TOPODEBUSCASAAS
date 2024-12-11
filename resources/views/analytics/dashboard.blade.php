@@ -499,6 +499,8 @@ function refreshCompetitorAnalysis() {
     });
 }
 
+
+
 function updateCompetitorContent(data) {
     // Atualiza concorrentes
     const topCompetitorsElement = document.getElementById('top-competitors');
