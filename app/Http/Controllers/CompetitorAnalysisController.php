@@ -7,16 +7,19 @@ use App\Services\AIAnalysisService;
 use App\Services\SerperService;
 use App\Models\Business;
 use Illuminate\Http\Request;
+use App\Services\GeminiService;
 
 class CompetitorAnalysisController extends Controller
 {
     protected $aiAnalysis;
     protected $serper;
+    protected $gemini;
 
-    public function __construct(AIAnalysisService $aiAnalysis, SerperService $serper)
+    public function __construct(AIAnalysisService $aiAnalysis, SerperService $serper, GeminiService $gemini)
     {
         $this->aiAnalysis = $aiAnalysis;
         $this->serper = $serper;
+        $this->gemini = $gemini;
     }
 
     public function analyze(Request $request)
@@ -125,9 +128,77 @@ class CompetitorAnalysisController extends Controller
     
     private function generateRecommendations($competitors)
     {
+        try {
+            // Prepara os dados dos concorrentes para análise
+            $competitorsData = array_map(function($competitor) {
+                return [
+                    'name' => $competitor['title'] ?? 'Nome não disponível',
+                    'rating' => $competitor['rating'] ?? 0,
+                    'reviews' => $competitor['reviews'] ?? 0,
+                    'has_website' => !empty($competitor['website']),
+                    'location' => $competitor['location'] ?? 'Localização não disponível',
+                ];
+            }, $competitors);
+
+            // Cria um prompt estruturado para o Gemini
+            $prompt = "Analise os seguintes dados de concorrentes e forneça 3 recomendações estratégicas:\n\n";
+            $prompt .= "Dados dos concorrentes:\n";
+            foreach ($competitorsData as $data) {
+                $prompt .= "- Empresa: {$data['name']}\n";
+                $prompt .= "  Avaliação: {$data['rating']}/5\n";
+                $prompt .= "  Número de reviews: {$data['reviews']}\n";
+                $prompt .= "  Possui website: " . ($data['has_website'] ? 'Sim' : 'Não') . "\n";
+                $prompt .= "  Localização: {$data['location']}\n\n";
+            }
+            
+            $prompt .= "Por favor, forneça 3 recomendações estratégicas no seguinte formato:\n";
+            $prompt .= "1. Título da recomendação: descrição detalhada (prioridade: alta/média/baixa)\n";
+
+            // Obtém a análise do Gemini
+            $geminiAnalysis = $this->gemini->generateResponse($prompt);
+
+            // Processa a resposta do Gemini
+            $recommendations = $this->parseGeminiRecommendations($geminiAnalysis);
+
+            // Se a análise do Gemini falhar, usa as recomendações padrão
+            if (empty($recommendations)) {
+                return $this->generateDefaultRecommendations($competitors);
+            }
+
+            return $recommendations;
+
+        } catch (\Exception $e) {
+            \Log::error('Erro ao gerar recomendações com Gemini: ' . $e->getMessage());
+            return $this->generateDefaultRecommendations($competitors);
+        }
+    }
+
+    private function parseGeminiRecommendations($analysis)
+    {
         $recommendations = [];
         
-        // Analisa presença online
+        // Divide a resposta em linhas
+        $lines = explode("\n", $analysis);
+        
+        foreach ($lines as $line) {
+            // Procura por linhas que começam com números (1., 2., 3.)
+            if (preg_match('/^\d+\.\s+(.+?):\s+(.+?)\s*\(prioridade:\s*(\w+)\)$/i', $line, $matches)) {
+                $recommendations[] = [
+                    'title' => trim($matches[1]),
+                    'description' => trim($matches[2]),
+                    'priority' => strtolower(trim($matches[3]))
+                ];
+            }
+        }
+
+        return $recommendations;
+    }
+
+    private function generateDefaultRecommendations($competitors)
+    {
+        $recommendations = [];
+        
+        // Código original das recomendações padrão
         $withWebsite = array_filter($competitors, fn($c) => !empty($c['website']));
         if (count($withWebsite) / count($competitors) > 0.7) {
             $recommendations[] = [
@@ -137,7 +208,6 @@ class CompetitorAnalysisController extends Controller
             ];
         }
     
-        // Analisa avaliações
         $avgRating = array_reduce($competitors, fn($carry, $c) => $carry + ($c['rating'] ?? 0), 0) / count($competitors);
         if ($avgRating > 4) {
             $recommendations[] = [
@@ -147,7 +217,6 @@ class CompetitorAnalysisController extends Controller
             ];
         }
     
-        // Adiciona recomendação padrão se houver poucos insights
         if (count($recommendations) < 2) {
             $recommendations[] = [
                 'title' => 'Análise de Mercado',
