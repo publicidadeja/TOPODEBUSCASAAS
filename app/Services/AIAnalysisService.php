@@ -178,18 +178,20 @@ class AIAnalysisService
 
     public function analyzeCompetitors($business, $competitors)
 {
-    $prompt = "Analise os seguintes concorrentes para o negócio {$business->name} 
-               no segmento {$business->segment} em {$business->city}:\n\n";
+    // Adicione mais contexto e estrutura aos dados
+    $prompt = "Analise detalhadamente os seguintes concorrentes:\n\n";
     
     foreach ($competitors as $competitor) {
-        $prompt .= "Concorrente: {$competitor['title']}\n";
-        $prompt .= "Descrição: {$competitor['snippet']}\n\n";
+        $prompt .= "Nome: {$competitor['title']}\n";
+        $prompt .= "Avaliação: {$competitor['rating']}\n";
+        $prompt .= "Número de Reviews: {$competitor['reviews']}\n";
+        $prompt .= "Localização: {$competitor['location']}\n\n";
     }
     
-    $prompt .= "Forneça uma análise detalhada incluindo:\n";
-    $prompt .= "1. Principais concorrentes\n";
-    $prompt .= "2. Análise de mercado\n";
-    $prompt .= "3. Recomendações estratégicas\n";
+    $prompt .= "\nCom base nesses dados, forneça:\n";
+    $prompt .= "1. Análise competitiva detalhada\n";
+    $prompt .= "2. Recomendações estratégicas específicas\n";
+    $prompt .= "3. Oportunidades de melhoria\n";
     
     return $this->gemini->analyze($prompt);
 }

@@ -500,13 +500,23 @@
 <script>
 // Funções JavaScript atualizadas
 function refreshCompetitorAnalysis() {
+    // Elementos do DOM
     const businessId = document.getElementById('business-selector').value;
     const loadingElement = document.getElementById('competitor-loading');
     const contentElement = document.getElementById('competitor-content');
+    const recommendationsElement = document.getElementById('strategic-recommendations');
 
+    // Validação inicial
+    if (!businessId) {
+        console.error('ID do negócio não encontrado');
+        return;
+    }
+
+    // Mostra loading e adiciona opacity
     loadingElement.classList.remove('hidden');
     contentElement.classList.add('opacity-50');
 
+    // Faz a requisição
     fetch('/competitor-analysis/analyze', {
         method: 'POST',
         headers: {
@@ -521,8 +531,111 @@ function refreshCompetitorAnalysis() {
         return response.json();
     })
     .then(data => {
+        console.log('Dados recebidos:', data); // Log para debug
+
         if (!data.success) throw new Error(data.message || 'Erro ao atualizar análise');
-        updateCompetitorContent(data);
+
+        // Atualiza a seção de concorrentes
+        if (data.competitors && Array.isArray(data.competitors)) {
+            const topCompetitorsElement = document.getElementById('top-competitors');
+            if (topCompetitorsElement) {
+                topCompetitorsElement.innerHTML = data.competitors
+                    .map(competitor => `
+                        <div class="bg-white rounded-lg p-4 shadow-sm">
+                            <div class="flex space-x-4">
+                                <div class="flex-shrink-0">
+                                    <img src="${competitor.image_url || '/images/default-business.jpg'}"
+                                         alt="${competitor.title}"
+                                         class="w-20 h-20 object-cover rounded-lg"
+                                         onerror="this.src='/images/default-business.jpg'">
+                                </div>
+                                <div class="flex-grow">
+                                    <h4 class="font-medium text-gray-900">${competitor.title}</h4>
+                                    <p class="text-sm text-gray-500">${competitor.location}</p>
+                                    <div class="flex items-center mt-2">
+                                        <div class="flex text-yellow-400">
+                                            ${generateStarRating(competitor.rating)}
+                                            <span class="ml-2 text-sm text-gray-600">
+                                                ${competitor.rating.toFixed(1)}/5
+                                                ${competitor.reviews ? `(${competitor.reviews} avaliações)` : ''}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                                        ${competitor.phone ? `
+                                            <span class="flex items-center">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                                </svg>
+                                                ${competitor.phone}
+                                            </span>
+                                        ` : ''}
+                                        ${competitor.website ? `
+                                            <a href="${competitor.website}" target="_blank" class="flex items-center text-blue-600 hover:text-blue-800">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                                </svg>
+                                                Visitar site
+                                            </a>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+            }
+        }
+
+        // Atualiza a análise de mercado
+        if (data.marketAnalysis && Array.isArray(data.marketAnalysis)) {
+            const marketAnalysisElement = document.getElementById('market-analysis');
+            if (marketAnalysisElement) {
+                marketAnalysisElement.innerHTML = data.marketAnalysis
+                    .map(analysis => `
+                        <div class="bg-white rounded-lg p-4 shadow-sm">
+                            <h4 class="font-medium text-gray-900 mb-2">${analysis.title}</h4>
+                            <p class="text-sm text-gray-600">${analysis.description}</p>
+                            ${analysis.metrics ? `
+                                <div class="mt-2 grid grid-cols-2 gap-2">
+                                    ${analysis.metrics.map(metric => `
+                                        <div class="bg-gray-50 p-2 rounded">
+                                            <span class="text-xs text-gray-500">${metric.label}</span>
+                                            <div class="font-medium">${metric.value}</div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('');
+            }
+        }
+
+        // Atualiza recomendações estratégicas
+        if (data.recommendations && Array.isArray(data.recommendations)) {
+            if (recommendationsElement) {
+                recommendationsElement.innerHTML = data.recommendations
+                    .map(recommendation => `
+                        <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                            <div class="flex items-center space-x-3">
+                                <div class="flex-shrink-0">
+                                    <svg class="w-6 h-6 ${getPriorityColor(recommendation.priority)}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="text-sm font-medium text-gray-900">${recommendation.title}</h4>
+                                    <p class="text-sm text-gray-500 mt-1">${recommendation.description}</p>
+                                    ${recommendation.priority ? `
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${getPriorityClass(recommendation.priority)}">
+                                            ${recommendation.priority.charAt(0).toUpperCase() + recommendation.priority.slice(1)} Priority
+                                        </span>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+            }
+        }
     })
     .catch(error => {
         console.error('Erro:', error);
@@ -532,6 +645,37 @@ function refreshCompetitorAnalysis() {
         loadingElement.classList.add('hidden');
         contentElement.classList.remove('opacity-50');
     });
+}
+
+// Funções auxiliares
+function generateStarRating(rating) {
+    let stars = '';
+    for (let i = 1; i <= 5; i++) {
+        if (i <= Math.floor(rating)) {
+            stars += '<svg class="w-4 h-4 fill-current text-yellow-400" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
+        } else if (i - 0.5 <= rating) {
+            stars += '<svg class="w-4 h-4 fill-current text-yellow-400" viewBox="0 0 24 24"><path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4V6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z"/></svg>';
+        } else {
+            stars += '<svg class="w-4 h-4 fill-current text-gray-300" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
+        }
+    }
+    return stars;
+}
+
+function getPriorityColor(priority) {
+    return {
+        'high': 'text-red-500',
+        'medium': 'text-yellow-500',
+        'low': 'text-green-500'
+    }[priority] || 'text-blue-500';
+}
+
+function getPriorityClass(priority) {
+    return {
+        'high': 'bg-red-100 text-red-800',
+        'medium': 'bg-yellow-100 text-yellow-800',
+        'low': 'bg-green-100 text-green-800'
+    }[priority] || 'bg-blue-100 text-blue-800';
 }
 
 function updateCompetitorContent(data) {
@@ -878,6 +1022,7 @@ function updateCompetitorContent(data) {
 <script>
 // Chart.js Configuration and Setup
 document.addEventListener('DOMContentLoaded', function() {
+    
     // Global Chart.js Configuration
     Chart.defaults.font.family = 'Inter var, sans-serif';
     Chart.defaults.color = '#6B7280';
@@ -1103,6 +1248,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Implement error notification system here
         console.error(message);
     }
+
 });
 </script>
 @endpush

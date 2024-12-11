@@ -62,38 +62,53 @@ class GeminiService
     }
 
     private function extractSuggestions($content)
-{
-    // Se $content for um array, converte para string
-    if (is_array($content)) {
-        $content = json_encode($content, JSON_UNESCAPED_UNICODE);
-    }
-
-    $suggestions = [];
-
-    // Procurar por padrões de sugestões no texto
-    if (preg_match_all('/\b(Sugestão|Melhoria|Recomendação):\s*([^\n]+)/i', $content, $matches)) {
-        foreach ($matches[2] as $index => $suggestion) {
-            $suggestions[] = [
-                'title' => 'Sugestão ' . ($index + 1),
-                'message' => trim($suggestion),
-                'action_type' => $this->determineActionType($suggestion),
-                'action_data' => $this->extractActionData($suggestion),
-                'priority' => $this->determinePriority($suggestion)
-            ];
+    {
+        if (is_array($content)) {
+            $content = json_encode($content, JSON_UNESCAPED_UNICODE);
         }
+    
+        $suggestions = [];
+        
+        // Melhorar a expressão regular para capturar recomendações
+        if (preg_match_all('/(?:Recomendação|Sugestão|Melhoria):\s*([^.!?\n]+[.!?])/i', $content, $matches)) {
+            foreach ($matches[1] as $index => $suggestion) {
+                $suggestions[] = [
+                    'title' => 'Recomendação ' . ($index + 1),
+                    'message' => trim($suggestion),
+                    'action_type' => $this->determineActionType($suggestion),
+                    'action_data' => $this->extractActionData($suggestion),
+                    'priority' => $this->determinePriority($suggestion)
+                ];
+            }
+        }
+        
+        // Só retorna a sugestão padrão se realmente não encontrar nada
+        if (empty($suggestions) && strpos($content, 'error') === false) {
+            // Tenta extrair qualquer conteúdo relevante
+            $sentences = explode('.', $content);
+            foreach ($sentences as $index => $sentence) {
+                if (strlen(trim($sentence)) > 30) {
+                    $suggestions[] = [
+                        'title' => 'Análise ' . ($index + 1),
+                        'message' => trim($sentence),
+                        'action_type' => 'general',
+                        'action_data' => [],
+                        'priority' => 'medium'
+                    ];
+                }
+            }
+        }
+        
+        return $suggestions ?: [
+            [
+                'title' => 'Melhoria de Fotos',
+                'message' => 'Considere atualizar as fotos do seu negócio para melhor visibilidade',
+                'action_type' => 'update_photos',
+                'action_data' => [],
+                'priority' => 'medium'
+            ]
+        ];
     }
-
-    // Se não encontrou sugestões, retorna uma sugestão padrão
-    return $suggestions ?: [
-        [
-            'title' => 'Melhoria de Fotos',
-            'message' => 'Considere atualizar as fotos do seu negócio para melhor visibilidade',
-            'action_type' => 'update_photos',
-            'action_data' => [],
-            'priority' => 'medium'
-        ]
-    ];
-}
     private function extractImportantDates($content)
     {
         $dates = [];
@@ -323,6 +338,7 @@ private function buildAnalysisPrompt($business, $analytics, $competitors)
  */
 public function analyze($prompt)
 {
+    $prompt = "Baseado nos seguintes dados, forneça recomendações estratégicas específicas:\n" . $prompt;
     try {
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
