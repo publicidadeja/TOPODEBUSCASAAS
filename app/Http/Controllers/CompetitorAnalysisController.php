@@ -114,25 +114,28 @@ private function searchCompetitors($business)
         'business' => [
             'id' => $business->id,
             'segment' => $business->segment,
+            'address' => $business->address,
             'city' => $business->city,
             'state' => $business->state
         ]
     ]);
 
     // Validação dos dados necessários
-    if (empty($business->segment) || empty($business->city) || empty($business->state)) {
+    if (empty($business->segment) || empty($business->city) || empty($business->state) || empty($business->address)) {
         \Log::warning('Dados do negócio incompletos', [
             'segment' => $business->segment,
+            'address' => $business->address,
             'city' => $business->city,
             'state' => $business->state
         ]);
         throw new \Exception('Dados do negócio incompletos para busca de concorrentes');
     }
 
-    // Construção da query mais específica
+    // Construção da query mais específica incluindo endereço
     $query = sprintf(
-        'empresas %s em %s %s',
+        '%s próximo a %s, %s, %s',
         trim($business->segment),
+        trim($business->address),
         trim($business->city),
         trim($business->state)
     );
@@ -144,39 +147,54 @@ private function searchCompetitors($business)
         
         // Filtragem e formatação dos resultados
         $competitors = array_map(function($result) {
-            // Extrai informações relevantes do título e snippet
-            $title = $result['title'] ?? '';
-            $snippet = $result['snippet'] ?? '';
-            
             return [
-                'title' => $this->cleanTitle($title),
-                'location' => $this->extractLocation($snippet),
-                'snippet' => $snippet,
-                'score' => $this->calculateScore($result)
+                'title' => $result['title'] ?? '',
+                'location' => $result['location'] ?? '',
+                'snippet' => $result['snippet'] ?? '',
+                'rating' => $result['rating'] ?? null,
+                'reviews' => $result['reviews'] ?? null,
+                'phone' => $result['phone'] ?? '',
+                'website' => $result['website'] ?? ''
             ];
         }, $results);
 
-        // Filtra resultados irrelevantes
-        $competitors = array_filter($competitors, function($competitor) {
-            return !empty($competitor['title']) && 
-                   strlen($competitor['title']) > 3 && 
-                   $competitor['title'] !== 'Nome não disponível';
+        // Filtra resultados irrelevantes e o próprio negócio
+        $competitors = array_filter($competitors, function($competitor) use ($business) {
+            // Remove resultados vazios ou muito curtos
+            if (empty($competitor['title']) || strlen($competitor['title']) < 3) {
+                return false;
+            }
+
+            // Remove o próprio negócio da lista
+            if (stripos($competitor['title'], $business->name) !== false) {
+                return false;
+            }
+
+            // Verifica se está na mesma cidade
+            if (!empty($competitor['location']) && 
+                stripos($competitor['location'], $business->city) === false) {
+                return false;
+            }
+
+            return true;
         });
 
         \Log::info('Resultados processados', [
-            'count' => count($competitors)
+            'query' => $query,
+            'total_results' => count($results),
+            'filtered_results' => count($competitors)
         ]);
 
         return array_values($competitors); // Reindexar array
 
     } catch (\Exception $e) {
         \Log::error('Erro na busca Serper', [
-            'error' => $e->getMessage()
+            'error' => $e->getMessage(),
+            'query' => $query
         ]);
         throw $e;
     }
 }
-
 // Funções auxiliares para melhorar a qualidade dos dados
 private function cleanTitle($title)
 {

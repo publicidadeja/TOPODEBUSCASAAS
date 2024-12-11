@@ -16,73 +16,73 @@ class SerperService
     }
 
     public function search($query)
-{
-    try {
-        $response = Http::withHeaders([
-            'X-API-KEY' => $this->apiKey,
-            'Content-Type' => 'application/json'
-        ])->post($this->apiEndpoint, [
-            'q' => $query,
-            'gl' => 'br',
-            'num' => 10,
-            'type' => 'places', // Alterado para 'places' para buscar locais
-            'search_type' => 'places' // Adicional para garantir busca de locais
-        ]);
-
-        if ($response->successful()) {
-            return $this->formatPlacesResults($response->json());
-        }
-
-        throw new \Exception('Erro na busca: ' . $response->body());
-    } catch (\Exception $e) {
-        \Log::error('Erro na busca Serper: ' . $e->getMessage());
-        throw $e;
-    }
-}
-
-private function formatPlacesResults($data)
-{
-    $results = [];
+    {
+        try {
+            $response = Http::withHeaders([
+                'X-API-KEY' => $this->apiKey,
+                'Content-Type' => 'application/json'
+            ])->post($this->apiEndpoint, [
+                'q' => $query,
+                'gl' => 'br',
+                'num' => 10,
+                'type' => 'places', // Alterado para places
+                'search_type' => 'places'
+            ]);
     
-    if (isset($data['places'])) {
-        foreach ($data['places'] as $place) {
-            $results[] = [
-                'title' => $place['title'] ?? '',
-                'location' => $place['address'] ?? 'Localização não disponível',
-                'snippet' => $this->formatPlaceDescription($place),
-                'rating' => $place['rating'] ?? null,
-                'reviews' => $place['reviewsCount'] ?? null,
-                'phone' => $place['phone'] ?? '',
-                'website' => $place['website'] ?? ''
-            ];
+            if ($response->successful()) {
+                return $this->formatPlacesResults($response->json());
+            }
+    
+            throw new \Exception('Erro na busca: ' . $response->body());
+        } catch (\Exception $e) {
+            \Log::error('Erro na busca Serper: ' . $e->getMessage());
+            throw $e;
         }
     }
     
-    return $results;
-}
-
-private function formatPlaceDescription($place)
-{
-    $description = [];
-    
-    if (!empty($place['address'])) {
-        $description[] = $place['address'];
+    private function formatPlacesResults($data)
+    {
+        $results = [];
+        
+        if (isset($data['places'])) {
+            foreach ($data['places'] as $place) {
+                $results[] = [
+                    'title' => $place['title'] ?? '',
+                    'location' => $place['address'] ?? '',
+                    'snippet' => $this->formatPlaceSnippet($place),
+                    'rating' => $place['rating'] ?? null,
+                    'reviews' => $place['reviewsCount'] ?? null,
+                    'phone' => $place['phone'] ?? '',
+                    'website' => $place['website'] ?? '',
+                    'coordinates' => [
+                        'lat' => $place['latitude'] ?? null,
+                        'lng' => $place['longitude'] ?? null
+                    ]
+                ];
+            }
+        }
+        
+        return $results;
     }
     
-    if (!empty($place['rating'])) {
-        $description[] = "Avaliação: {$place['rating']}/5";
+    private function formatPlaceSnippet($place)
+    {
+        $parts = [];
+        
+        if (!empty($place['address'])) {
+            $parts[] = $place['address'];
+        }
+        
+        if (!empty($place['rating'])) {
+            $parts[] = "Avaliação: {$place['rating']}/5";
+        }
+        
+        if (!empty($place['reviewsCount'])) {
+            $parts[] = "{$place['reviewsCount']} avaliações";
+        }
+        
+        return implode(' • ', $parts);
     }
-    
-    if (!empty($place['reviewsCount'])) {
-        $description[] = "{$place['reviewsCount']} avaliações";
-    }
-    
-    if (!empty($place['phone'])) {
-        $description[] = "Tel: {$place['phone']}";
-    }
-    
-    return implode(' • ', $description);
-}
 
     
     private function calculateCompetitorScore($place)
