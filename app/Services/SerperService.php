@@ -41,29 +41,30 @@ class SerperService
     }
     
     private function formatPlacesResults($data)
-    {
-        $results = [];
-        
-        if (isset($data['places'])) {
-            foreach ($data['places'] as $place) {
-                $results[] = [
-                    'title' => $place['title'] ?? '',
-                    'location' => $place['address'] ?? '',
-                    'snippet' => $this->formatPlaceSnippet($place),
-                    'rating' => $place['rating'] ?? null,
-                    'reviews' => $place['reviewsCount'] ?? null,
-                    'phone' => $place['phone'] ?? '',
-                    'website' => $place['website'] ?? '',
-                    'coordinates' => [
-                        'lat' => $place['latitude'] ?? null,
-                        'lng' => $place['longitude'] ?? null
-                    ]
-                ];
-            }
+{
+    $results = [];
+    
+    if (isset($data['places'])) {
+        foreach ($data['places'] as $place) {
+            $results[] = [
+                'title' => $place['title'] ?? '',
+                'location' => $place['address'] ?? '',
+                'snippet' => $this->formatPlaceSnippet($place),
+                'rating' => $place['rating'] ?? null,
+                'reviews' => $place['reviewsCount'] ?? null,
+                'phone' => $place['phone'] ?? '',
+                'website' => $place['website'] ?? '',
+                'image_url' => $place['thumbnailUrl'] ?? null, // Adiciona URL da imagem
+                'coordinates' => [
+                    'lat' => $place['latitude'] ?? null,
+                    'lng' => $place['longitude'] ?? null
+                ]
+            ];
         }
-        
-        return $results;
     }
+    
+    return $results;
+}
     
     private function formatPlaceSnippet($place)
     {

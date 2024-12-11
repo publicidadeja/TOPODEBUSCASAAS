@@ -358,20 +358,69 @@
                 <div class="space-y-4" id="top-competitors">
                     @foreach($competitors ?? [] as $competitor)
                         <div class="bg-white rounded-lg p-4 shadow-sm">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h4 class="font-medium text-gray-900">{{ $competitor['name'] }}</h4>
-                                    <p class="text-sm text-gray-500">{{ $competitor['location'] }}</p>
+                            <div class="flex space-x-4">
+                                <!-- Imagem do Negócio -->
+                                <div class="flex-shrink-0">
+                                    <img src="{{ $competitor['image_url'] ?? asset('images/default-business.jpg') }}"
+                                         alt="{{ $competitor['title'] }}"
+                                         class="w-20 h-20 object-cover rounded-lg"
+                                         onerror="this.src='{{ asset('images/default-business.jpg') }}'">
                                 </div>
-                                <span class="px-2 py-1 text-xs font-medium rounded-full 
-                                    {{ $competitor['score'] >= 8 ? 'bg-red-100 text-red-800' : 
-                                       ($competitor['score'] >= 5 ? 'bg-yellow-100 text-yellow-800' : 
-                                        'bg-green-100 text-green-800') }}">
-                                    Score: {{ $competitor['score'] }}/10
-                                </span>
-                            </div>
-                            <div class="mt-2">
-                                <p class="text-sm text-gray-600">{{ $competitor['summary'] }}</p>
+
+                                <!-- Informações do Negócio -->
+                                <div class="flex-grow">
+                                    <h4 class="font-medium text-gray-900">{{ $competitor['title'] }}</h4>
+                                    <p class="text-sm text-gray-500">{{ $competitor['location'] }}</p>
+                                    
+                                    <!-- Avaliação com Estrelas -->
+                                    <div class="flex items-center mt-2">
+                                        <div class="flex text-yellow-400">
+                                            @for($i = 1; $i <= 5; $i++)
+                                                @if($i <= floor($competitor['rating']))
+                                                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                                                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                                                    </svg>
+                                                @elseif($i - 0.5 <= $competitor['rating'])
+                                                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                                                        <path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4V6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z"/>
+                                                    </svg>
+                                                @else
+                                                    <svg class="w-4 h-4 fill-current text-gray-300" viewBox="0 0 24 24">
+                                                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+                                                    </svg>
+                                                @endif
+                                            @endfor
+                                            <span class="ml-2 text-sm text-gray-600">
+                                                {{ number_format($competitor['rating'], 1) }}/5
+                                                @if($competitor['reviews'])
+                                                    ({{ number_format($competitor['reviews']) }} avaliações)
+                                                @endif
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Informações de Contato -->
+                                    <div class="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                                        @if($competitor['phone'])
+                                            <span class="flex items-center">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                                </svg>
+                                                {{ $competitor['phone'] }}
+                                            </span>
+                                        @endif
+                                        @if($competitor['website'])
+                                            <a href="{{ $competitor['website'] }}" 
+                                               target="_blank" 
+                                               class="flex items-center text-blue-600 hover:text-blue-800">
+                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                                                </svg>
+                                                Visitar site
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     @endforeach
@@ -402,53 +451,44 @@
             </div>
         </div>
 
-<!-- Recomendações Estratégicas -->
-<div class="mt-6">
-    <h3 class="text-lg font-semibold text-gray-800 mb-4">Recomendações Estratégicas</h3>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="strategic-recommendations">
-        @foreach($suggestions ?? [] as $suggestion)
-            <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div class="flex items-center space-x-3">
-                    <div class="flex-shrink-0">
-                        <svg class="w-6 h-6 {{ isset($suggestion['priority']) && $suggestion['priority'] === 'high' ? 'text-red-500' : 
-                            (isset($suggestion['priority']) && $suggestion['priority'] === 'medium' ? 'text-yellow-500' : 'text-green-500') }}"
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                        </svg>
+        <!-- Recomendações Estratégicas -->
+        <div class="mt-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Recomendações Estratégicas</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="strategic-recommendations">
+                @foreach($suggestions ?? [] as $suggestion)
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                        <div class="flex items-center space-x-3">
+                            <div class="flex-shrink-0">
+                                <svg class="w-6 h-6 {{ isset($suggestion['priority']) && $suggestion['priority'] === 'high' ? 'text-red-500' : 
+                                    (isset($suggestion['priority']) && $suggestion['priority'] === 'medium' ? 'text-yellow-500' : 'text-green-500') }}"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-medium text-gray-900">{{ $suggestion['title'] ?? '' }}</h4>
+                                <p class="text-sm text-gray-500">{{ $suggestion['description'] ?? '' }}</p>
+                            </div>
+                        </div>
                     </div>
-                    <div>
-                        <h4 class="text-sm font-medium text-gray-900">{{ $suggestion['title'] ?? '' }}</h4>
-                        <p class="text-sm text-gray-500">{{ $suggestion['description'] ?? '' }}</p>
-                    </div>
-                </div>
+                @endforeach
             </div>
-        @endforeach
-    </div>
-</div>
+        </div>
     </div>
 </div>
 
 @push('scripts')
 <script>
+// Funções JavaScript atualizadas
 function refreshCompetitorAnalysis() {
-    // Log inicial
-    console.log('Iniciando atualização da análise de concorrentes');
-    
     const businessId = document.getElementById('business-selector').value;
-    console.log('ID do negócio selecionado:', businessId); // Log do ID selecionado
-
     const loadingElement = document.getElementById('competitor-loading');
     const contentElement = document.getElementById('competitor-content');
 
-    // Mostra loading
     loadingElement.classList.remove('hidden');
     contentElement.classList.add('opacity-50');
 
-    // Log antes da requisição
-    console.log('Enviando requisição para o servidor...');
-
-    // Faz a requisição
     fetch('/competitor-analysis/analyze', {
         method: 'POST',
         headers: {
@@ -456,170 +496,254 @@ function refreshCompetitorAnalysis() {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-            business_id: businessId
-        })
+        body: JSON.stringify({ business_id: businessId })
     })
     .then(response => {
-        // Log do status da resposta
-        console.log('Status da resposta:', response.status);
-        console.log('Headers da resposta:', Object.fromEntries(response.headers));
-        
-        if (!response.ok) {
-            throw new Error(`Erro HTTP: ${response.status} ${response.statusText}`);
-        }
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         return response.json();
     })
     .then(data => {
-        // Log dos dados recebidos
-        console.log('Dados recebidos do servidor:', data);
-        
-        if (!data.success) {
-            throw new Error(data.message || 'Erro ao atualizar análise');
-        }
-        
-        console.log('Atualizando conteúdo na página...');
+        if (!data.success) throw new Error(data.message || 'Erro ao atualizar análise');
         updateCompetitorContent(data);
-        
-        loadingElement.classList.add('hidden');
-        contentElement.classList.remove('opacity-50');
-        
-        console.log('Atualização concluída com sucesso');
     })
     .catch(error => {
-        // Log detalhado do erro
-        console.error('Erro detalhado:', {
-            message: error.message,
-            stack: error.stack
-        });
-        
+        console.error('Erro:', error);
         alert('Erro ao atualizar análise: ' + error.message);
+    })
+    .finally(() => {
         loadingElement.classList.add('hidden');
         contentElement.classList.remove('opacity-50');
     });
 }
 
-
-
 function updateCompetitorContent(data) {
-    // Atualiza concorrentes
-    const topCompetitorsElement = document.getElementById('top-competitors');
-    if (data.competitors && topCompetitorsElement) {
-        topCompetitorsElement.innerHTML = data.competitors.map(competitor => `
-            <div class="bg-white rounded-lg p-4 shadow-sm">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <h4 class="font-medium text-gray-900">${competitor.name}</h4>
-                        <p class="text-sm text-gray-500">${competitor.location}</p>
-                    </div>
-                    <span class="px-2 py-1 text-xs font-medium rounded-full ${getScoreClass(competitor.score)}">
-                        Score: ${competitor.score}/10
-                    </span>
-                </div>
-                <div class="mt-2">
-                    <p class="text-sm text-gray-600">${competitor.summary}</p>
-                </div>
-            </div>
-        `).join('');
-    }
+    try {
+        // Update competitors section
+        const topCompetitorsElement = document.getElementById('top-competitors');
+        if (data.competitors && Array.isArray(data.competitors) && topCompetitorsElement) {
+            topCompetitorsElement.innerHTML = data.competitors
+                .filter(competitor => competitor) // Remove null/undefined entries
+                .map(competitor => {
+                    try {
+                        return createCompetitorCard(competitor);
+                    } catch (error) {
+                        console.error('Error creating competitor card:', error);
+                        return ''; // Return empty string if card creation fails
+                    }
+                })
+                .join('');
+        } else {
+            if (topCompetitorsElement) {
+                topCompetitorsElement.innerHTML = '<div class="p-4 text-gray-500">Nenhum concorrente encontrado.</div>';
+            }
+        }
 
-    // Atualiza análise de mercado
-    const marketAnalysisElement = document.getElementById('market-analysis');
-    if (data.marketAnalysis && marketAnalysisElement) {
-        marketAnalysisElement.innerHTML = data.marketAnalysis.map(analysis => `
-            <div class="bg-white rounded-lg p-4 shadow-sm">
-                <h4 class="font-medium text-gray-900 mb-2">${analysis.title}</h4>
-                <p class="text-sm text-gray-600">${analysis.description}</p>
-            </div>
-        `).join('');
-    }
+        // Update market analysis section
+        const marketAnalysisElement = document.getElementById('market-analysis');
+        if (data.marketAnalysis && Array.isArray(data.marketAnalysis) && marketAnalysisElement) {
+            marketAnalysisElement.innerHTML = data.marketAnalysis
+                .filter(analysis => analysis) // Remove null/undefined entries
+                .map(analysis => {
+                    try {
+                        return createMarketAnalysisCard(analysis);
+                    } catch (error) {
+                        console.error('Error creating market analysis card:', error);
+                        return ''; // Return empty string if card creation fails
+                    }
+                })
+                .join('');
+        } else {
+            if (marketAnalysisElement) {
+                marketAnalysisElement.innerHTML = '<div class="p-4 text-gray-500">Nenhuma análise de mercado disponível.</div>';
+            }
+        }
 
-    // Atualiza recomendações
-    const recommendationsElement = document.getElementById('strategic-recommendations');
-    if (data.recommendations && recommendationsElement) {
-        recommendationsElement.innerHTML = data.recommendations.map(recommendation => `
-            <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div class="flex items-center space-x-3">
-                    <div class="flex-shrink-0">
-                        <svg class="w-6 h-6 ${getPriorityClass(recommendation.priority)}" 
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <h4 class="text-sm font-medium text-gray-900">${recommendation.title}</h4>
-                        <p class="text-sm text-gray-500">${recommendation.description}</p>
-                    </div>
-                </div>
-            </div>
-        `).join('');
+        // Update recommendations section
+        const recommendationsElement = document.getElementById('strategic-recommendations');
+        if (data.recommendations && Array.isArray(data.recommendations) && recommendationsElement) {
+            recommendationsElement.innerHTML = data.recommendations
+                .filter(recommendation => recommendation) // Remove null/undefined entries
+                .map(recommendation => {
+                    try {
+                        return createRecommendationCard(recommendation);
+                    } catch (error) {
+                        console.error('Error creating recommendation card:', error);
+                        return ''; // Return empty string if card creation fails
+                    }
+                })
+                .join('');
+        } else {
+            if (recommendationsElement) {
+                recommendationsElement.innerHTML = '<div class="p-4 text-gray-500">Nenhuma recomendação disponível.</div>';
+            }
+        }
+
+        // Add success notification
+        if (typeof showNotification === 'function') {
+            showNotification('Análise atualizada com sucesso!', 'success');
+        }
+
+    } catch (error) {
+        console.error('Error updating competitor content:', error);
+        
+        // Show error notification if available
+        if (typeof showNotification === 'function') {
+            showNotification('Erro ao atualizar análise. Por favor, tente novamente.', 'error');
+        }
+        
+        // Reset loading state if needed
+        const loadingElement = document.getElementById('competitor-loading');
+        if (loadingElement) {
+            loadingElement.classList.add('hidden');
+        }
+        
+        // Reset content opacity if needed
+        const contentElement = document.getElementById('competitor-content');
+        if (contentElement) {
+            contentElement.classList.remove('opacity-50');
+        }
     }
 }
 
-function getScoreClass(score) {
-    if (score >= 8) return 'bg-red-100 text-red-800';
-    if (score >= 5) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-green-100 text-green-800';
+// Helper function to safely get element by ID
+function getElementByIdSafely(id) {
+    const element = document.getElementById(id);
+    if (!element) {
+        console.warn(`Element with id '${id}' not found`);
+    }
+    return element;
 }
 
-function getPriorityClass(priority) {
-    switch (priority) {
-        case 'high': return 'text-red-500';
-        case 'medium': return 'text-yellow-500';
-        default: return 'text-green-500';
+// Helper function to validate data array
+function isValidDataArray(data) {
+    return data && Array.isArray(data) && data.length > 0;
+}
+
+// Helper function to show empty state message
+function showEmptyState(element, message) {
+    if (element) {
+        element.innerHTML = `
+            <div class="p-4 text-center text-gray-500">
+                <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                          d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p class="mt-2">${message}</p>
+            </div>
+        `;
     }
 }
-function updateCompetitorAnalysis(data) {
-    // Update top competitors
-    const topCompetitorsElement = document.getElementById('top-competitors');
-    topCompetitorsElement.innerHTML = data.competitors.map(competitor => `
+
+function createCompetitorCard(competitor) {
+    // Ensure all properties have default values to prevent undefined
+    const name = competitor.name || competitor.title || 'Nome não disponível';
+    const location = competitor.location || competitor.address || 'Localização não disponível';
+    const rating = parseFloat(competitor.rating || 0);
+    const reviews = parseInt(competitor.reviews || 0);
+    const imageUrl = competitor.image_url || competitor.photo || '/images/default-business.jpg';
+    const phone = competitor.phone || '';
+    const website = competitor.website || '';
+
+    return `
         <div class="bg-white rounded-lg p-4 shadow-sm">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h4 class="font-medium text-gray-900">${competitor.name}</h4>
-                    <p class="text-sm text-gray-500">${competitor.location}</p>
+            <div class="flex space-x-4">
+                <!-- Imagem do Negócio -->
+                <div class="flex-shrink-0">
+                    <img src="${imageUrl}"
+                         alt="${name}"
+                         class="w-20 h-20 object-cover rounded-lg"
+                         onerror="this.src='/images/default-business.jpg'">
                 </div>
-                <span class="px-2 py-1 text-xs font-medium rounded-full 
-                    ${competitor.score >= 8 ? 'bg-red-100 text-red-800' : 
-                      (competitor.score >= 5 ? 'bg-yellow-100 text-yellow-800' : 
-                       'bg-green-100 text-green-800')}">
-                    Score: ${competitor.score}/10
-                </span>
-            </div>
-            <div class="mt-2">
-                <p class="text-sm text-gray-600">${competitor.summary}</p>
+
+                <!-- Informações do Negócio -->
+                <div class="flex-grow">
+                    <h4 class="font-medium text-gray-900">${name}</h4>
+                    <p class="text-sm text-gray-500">${location}</p>
+                    
+                    <!-- Avaliação com Estrelas -->
+                    <div class="flex items-center mt-2">
+                        <div class="flex text-yellow-400">
+                            ${createRatingStars(rating)}
+                            <span class="ml-2 text-sm text-gray-600">
+                                ${rating.toFixed(1)}/5
+                                ${reviews > 0 ? `(${reviews} avaliações)` : ''}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Informações de Contato -->
+                    ${createContactInfo(phone, website)}
+                </div>
             </div>
         </div>
-    `).join('');
+    `;
+}
 
-    // Update market analysis
-    const marketAnalysisElement = document.getElementById('market-analysis');
-    marketAnalysisElement.innerHTML = data.marketAnalysis.map(analysis => `
+function createRatingStars(rating) {
+    return Array.from({ length: 5 }, (_, index) => {
+        if (index < Math.floor(rating)) {
+            return '<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
+        } else if (index < rating) {
+            return '<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4V6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z"/></svg>';
+        }
+        return '<svg class="w-4 h-4 fill-current text-gray-300" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
+    }).join('');
+}
+
+function createContactInfo(phone, website) {
+    return `
+        <div class="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+            ${phone ? `
+                <span class="flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                    </svg>
+                    ${phone}
+                </span>
+            ` : ''}
+            ${website ? `
+                <a href="${website}" 
+                   target="_blank" 
+                   class="flex items-center text-blue-600 hover:text-blue-800">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+                    </svg>
+                    Visitar site
+                </a>
+            ` : ''}
+        </div>
+    `;
+}
+
+function createMarketAnalysisCard(analysis) {
+    return `
         <div class="bg-white rounded-lg p-4 shadow-sm">
             <h4 class="font-medium text-gray-900 mb-2">${analysis.title}</h4>
             <p class="text-sm text-gray-600">${analysis.description}</p>
-            ${analysis.metrics ? `
-                <div class="mt-2 grid grid-cols-2 gap-2">
-                    ${analysis.metrics.map(metric => `
-                        <div class="bg-gray-50 p-2 rounded">
-                            <span class="text-xs text-gray-500">${metric.label}</span>
-                            <div class="font-medium">${metric.value}</div>
-                        </div>
-                    `).join('')}
-                </div>
-            ` : ''}
+            ${analysis.metrics ? createMetricsGrid(analysis.metrics) : ''}
         </div>
-    `).join('');
+    `;
+}
 
-    // Update recommendations
-    const recommendationsElement = document.getElementById('strategic-recommendations');
-    recommendationsElement.innerHTML = data.recommendations.map(recommendation => `
+function createMetricsGrid(metrics) {
+    return `
+        <div class="mt-2 grid grid-cols-2 gap-2">
+            ${metrics.map(metric => `
+                <div class="bg-gray-50 p-2 rounded">
+                    <span class="text-xs text-gray-500">${metric.label}</span>
+                    <div class="font-medium">${metric.value}</div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function createRecommendationCard(recommendation) {
+    return `
         <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
             <div class="flex items-center space-x-3">
                 <div class="flex-shrink-0">
-                    <svg class="w-6 h-6 ${recommendation.priority === 'high' ? 'text-red-500' : 
-                        (recommendation.priority === 'medium' ? 'text-yellow-500' : 'text-green-500')}" 
+                    <svg class="w-6 h-6 ${getPriorityClass(recommendation.priority)}" 
                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                             d="M13 10V3L4 14h7v7l9-11h-7z"/>
@@ -631,10 +755,18 @@ function updateCompetitorAnalysis(data) {
                 </div>
             </div>
         </div>
-    `).join('');
+    `;
 }
 
+function getPriorityClass(priority) {
+    switch (priority) {
+        case 'high': return 'text-red-500';
+        case 'medium': return 'text-yellow-500';
+        default: return 'text-green-500';
+    }
+}
 </script>
+
 
 
 @endpush
