@@ -13,6 +13,9 @@ class GeminiService
     public function __construct()
     {
         $this->apiKey = config('services.gemini.api_key');
+        if (empty($this->apiKey)) {
+            Log::warning('Gemini API key not configured');
+        }
     }
 
     
@@ -318,10 +321,12 @@ private function buildAnalysisPrompt($business, $analytics, $competitors)
  * @param string $prompt
  * @return array
  */
-public function analyze($prompt)
+public function analyze($prompt) 
 {
     try {
-        $response = Http::post($this->apiEndpoint, [
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+        ])->post('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', [
             'contents' => [
                 [
                     'parts' => [
@@ -333,39 +338,60 @@ public function analyze($prompt)
                 'temperature' => 0.7,
                 'topK' => 40,
                 'topP' => 0.95,
-                'maxOutputTokens' => 1024,
+                'maxOutputTokens' => 2048,
+            ],
+            'safetySettings' => [
+                [
+                    'category' => 'HARM_CATEGORY_HARASSMENT',
+                    'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
+                ],
+                [
+                    'category' => 'HARM_CATEGORY_HATE_SPEECH',
+                    'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
+                ],
+                [
+                    'category' => 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+                    'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
+                ],
+                [
+                    'category' => 'HARM_CATEGORY_DANGEROUS_CONTENT',
+                    'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
+                ]
             ]
-        ])->throw()->json();
+        ], [
+            'key' => config('services.gemini.api_key')
+        ]);
 
-        if (!isset($response['candidates'][0]['content']['parts'][0]['text'])) {
-            throw new \Exception('Resposta inválida da API');
+        if ($response->successful()) {
+            $data = $response->json();
+            
+            // Verifica se há conteúdo gerado na resposta
+            if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+                return $data['candidates'][0]['content']['parts'][0]['text'];
+            }
+            
+            // Log da resposta completa para debug
+            Log::info('Gemini response:', ['response' => $data]);
+            
+            return 'Não foi possível gerar a análise no momento.';
         }
 
-        $analysis = $response['candidates'][0]['content']['parts'][0]['text'];
-        
-        return [
-            'performance' => $this->extractPerformanceInsight($analysis),
-            'opportunities' => $this->extractOpportunityInsight($analysis),
-            'alerts' => $this->extractAlertInsight($analysis)
-        ];
+        // Log de erro em caso de falha na requisição
+        Log::error('Erro na requisição Gemini:', [
+            'status' => $response->status(),
+            'body' => $response->body()
+        ]);
+
+        return 'Erro ao processar a análise.';
 
     } catch (\Exception $e) {
-        Log::error('Erro ao analisar dados com Gemini: ' . $e->getMessage());
-        
-        return [
-            'performance' => [
-                'type' => 'performance',
-                'message' => 'Não foi possível gerar análise de performance no momento.'
-            ],
-            'opportunities' => [
-                'type' => 'opportunity',
-                'message' => 'Não foi possível identificar oportunidades no momento.'
-            ],
-            'alerts' => [
-                'type' => 'alert',
-                'message' => 'Não foi possível gerar alertas no momento.'
-            ]
-        ];
+        // Log detalhado do erro
+        Log::error('Exceção ao analisar com Gemini:', [
+            'message' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return 'Ocorreu um erro ao realizar a análise.';
     }
 }
 
@@ -415,6 +441,37 @@ private function extractSection($analysis, $sectionName)
         return trim($matches[1]);
     }
     return "Não foi possível extrair informações de $sectionName.";
+}
+
+// Em GeminiService.php
+public function testConnection()
+{
+    try {
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+        ])->get($this->apiEndpoint . '?key=' . $this->apiKey);
+
+        Log::info('Teste de conexão Gemini:', [
+            'status' => $response->status(),
+            'has_api_key' => !empty($this->apiKey),
+            'api_key_length' => strlen($this->apiKey)
+        ]);
+
+        return $response->successful();
+    } catch (\Exception $e) {
+        Log::error('Erro no teste de conexão Gemini: ' . $e->getMessage());
+        return false;
+    }
+}
+
+// Em um comando artisan ou controller
+public function checkGeminiSetup(GeminiService $gemini)
+{
+    if ($gemini->testConnection()) {
+        $this->info('Conexão com Gemini API estabelecida com sucesso!');
+    } else {
+        $this->error('Falha na conexão com Gemini API. Verifique suas credenciais.');
+    }
 }
     
 }
