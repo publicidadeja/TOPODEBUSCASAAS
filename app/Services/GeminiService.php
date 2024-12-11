@@ -321,12 +321,12 @@ private function buildAnalysisPrompt($business, $analytics, $competitors)
  * @param string $prompt
  * @return array
  */
-public function analyze($prompt) 
+public function analyze($prompt)
 {
     try {
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
-        ])->post('https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent', [
+        ])->post($this->apiEndpoint . '?key=' . $this->apiKey, [
             'contents' => [
                 [
                     'parts' => [
@@ -358,40 +358,57 @@ public function analyze($prompt)
                     'threshold' => 'BLOCK_MEDIUM_AND_ABOVE'
                 ]
             ]
-        ], [
-            'key' => config('services.gemini.api_key')
         ]);
 
         if ($response->successful()) {
             $data = $response->json();
             
-            // Verifica se há conteúdo gerado na resposta
             if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
-                return $data['candidates'][0]['content']['parts'][0]['text'];
+                return [
+                    'performance' => $this->extractPerformanceInsight($data['candidates'][0]['content']['parts'][0]['text']),
+                    'opportunities' => $this->extractOpportunityInsight($data['candidates'][0]['content']['parts'][0]['text']),
+                    'alerts' => $this->extractAlertInsight($data['candidates'][0]['content']['parts'][0]['text'])
+                ];
             }
-            
-            // Log da resposta completa para debug
-            Log::info('Gemini response:', ['response' => $data]);
-            
-            return 'Não foi possível gerar a análise no momento.';
         }
 
-        // Log de erro em caso de falha na requisição
         Log::error('Erro na requisição Gemini:', [
             'status' => $response->status(),
             'body' => $response->body()
         ]);
 
-        return 'Erro ao processar a análise.';
+        return [
+            'performance' => [
+                'type' => 'performance',
+                'message' => 'Não foi possível gerar análise de performance no momento.'
+            ],
+            'opportunities' => [
+                'type' => 'opportunity',
+                'message' => 'Não foi possível identificar oportunidades no momento.'
+            ],
+            'alerts' => [
+                'type' => 'alert',
+                'message' => 'Não foi possível gerar alertas no momento.'
+            ]
+        ];
 
     } catch (\Exception $e) {
-        // Log detalhado do erro
-        Log::error('Exceção ao analisar com Gemini:', [
-            'message' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-
-        return 'Ocorreu um erro ao realizar a análise.';
+        Log::error('Erro ao analisar dados com Gemini: ' . $e->getMessage());
+        
+        return [
+            'performance' => [
+                'type' => 'performance',
+                'message' => 'Erro ao processar análise de performance.'
+            ],
+            'opportunities' => [
+                'type' => 'opportunity',
+                'message' => 'Erro ao processar análise de oportunidades.'
+            ],
+            'alerts' => [
+                'type' => 'alert',
+                'message' => 'Erro ao processar análise de alertas.'
+            ]
+        ];
     }
 }
 
