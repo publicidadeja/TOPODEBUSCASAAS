@@ -119,6 +119,7 @@ private function searchCompetitors($business)
         ]
     ]);
 
+    // Validação dos dados necessários
     if (empty($business->segment) || empty($business->city) || empty($business->state)) {
         \Log::warning('Dados do negócio incompletos', [
             'segment' => $business->segment,
@@ -128,8 +129,9 @@ private function searchCompetitors($business)
         throw new \Exception('Dados do negócio incompletos para busca de concorrentes');
     }
 
+    // Construção da query mais específica
     $query = sprintf(
-        '%s em %s %s',
+        'empresas %s em %s %s',
         trim($business->segment),
         trim($business->city),
         trim($business->state)
@@ -139,10 +141,34 @@ private function searchCompetitors($business)
     
     try {
         $results = $this->serper->search($query);
-        \Log::info('Resultados obtidos', [
-            'count' => count($results)
+        
+        // Filtragem e formatação dos resultados
+        $competitors = array_map(function($result) {
+            // Extrai informações relevantes do título e snippet
+            $title = $result['title'] ?? '';
+            $snippet = $result['snippet'] ?? '';
+            
+            return [
+                'title' => $this->cleanTitle($title),
+                'location' => $this->extractLocation($snippet),
+                'snippet' => $snippet,
+                'score' => $this->calculateScore($result)
+            ];
+        }, $results);
+
+        // Filtra resultados irrelevantes
+        $competitors = array_filter($competitors, function($competitor) {
+            return !empty($competitor['title']) && 
+                   strlen($competitor['title']) > 3 && 
+                   $competitor['title'] !== 'Nome não disponível';
+        });
+
+        \Log::info('Resultados processados', [
+            'count' => count($competitors)
         ]);
-        return $results;
+
+        return array_values($competitors); // Reindexar array
+
     } catch (\Exception $e) {
         \Log::error('Erro na busca Serper', [
             'error' => $e->getMessage()
@@ -151,5 +177,54 @@ private function searchCompetitors($business)
     }
 }
 
+// Funções auxiliares para melhorar a qualidade dos dados
+private function cleanTitle($title)
+{
+    // Remove textos comuns que não são nomes de empresas
+    $removeTexts = ['- Google Maps', '| Facebook', '| Instagram', 'Página inicial'];
+    $title = str_replace($removeTexts, '', $title);
+    
+    // Limpa espaços extras
+    return trim($title);
+}
+
+private function extractLocation($snippet)
+{
+    // Tenta extrair endereço do snippet
+    if (preg_match('/(?:R\.|Rua|Av\.|Avenida|Al\.|Alameda).*?,.*?(?:\d{5}-\d{3}|\d{8})/', $snippet, $matches)) {
+        return $matches[0];
+    }
+    
+    return 'Localização não disponível';
+}
+
+private function calculateScore($result)
+{
+    $score = 5; // Score base
+    
+    // Aumenta score baseado em fatores relevantes
+    if (stripos($result['title'], 'oficial') !== false) $score += 1;
+    if (stripos($result['snippet'], 'desde') !== false) $score += 1;
+    if (isset($result['position']) && $result['position'] <= 3) $score += 2;
+    
+    // Normaliza o score entre 1 e 10
+    return max(1, min(10, $score));
+}
+
+private function isRelevantCompetitor($result, $business)
+{
+    // Verificar se é do mesmo segmento
+    if (!isset($result['category']) || 
+        !str_contains(strtolower($result['category']), strtolower($business->segment))) {
+        return false;
+    }
+
+    // Verificar se tem dados do Google My Business
+    if (!isset($result['googlePlace'])) {
+        return false;
+    }
+
+    return true;
+}
     
 }

@@ -1012,67 +1012,47 @@ private function calculateGrowth($previous, $current, $currentConversion = null,
     ]);
 }
 
-public function analyzeCompetitors(Business $business)
+public function analyzeCompetitors($business, $competitors)
 {
-    try {
-        // 1. Buscar dados analíticos do negócio principal
-        $endDate = Carbon::now();
-        $startDate = Carbon::now()->subDays(30);
+    // Enriquecer dados dos concorrentes com métricas do Google My Business
+    $enrichedCompetitors = array_map(function($competitor) {
+        return $this->enrichCompetitorData($competitor);
+    }, $competitors);
+
+    // Ordenar por relevância
+    usort($enrichedCompetitors, function($a, $b) {
+        return $b['relevance_score'] <=> $a['relevance_score'];
+    });
+
+    // Limitar aos top 10
+    $enrichedCompetitors = array_slice($enrichedCompetitors, 0, 10);
+
+    return [
+        'competitors' => $enrichedCompetitors,
+        'market_analysis' => $this->generateMarketAnalysis($business, $enrichedCompetitors),
+        'recommendations' => $this->generateRecommendations($business, $enrichedCompetitors)
+    ];
+}
+
+private function enrichCompetitorData($competitor)
+{
+    // Adicionar dados do Google My Business
+    $placeId = $competitor['googlePlace']['place_id'] ?? null;
+    if ($placeId) {
+        $gmb_data = $this->googleBusinessService->getPlaceDetails($placeId);
         
-        $businessAnalytics = BusinessAnalytics::where('business_id', $business->id)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->orderBy('date')
-            ->get();
-
-        // 2. Preparar dados do negócio principal
-        $mainBusinessData = $this->prepareCompetitorData($businessAnalytics);
-
-        // 3. Buscar e preparar dados dos concorrentes
-        $competitors = $business->competitors()
-            ->with(['analytics' => function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('date', [$startDate, $endDate]);
-            }])
-            ->get();
-
-        $competitorsData = [];
-        foreach ($competitors as $competitor) {
-            $competitorsData[$competitor->id] = array_merge(
-                [
-                    'name' => $competitor->name,
-                    'website' => $competitor->website,
-                    'segment' => $competitor->segment,
-                    'address' => $competitor->address
-                ],
-                $this->prepareCompetitorData($competitor->analytics)
-            );
-        }
-
-        // 4. Construir prompt detalhado para o Gemini
-        $prompt = $this->buildCompetitorAnalysisPrompt($business, $mainBusinessData, $competitorsData);
-
-        // 5. Gerar análise com IA usando dados reais
-        $analysis = $this->geminiService->generateContent($prompt);
-
-        // 6. Estruturar resposta
-        $response = [
-            'business_data' => $mainBusinessData,
-            'competitors_data' => $competitorsData,
-            'ai_analysis' => $analysis,
-            'period' => [
-                'start' => $startDate->format('Y-m-d'),
-                'end' => $endDate->format('Y-m-d')
-            ]
-        ];
-
-        return response()->json($response);
-
-    } catch (\Exception $e) {
-        \Log::error('Erro na análise de concorrentes: ' . $e->getMessage());
-        return response()->json([
-            'error' => 'Não foi possível completar a análise de concorrentes.',
-            'message' => $e->getMessage()
-        ], 500);
+        return array_merge($competitor, [
+            'name' => $gmb_data['name'] ?? $competitor['title'],
+            'address' => $gmb_data['formatted_address'] ?? 'Localização não disponível',
+            'rating' => $gmb_data['rating'] ?? 0,
+            'reviews' => $gmb_data['user_ratings_total'] ?? 0,
+            'phone' => $gmb_data['formatted_phone_number'] ?? '',
+            'website' => $gmb_data['website'] ?? '',
+            'relevance_score' => $this->calculateRelevanceScore($gmb_data)
+        ]);
     }
+
+    return $competitor;
 }
 
 private function buildCompetitorAnalysisPrompt($business, $mainBusinessData, $competitorsData)

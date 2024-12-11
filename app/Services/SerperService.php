@@ -25,15 +25,12 @@ class SerperService
             'q' => $query,
             'gl' => 'br',
             'num' => 10,
-            'type' => 'search'
+            'type' => 'places', // Alterado para 'places' para buscar locais
+            'search_type' => 'places' // Adicional para garantir busca de locais
         ]);
 
         if ($response->successful()) {
-            $results = $this->formatResults($response->json());
-            if (empty($results)) {
-                throw new \Exception('Nenhum resultado encontrado');
-            }
-            return $results;
+            return $this->formatPlacesResults($response->json());
         }
 
         throw new \Exception('Erro na busca: ' . $response->body());
@@ -42,6 +39,71 @@ class SerperService
         throw $e;
     }
 }
+
+private function formatPlacesResults($data)
+{
+    $results = [];
+    
+    if (isset($data['places'])) {
+        foreach ($data['places'] as $place) {
+            $results[] = [
+                'title' => $place['title'] ?? '',
+                'location' => $place['address'] ?? 'Localização não disponível',
+                'snippet' => $this->formatPlaceDescription($place),
+                'rating' => $place['rating'] ?? null,
+                'reviews' => $place['reviewsCount'] ?? null,
+                'phone' => $place['phone'] ?? '',
+                'website' => $place['website'] ?? ''
+            ];
+        }
+    }
+    
+    return $results;
+}
+
+private function formatPlaceDescription($place)
+{
+    $description = [];
+    
+    if (!empty($place['address'])) {
+        $description[] = $place['address'];
+    }
+    
+    if (!empty($place['rating'])) {
+        $description[] = "Avaliação: {$place['rating']}/5";
+    }
+    
+    if (!empty($place['reviewsCount'])) {
+        $description[] = "{$place['reviewsCount']} avaliações";
+    }
+    
+    if (!empty($place['phone'])) {
+        $description[] = "Tel: {$place['phone']}";
+    }
+    
+    return implode(' • ', $description);
+}
+
+    
+    private function calculateCompetitorScore($place)
+    {
+        $score = 0;
+        
+        // Pontuação baseada na avaliação
+        if (isset($place['rating'])) {
+            $score += ($place['rating'] * 2); // Máximo de 10 pontos
+        }
+        
+        // Pontuação baseada no número de avaliações
+        if (isset($place['reviews'])) {
+            $score += min(($place['reviews'] / 100), 5); // Máximo de 5 pontos
+        }
+        
+        // Normaliza o score para escala de 1-10
+        $score = max(1, min(10, round($score)));
+        
+        return $score;
+    }
 
 private function formatResults($data)
 {
