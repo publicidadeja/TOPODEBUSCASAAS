@@ -22,50 +22,33 @@ class CompetitorAnalysisController extends Controller
     public function analyze(Request $request)
 {
     try {
-        \Log::info('Iniciando análise de concorrentes', [
-            'business_id' => $request->business_id
-        ]);
-
-        $request->validate([
-            'business_id' => 'required|exists:businesses,id'
-        ]);
-
         $business = Business::findOrFail($request->business_id);
-        \Log::info('Negócio encontrado', [
-            'business' => $business->toArray()
-        ]);
         
-        // Log antes de buscar concorrentes
-        \Log::info('Buscando concorrentes');
+        // Busca os concorrentes
         $competitors = $this->searchCompetitors($business);
-        \Log::info('Concorrentes encontrados', [
-            'count' => count($competitors)
-        ]);
         
-        if (empty($competitors)) {
-            throw new \Exception('Não foi possível encontrar concorrentes');
-        }
-        
-        // Log antes da análise
-        \Log::info('Iniciando análise com Gemini');
-        $analysis = $this->aiAnalysis->analyzeCompetitors($business, $competitors);
-        
-        // Verifica se a análise é válida
-        if (empty($analysis) || 
-            (empty($analysis['performance']['message']) && 
-             empty($analysis['opportunities']['message']) && 
-             empty($analysis['alerts']['message']))) {
-            
-            // Gera análise padrão baseada nos competidores
-            $analysis = $this->generateDefaultAnalysis($competitors);
-        }
+        // Formata os dados dos concorrentes
+        $formattedCompetitors = array_map(function($competitor) {
+            return [
+                'name' => $competitor['title'] ?? 'Nome não disponível',
+                'location' => $competitor['location'] ?? 'Localização não disponível',
+                'score' => rand(1, 10), // Exemplo - implemente sua própria lógica de score
+                'summary' => $competitor['snippet'] ?? 'Resumo não disponível'
+            ];
+        }, $competitors);
 
+        // Retorna os dados formatados
         return response()->json([
             'success' => true,
-            'competitors' => $competitors,
-            'marketAnalysis' => $analysis['market_analysis'] ?? [],
-            'recommendations' => $this->generateRecommendations($competitors)
+            'competitors' => $formattedCompetitors,
+            'marketAnalysis' => [
+                [
+                    'title' => 'Análise de Mercado',
+                    'description' => 'Descrição da análise de mercado'
+                ]
+            ]
         ]);
+
     } catch (\Exception $e) {
         \Log::error('Erro na análise de concorrentes: ' . $e->getMessage());
         return response()->json([
@@ -74,21 +57,38 @@ class CompetitorAnalysisController extends Controller
         ], 500);
     }
 }
-
 private function generateDefaultAnalysis($competitors)
 {
+    $competitorCount = count($competitors);
+    $averageScore = array_reduce($competitors, function($carry, $competitor) {
+        return $carry + ($competitor['score'] ?? 0);
+    }, 0) / max(1, $competitorCount);
+
     return [
         'performance' => [
             'type' => 'performance',
-            'message' => 'Análise baseada em ' . count($competitors) . ' concorrentes principais.'
+            'message' => sprintf(
+                'Análise baseada em %d concorrentes principais. Score médio do mercado: %.1f/10',
+                $competitorCount,
+                $averageScore
+            )
         ],
         'opportunities' => [
             'type' => 'opportunity',
-            'message' => 'Identificadas oportunidades de diferenciação no mercado.'
+            'message' => 'Identificadas oportunidades de diferenciação no mercado com base nos concorrentes analisados.'
         ],
         'alerts' => [
             'type' => 'alert',
-            'message' => 'Monitorando atividades dos principais concorrentes.'
+            'message' => 'Monitorando atividades dos principais concorrentes para identificar tendências e mudanças no mercado.'
+        ],
+        'market_analysis' => [
+            [
+                'title' => 'Análise de Mercado',
+                'description' => sprintf(
+                    'O mercado apresenta %d players principais, com diferentes níveis de presença online e reputação.',
+                    $competitorCount
+                )
+            ]
         ]
     ];
 }
