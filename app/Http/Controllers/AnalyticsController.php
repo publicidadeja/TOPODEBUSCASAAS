@@ -1400,4 +1400,18 @@ protected function getKeywordAnalytics($business, $startDate = null, $endDate = 
         return [];
     }
 }
+
+public function getKeywords(Business $business)
+{
+    try {
+        $keywords = $this->keywordService->getPopularKeywords($business);
+        return response()->json(['keywords' => $keywords]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => 'Não foi possível buscar as palavras-chave',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+}
+
 }

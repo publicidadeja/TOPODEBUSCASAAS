@@ -18,6 +18,10 @@ Route::get('/analytics/keywords/{business}', [AnalyticsController::class, 'getKe
     ->name('analytics.keywords')
     ->middleware('auth');
 
+Route::get('/analytics/keywords/{business}', [AnalyticsController::class, 'getKeywords'])
+    ->name('analytics.keywords')
+    ->middleware('auth');
+
 Route::middleware(['auth'])->group(function () {
     Route::post('/market-analysis/{business}', [MarketAnalysisController::class, 'analyze'])
         ->name('market-analysis.analyze');

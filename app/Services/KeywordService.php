@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\Business;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class KeywordService
 {
@@ -20,55 +20,72 @@ class KeywordService
         $cacheKey = "business_{$business->id}_keywords";
         
         return Cache::remember($cacheKey, now()->addHours(24), function () use ($business) {
-            // Busca palavras-chave usando informações do negócio
-            $keywords = $this->searchKeywords($business);
-            
-            // Organiza e retorna os resultados
-            return collect($keywords)
-                ->sortByDesc('relevance')
-                ->take(10)
-                ->mapWithKeys(function ($item) {
-                    return [$item['keyword'] => $item['searchVolume']];
-                })
-                ->toArray();
+            try {
+                // Gera prompt contextualizado com informações do negócio
+                $prompt = $this->buildKeywordPrompt($business);
+                
+                // Obtém sugestões do Gemini
+                $suggestions = $this->geminiService->generateContent($prompt);
+                
+                if (empty($suggestions)) {
+                    throw new \Exception('Não foi possível gerar sugestões de palavras-chave');
+                }
+                
+                // Processa e formata as sugestões
+                return $this->processKeywordSuggestions($suggestions);
+                
+            } catch (\Exception $e) {
+                \Log::error('Erro ao buscar palavras-chave: ' . $e->getMessage());
+                return $this->getFallbackKeywords($business);
+            }
         });
-    }
-
-    protected function searchKeywords(Business $business)
-    {
-        try {
-            // Usa o GeminiService para gerar palavras-chave relevantes
-            $prompt = $this->buildKeywordPrompt($business);
-            $suggestions = $this->geminiService->generateContent($prompt);
-            
-            // Processa e valida as sugestões
-            return $this->processKeywordSuggestions($suggestions, $business);
-        } catch (\Exception $e) {
-            \Log::error('Erro ao buscar palavras-chave: ' . $e->getMessage());
-            return [];
-        }
     }
 
     protected function buildKeywordPrompt(Business $business)
     {
-        return "Gere palavras-chave relevantes para uma empresa com as seguintes características:
+        return "Gere 10 palavras-chave relevantes para uma empresa com as seguintes características:
+                Nome: {$business->name}
                 Segmento: {$business->segment}
                 Cidade: {$business->city}
+                Estado: {$business->state}
                 Descrição: {$business->description}
-                Considere termos de busca que potenciais clientes usariam para encontrar este tipo de negócio.";
+                
+                Formato desejado: Retorne apenas as palavras-chave, uma por linha.
+                Considere termos que potenciais clientes usariam para encontrar este negócio localmente.";
     }
 
-    protected function processKeywordSuggestions($suggestions, Business $business)
+    protected function processKeywordSuggestions($suggestions)
     {
-        // Processa e formata as sugestões
-        $keywords = [];
+        // Converte string em array e limpa
+        $keywords = array_map('trim', explode("\n", $suggestions));
+        $keywords = array_filter($keywords);
         
-        foreach ($suggestions as $suggestion) {
-            $keywords[] = [
-                'keyword' => $suggestion,
-                'searchVolume' => rand(100, 1000), // Exemplo - idealmente usar dados reais
-                'relevance' => rand(1, 100) // Exemplo - idealmente calcular baseado em dados reais
-            ];
+        // Gera volumes de busca simulados (em produção, usar dados reais)
+        $processedKeywords = [];
+        foreach ($keywords as $keyword) {
+            $processedKeywords[$keyword] = rand(100, 1000);
+        }
+        
+        // Ordena por volume de busca
+        arsort($processedKeywords);
+        
+        return $processedKeywords;
+    }
+
+    protected function getFallbackKeywords(Business $business)
+    {
+        // Palavras-chave genéricas baseadas no segmento
+        $baseKeywords = [
+            $business->segment . ' ' . $business->city,
+            'melhor ' . $business->segment,
+            $business->segment . ' próximo',
+            $business->segment . ' recomendado',
+            $business->segment . ' profissional'
+        ];
+        
+        $keywords = [];
+        foreach ($baseKeywords as $keyword) {
+            $keywords[$keyword] = rand(50, 500);
         }
         
         return $keywords;
