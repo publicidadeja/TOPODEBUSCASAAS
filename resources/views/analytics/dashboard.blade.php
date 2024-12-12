@@ -324,7 +324,7 @@
 
 <!-- Análise de Concorrentes -->
 <div class="mt-8">
-    <div class="bg-white rounded-lg shadow-lg p-6">
+    <div class="bg-white rounded-xl shadow-xl p-6 border border-gray-100">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-gray-800">
                 <span class="flex items-center">
@@ -334,45 +334,73 @@
                     Análise de Concorrentes
                 </span>
             </h2>
-            <button onclick="refreshCompetitorAnalysis()" class="text-sm text-blue-500 hover:text-blue-700 flex items-center">
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button onclick="refreshCompetitorAnalysis()" 
+                    class="inline-flex items-center px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg text-purple-700 hover:bg-purple-100 transition-colors duration-200">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
                 Atualizar Análise
             </button>
         </div>
 
-        <!-- Loading State -->
+        <!-- Estado de Carregamento Animado -->
         <div id="competitor-loading" class="hidden">
             <div class="flex justify-center items-center py-8">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                <span class="ml-2 text-gray-600">Analisando concorrentes...</span>
+                <div class="relative">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
+                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                        <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
+                </div>
+                <span class="ml-3 text-gray-600 font-medium">Analisando concorrentes...</span>
             </div>
         </div>
 
-        <!-- Content Grid -->
-        <div id="competitor-content" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Grid de Conteúdo -->
+        <div id="competitor-content" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- Principais Concorrentes -->
-            <div class="bg-gradient-to-br from-purple-50 to-white rounded-lg p-4">
-                <h3 class="text-lg font-semibold text-purple-800 mb-3">Principais Concorrentes</h3>
+            <div class="bg-gradient-to-br from-purple-50 via-purple-25 to-white rounded-xl p-6 border border-purple-100">
+                <h3 class="text-lg font-semibold text-purple-800 mb-4 flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                    </svg>
+                    Principais Concorrentes
+                </h3>
+                
                 <div class="space-y-4" id="top-competitors">
                     @foreach($competitors ?? [] as $competitor)
-                        <div class="bg-white rounded-lg p-4 shadow-sm">
+                        <div class="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100">
                             <div class="flex space-x-4">
-                                <!-- Imagem do Negócio -->
-                                <div class="flex-shrink-0">
-                                    <img src="{{ $competitor['image_url'] ?? asset('images/default-business.jpg') }}"
+                                <!-- Imagem do Negócio com Fallback Inteligente -->
+                                <div class="flex-shrink-0 relative">
+                                    <img src="{{ $competitor['serper_image'] ?? $competitor['image_url'] ?? 'https://via.placeholder.com/80x80?text=Sem+Imagem' }}"
                                          alt="{{ $competitor['title'] }}"
-                                         class="w-20 h-20 object-cover rounded-lg"
-                                         onerror="this.src='{{ asset('images/default-business.jpg') }}'">
+                                         class="w-20 h-20 object-cover rounded-lg shadow-sm"
+                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/80x80?text=Sem+Imagem';">
+                                    <div class="absolute -top-2 -right-2 bg-green-500 rounded-full w-4 h-4 border-2 border-white"
+                                         title="Ativo"></div>
                                 </div>
 
                                 <!-- Informações do Negócio -->
                                 <div class="flex-grow">
-                                    <h4 class="font-medium text-gray-900">{{ $competitor['title'] }}</h4>
-                                    <p class="text-sm text-gray-500">{{ $competitor['location'] }}</p>
+                                    <div class="flex justify-between items-start">
+                                        <h4 class="font-medium text-gray-900">{{ $competitor['title'] }}</h4>
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $competitor['status'] === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
+                                            {{ $competitor['status'] === 'active' ? 'Ativo' : 'Inativo' }}
+                                        </span>
+                                    </div>
                                     
-                                    <!-- Avaliação com Estrelas -->
+                                    <p class="text-sm text-gray-500 flex items-center mt-1">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                        </svg>
+                                        {{ $competitor['location'] }}
+                                    </p>
+                                    
+                                    <!-- Sistema de Avaliação Aprimorado -->
                                     <div class="flex items-center mt-2">
                                         <div class="flex text-yellow-400">
                                             @for($i = 1; $i <= 5; $i++)
@@ -393,26 +421,28 @@
                                             <span class="ml-2 text-sm text-gray-600">
                                                 {{ number_format($competitor['rating'], 1) }}/5
                                                 @if($competitor['reviews'])
-                                                    ({{ number_format($competitor['reviews']) }} avaliações)
+                                                    <span class="text-gray-400">({{ number_format($competitor['reviews']) }} avaliações)</span>
                                                 @endif
                                             </span>
                                         </div>
                                     </div>
 
-                                    <!-- Informações de Contato -->
-                                    <div class="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                                    <!-- Ações e Contatos -->
+                                    <div class="flex items-center space-x-4 mt-3">
                                         @if($competitor['phone'])
-                                            <span class="flex items-center">
+                                            <a href="tel:{{ $competitor['phone'] }}" 
+                                               class="inline-flex items-center px-3 py-1 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors duration-200">
                                                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
                                                 </svg>
-                                                {{ $competitor['phone'] }}
-                                            </span>
+                                                Ligar
+                                            </a>
                                         @endif
+                                        
                                         @if($competitor['website'])
                                             <a href="{{ $competitor['website'] }}" 
                                                target="_blank" 
-                                               class="flex items-center text-blue-600 hover:text-blue-800">
+                                               class="inline-flex items-center px-3 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors duration-200">
                                                 <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                                                 </svg>
@@ -427,87 +457,123 @@
                 </div>
             </div>
 
-            <div class="mt-8">
-    <div class="bg-white rounded-lg shadow-lg p-6">
+<!-- Análise de Mercado -->
+<div class="mt-8">
+    <div class="bg-white rounded-xl shadow-xl p-6 border border-gray-100">
         <div class="flex items-center justify-between mb-6">
             <h2 class="text-xl font-bold text-gray-800">
                 <span class="flex items-center">
                     <svg class="w-6 h-6 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                     </svg>
-                    Análise de Mercado
+                    <span class="bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
+                        Análise de Mercado
+                    </span>
                 </span>
             </h2>
-            <button onclick="refreshMarketAnalysis()" class="text-sm text-blue-500 hover:text-blue-700 flex items-center">
-                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button onclick="refreshMarketAnalysis()" 
+                    class="inline-flex items-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-all duration-200 transform hover:scale-105">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
                 Atualizar Análise
             </button>
         </div>
 
-        <!-- Loading State -->
+        <!-- Estado de Carregamento Aprimorado -->
         <div id="market-analysis-loading" class="hidden">
-            <div class="flex justify-center items-center py-8">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                <span class="ml-2 text-gray-600">Analisando mercado...</span>
+            <div class="flex flex-col items-center justify-center py-8">
+                <div class="relative">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500">
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                <span class="mt-4 text-gray-600 font-medium">Analisando mercado...</span>
+                <span class="text-sm text-gray-400 mt-2">Isso pode levar alguns segundos</span>
             </div>
         </div>
 
-        <!-- Content -->
+        <!-- Conteúdo com Layout Aprimorado -->
         <div id="market-analysis-content" class="space-y-6">
-            <!-- O conteúdo será preenchido via JavaScript -->
-        </div>
-    </div>
-</div>
-
-        <!-- Recomendações Estratégicas -->
-<div class="mt-6">
-    <h3 class="text-lg font-semibold text-gray-800 mb-4">Recomendações Estratégicas</h3>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="strategic-recommendations">
-        @forelse($recommendations ?? [] as $recommendation)
-            <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                <div class="flex items-center space-x-3">
-                    <div class="flex-shrink-0">
-                        @php
-                            $priorityColor = match($recommendation['priority'] ?? 'medium') {
-                                'high' => 'text-red-500',
-                                'medium' => 'text-yellow-500',
-                                'low' => 'text-green-500',
-                                default => 'text-blue-500'
-                            };
-                        @endphp
-                        <svg class="w-6 h-6 {{ $priorityColor }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Visão Geral do Mercado -->
+                <div class="bg-gradient-to-br from-blue-50 to-white rounded-xl p-6 border border-blue-100 shadow-sm">
+                    <div class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                         </svg>
+                        <h3 class="text-lg font-semibold text-gray-800">Visão Geral do Mercado</h3>
                     </div>
-                    <div>
-                        <h4 class="text-sm font-medium text-gray-900">{{ $recommendation['title'] ?? 'Recomendação' }}</h4>
-                        <p class="text-sm text-gray-500 mt-1">{{ $recommendation['description'] ?? '' }}</p>
-                        @if(isset($recommendation['priority']))
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2
-                                {{ $recommendation['priority'] === 'high' ? 'bg-red-100 text-red-800' : 
-                                   ($recommendation['priority'] === 'medium' ? 'bg-yellow-100 text-yellow-800' : 
-                                   'bg-green-100 text-green-800') }}">
-                                {{ ucfirst($recommendation['priority']) }} Priority
-                            </span>
-                        @endif
+                    <div class="prose prose-blue max-w-none">
+                        <!-- Conteúdo dinâmico -->
+                    </div>
+                </div>
+
+                <!-- Tendências e Oportunidades -->
+                <div class="bg-gradient-to-br from-green-50 to-white rounded-xl p-6 border border-green-100 shadow-sm">
+                    <div class="flex items-center mb-4">
+                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                        </svg>
+                        <h3 class="text-lg font-semibold text-gray-800">Tendências e Oportunidades</h3>
+                    </div>
+                    <div class="prose prose-green max-w-none">
+                        <!-- Conteúdo dinâmico -->
                     </div>
                 </div>
             </div>
-        @empty
-            <div class="col-span-full">
-                <div class="bg-gray-50 rounded-lg p-4 text-center text-gray-500">
-                    <p>Nenhuma recomendação estratégica disponível no momento.</p>
+
+            <!-- Insights e Recomendações -->
+            <div class="bg-gradient-to-br from-purple-50 to-white rounded-xl p-6 border border-purple-100 shadow-sm">
+                <div class="flex items-center mb-4">
+                    <svg class="w-5 h-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                    <h3 class="text-lg font-semibold text-gray-800">Insights e Recomendações</h3>
+                </div>
+                <div class="prose prose-purple max-w-none">
+                    <!-- Conteúdo dinâmico -->
                 </div>
             </div>
-        @endforelse
+
+            <!-- Indicadores de Desempenho -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-gray-500">Taxa de Crescimento</span>
+                        <span class="text-green-500">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                            </svg>
+                        </span>
+                    </div>
+                    <p class="text-2xl font-bold text-gray-900 mt-2">+12.5%</p>
+                </div>
+                <!-- Adicione mais indicadores conforme necessário -->
+            </div>
+        </div>
     </div>
 </div>
 
 @push('scripts')
 <script>
+
+     // Função que será executada quando a página carregar
+     document.addEventListener('DOMContentLoaded', function() {
+        // Inicia análise de concorrentes automaticamente
+        refreshCompetitorAnalysis();
+        
+        // Inicia análise de mercado automaticamente
+        refreshMarketAnalysis();
+        
+        // Se houver análise Gemini, também pode iniciar automaticamente
+        updateGeminiAnalysis();
+    });
+
 // Funções JavaScript atualizadas
 function refreshCompetitorAnalysis() {
     // Elementos do DOM
@@ -1298,24 +1364,32 @@ function refreshMarketAnalysis() {
         // Cria o HTML para a análise
         const html = `
             <div class="space-y-6">
-                <div class="bg-blue-50 p-4 rounded-lg">
-                    <h3 class="text-lg font-semibold text-blue-800 mb-2">Visão Geral do Mercado</h3>
-                    <p class="text-gray-700">${marketOverview}</p>
+                <div class="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-500">
+                    <h3 class="text-lg font-semibold text-blue-800 mb-3">Visão Geral do Mercado</h3>
+                    <div class="prose prose-blue max-w-none">
+                        <p class="text-gray-700 leading-relaxed">${formatAnalysisText(marketOverview)}</p>
+                    </div>
                 </div>
 
-                <div class="bg-purple-50 p-4 rounded-lg">
-                    <h3 class="text-lg font-semibold text-purple-800 mb-2">Análise dos Concorrentes</h3>
-                    <p class="text-gray-700">${competitorAnalysis}</p>
+                <div class="bg-purple-50 p-6 rounded-lg border-l-4 border-purple-500">
+                    <h3 class="text-lg font-semibold text-purple-800 mb-3">Análise dos Concorrentes</h3>
+                    <div class="prose prose-purple max-w-none">
+                        <p class="text-gray-700 leading-relaxed">${formatAnalysisText(competitorAnalysis)}</p>
+                    </div>
                 </div>
 
-                <div class="bg-green-50 p-4 rounded-lg">
-                    <h3 class="text-lg font-semibold text-green-800 mb-2">Oportunidades Identificadas</h3>
-                    <p class="text-gray-700">${opportunities}</p>
+                <div class="bg-green-50 p-6 rounded-lg border-l-4 border-green-500">
+                    <h3 class="text-lg font-semibold text-green-800 mb-3">Oportunidades Identificadas</h3>
+                    <div class="prose prose-green max-w-none">
+                        <p class="text-gray-700 leading-relaxed">${formatAnalysisText(opportunities)}</p>
+                    </div>
                 </div>
 
-                <div class="bg-yellow-50 p-4 rounded-lg">
-                    <h3 class="text-lg font-semibold text-yellow-800 mb-2">Recomendações Estratégicas</h3>
-                    <p class="text-gray-700">${recommendations}</p>
+                <div class="bg-yellow-50 p-6 rounded-lg border-l-4 border-yellow-500">
+                    <h3 class="text-lg font-semibold text-yellow-800 mb-3">Recomendações Estratégicas</h3>
+                    <div class="prose prose-yellow max-w-none">
+                        <p class="text-gray-700 leading-relaxed">${formatAnalysisText(recommendations)}</p>
+                    </div>
                 </div>
             </div>
         `;
@@ -1326,8 +1400,8 @@ function refreshMarketAnalysis() {
     .catch(error => {
         console.error('Erro:', error);
         contentElement.innerHTML = `
-            <div class="bg-red-50 p-4 rounded-lg">
-                <h3 class="text-lg font-semibold text-red-800 mb-2">Erro</h3>
+            <div class="bg-red-50 p-6 rounded-lg border-l-4 border-red-500">
+                <h3 class="text-lg font-semibold text-red-800 mb-3">Erro</h3>
                 <p class="text-red-700">Não foi possível carregar a análise de mercado. Por favor, tente novamente.</p>
             </div>
         `;
@@ -1336,6 +1410,65 @@ function refreshMarketAnalysis() {
         // Esconde loading
         loadingElement.classList.add('hidden');
         contentElement.classList.remove('opacity-50');
+    });
+}
+
+// Função auxiliar para formatar o texto da análise
+function formatAnalysisText(text) {
+    return text
+        .replace(/\n/g, '</p><p class="text-gray-700 leading-relaxed">')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/- (.*?)(?=\n|$)/g, '<li>$1</li>')
+        .replace(/<li>/g, '<ul class="list-disc pl-4 space-y-2"><li>')
+        .replace(/<\/li>(?!\s*<li>)/g, '</li></ul>');
+}
+
+function updateGeminiAnalysis() {
+    // Mostra loading
+    document.getElementById('geminiLoading').classList.remove('hidden');
+    document.getElementById('geminiContent').classList.add('opacity-50');
+
+    // Faz a requisição
+    fetch(`/analytics/update-gemini-analysis/${businessId}`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            throw new Error(data.message || 'Erro ao atualizar análise');
+        }
+
+        // Atualiza o conteúdo da análise de concorrentes
+        const competitorAnalysis = document.getElementById('competitorAnalysis');
+        if (data.competitor_analysis && data.competitor_analysis.length > 0) {
+            competitorAnalysis.innerHTML = data.competitor_analysis
+                .map(analysis => `<li class="mb-2">${analysis}</li>`)
+                .join('');
+        } else {
+            competitorAnalysis.innerHTML = '<li>Nenhuma análise de concorrentes disponível.</li>';
+        }
+
+        // Atualiza timestamp
+        document.getElementById('lastUpdate').textContent = 
+            new Date().toLocaleString('pt-BR');
+
+        // Mostra mensagem de sucesso
+        alert('Análise atualizada com sucesso!');
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao atualizar análise. Tente novamente.');
+    })
+    .finally(() => {
+        // Esconde loading
+        document.getElementById('geminiLoading').classList.add('hidden');
+        document.getElementById('geminiContent').classList.remove('opacity-50');
     });
 }
 </script>
