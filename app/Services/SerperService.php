@@ -259,4 +259,66 @@ private function formatResults($data)
     
     return $results;
 }
+
+public function searchKeywords($business)
+{
+    try {
+        // Construir query baseada nos dados do negócio
+        $query = sprintf(
+            '%s %s %s', 
+            $business->segment,
+            $business->city,
+            $business->state
+        );
+
+        Log::info("Buscando palavras-chave para: " . $query);
+
+        $response = Http::withHeaders([
+            'X-API-KEY' => $this->apiKey,
+            'Content-Type' => 'application/json'
+        ])->post($this->apiEndpoint, [
+            'q' => $query,
+            'gl' => 'br',
+            'hl' => 'pt-br',
+            'type' => 'search'
+        ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+            return $this->extractKeywords($data);
+        }
+
+        Log::error("Erro na busca de palavras-chave: " . $response->body());
+        return [];
+
+    } catch (\Exception $e) {
+        Log::error("Erro ao buscar palavras-chave: " . $e->getMessage());
+        return [];
+    }
+}
+
+private function extractKeywords($data) 
+{
+    $keywords = [];
+    
+    // Extrair palavras-chave dos resultados orgânicos
+    if (isset($data['organic'])) {
+        foreach ($data['organic'] as $result) {
+            if (isset($result['title'])) {
+                $words = explode(' ', strtolower($result['title']));
+                foreach ($words as $word) {
+                    if (strlen($word) > 3) {
+                        $keywords[$word] = ($keywords[$word] ?? 0) + 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // Ordenar por frequência
+    arsort($keywords);
+    
+    // Retornar os 10 termos mais frequentes
+    return array_slice($keywords, 0, 10, true);
+}
 }

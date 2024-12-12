@@ -195,4 +195,47 @@ class AIAnalysisService
     
     return $this->gemini->analyze($prompt);
 }
+
+public function analyzeKeywords($business, $keywords)
+{
+    $prompt = $this->buildKeywordAnalysisPrompt($business, $keywords);
+    
+    try {
+        $analysis = $this->gemini->analyze($prompt);
+        return $this->processKeywordAnalysis($analysis);
+    } catch (\Exception $e) {
+        Log::error("Erro na análise de palavras-chave: " . $e->getMessage());
+        return [];
+    }
+}
+
+private function buildKeywordAnalysisPrompt($business, $keywords)
+{
+    return "Analise as seguintes palavras-chave encontradas para o negócio '{$business->name}' 
+            do segmento '{$business->segment}':
+            
+            " . implode(", ", array_keys($keywords)) . "
+            
+            Por favor, identifique e retorne apenas as palavras-chave mais relevantes 
+            que potenciais clientes usariam para encontrar este tipo de negócio,
+            junto com uma estimativa de relevância (1-100).
+            
+            Formato da resposta:
+            palavra_chave|relevância";
+}
+
+private function processKeywordAnalysis($analysis)
+{
+    $keywords = [];
+    $lines = explode("\n", $analysis);
+    
+    foreach ($lines as $line) {
+        if (strpos($line, '|') !== false) {
+            list($keyword, $relevance) = explode('|', $line);
+            $keywords[trim($keyword)] = (int)trim($relevance);
+        }
+    }
+    
+    return $keywords;
+}
 }

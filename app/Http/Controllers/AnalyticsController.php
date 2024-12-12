@@ -288,143 +288,186 @@ private function calculateMetricsGrowth($previous, $current)
     );
 }
 
-    public function dashboard(Request $request)
+public function dashboard(Request $request)
 {
-    // Obtém usuário atual e seus negócios
-    $user = auth()->user();
-    $businesses = $user->businesses;
-    
-    // Se não houver negócio selecionado, pega o primeiro
-    $selectedBusiness = null;
-    if ($businesses->isNotEmpty()) {
-        $selectedBusiness = $businesses->first();
+    try {
+        // Obtém usuário atual e seus negócios
+        $user = auth()->user();
+        $businesses = $user->businesses;
+        
+        // Se não houver negócio selecionado, pega o primeiro
+        $selectedBusiness = null;
+        if ($businesses->isNotEmpty()) {
+            $selectedBusiness = $businesses->first();
+        }
+
+        // Se houver um businessId na requisição, use-o
+        if ($request->has('businessId')) {
+            $selectedBusiness = $businesses->find($request->businessId);
+        }
+
+        // Se não houver negócio, redirecione para criar um
+        if (!$selectedBusiness) {
+            return redirect()->route('business.create')
+                ->with('warning', 'Por favor, cadastre um negócio primeiro.');
+        }
+
+        // Define período de análise (últimos 30 dias)
+        $endDate = Carbon::now();
+        $startDate = Carbon::now()->subDays(30);
+
+        // Busca analytics do período
+        $analytics = BusinessAnalytics::where('business_id', $selectedBusiness->id)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->orderBy('date')
+            ->get();
+
+        // Calcula totais
+        $totalViews = $analytics->sum('views');
+        $totalClicks = $analytics->sum('clicks');
+        $totalCalls = $analytics->sum('calls');
+
+        // Calcula taxa de conversão
+        $conversionRate = $totalViews > 0 
+            ? round((($totalClicks + $totalCalls) / $totalViews) * 100, 1)
+            : 0;
+
+        // Busca palavras-chave via cache ou Serper
+        $keywords = Cache::remember(
+            "business_{$selectedBusiness->id}_keywords",
+            now()->addHours(24),
+            function () use ($selectedBusiness) {
+                try {
+                    // Busca palavras-chave via Serper
+                    $searchResults = $this->serperService->searchKeywords([
+                        'query' => "{$selectedBusiness->segment} {$selectedBusiness->city}",
+                        'business_type' => $selectedBusiness->segment,
+                        'location' => "{$selectedBusiness->city}, {$selectedBusiness->state}"
+                    ]);
+
+                    // Análise com Gemini
+                    $prompt = "Analise as seguintes palavras-chave encontradas para o negócio '{$selectedBusiness->name}' 
+                              do segmento '{$selectedBusiness->segment}' em '{$selectedBusiness->city}'. 
+                              Identifique e retorne apenas as palavras-chave mais relevantes que potenciais 
+                              clientes usariam para encontrar este tipo de negócio, junto com uma estimativa 
+                              de volume de buscas mensal (1-1000).
+                              
+                              Palavras encontradas: " . implode(", ", array_keys($searchResults));
+
+                    $keywordAnalysis = $this->geminiService->analyze($prompt);
+
+                    // Processa e retorna as palavras-chave mais relevantes
+                    return $this->processKeywordAnalysis($keywordAnalysis);
+
+                } catch (\Exception $e) {
+                    \Log::error('Erro ao buscar palavras-chave: ' . $e->getMessage());
+                    return [];
+                }
+            }
+        );
+
+        // Prepara dados para o dashboard
+        $analyticsData = [
+            'views' => $totalViews,
+            'clicks' => $totalClicks,
+            'calls' => $totalCalls,
+            'conversion_rate' => $conversionRate,
+            'dates' => $analytics->pluck('date')->map(fn($date) => $date->format('d/m')),
+            'daily_views' => $analytics->pluck('views'),
+            'daily_clicks' => $analytics->pluck('clicks'),
+            'daily_calls' => $analytics->pluck('calls'),
+            'devices' => $analytics->last()?->devices ?? [
+                'desktop' => 0,
+                'mobile' => 0,
+                'tablet' => 0
+            ],
+            'top_locations' => $this->getTopLocations($analytics),
+            'trends' => $this->calculateTrends($analytics),
+            'keywords' => $keywords
+        ];
+
+        // Obtém ou gera análise de IA
+        $aiAnalysis = $this->getOrGenerateAIAnalysis($selectedBusiness, $analyticsData);
+
+        // Busca ações recentes
+        $actions = Action::where('business_id', $selectedBusiness->id)
+            ->orderBy('created_at', 'desc')
+            ->take(5)
+            ->get();
+
+        // Gera sugestões baseadas nos dados
+        $suggestions = $this->generateSuggestions($analyticsData, $selectedBusiness);
+
+        // Prepara métricas para a view
+        $metrics = [
+            'total_views' => $totalViews,
+            'total_clicks' => $totalClicks,
+            'total_calls' => $totalCalls,
+            'conversion_rate' => $conversionRate,
+            'trends' => $this->calculateTrends($analytics),
+            'keywords' => $keywords,
+            'response_time' => '2.5s', // Exemplo fixo, ajuste conforme necessário
+        ];
+
+        return view('dashboard', [
+            'businesses' => $businesses,
+            'selectedBusiness' => $selectedBusiness,
+            'analytics' => $analyticsData,
+            'aiAnalysis' => $aiAnalysis,
+            'actions' => $actions,
+            'suggestions' => $suggestions,
+            'metrics' => $metrics,
+            'keywords' => $keywords
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Erro no dashboard: ' . $e->getMessage());
+        return back()->with('error', 'Ocorreu um erro ao carregar o dashboard. Por favor, tente novamente.');
     }
+}
 
-    // Se houver um businessId na requisição, use-o
-    if ($request->has('businessId')) {
-        $selectedBusiness = $businesses->find($request->businessId);
+protected function processKeywordAnalysis($analysis)
+{
+    try {
+        $lines = explode("\n", $analysis);
+        $keywords = [];
+        
+        foreach ($lines as $line) {
+            if (preg_match('/([^|]+)\|(\d+)/', $line, $matches)) {
+                $keyword = trim($matches[1]);
+                $volume = (int)$matches[2];
+                if ($volume > 0) {
+                    $keywords[$keyword] = $volume;
+                }
+            }
+        }
+
+        // Ordena por volume e limita a 8 palavras-chave
+        arsort($keywords);
+        return array_slice($keywords, 0, 8, true);
+
+    } catch (\Exception $e) {
+        \Log::error('Erro ao processar análise de palavras-chave: ' . $e->getMessage());
+        return [];
     }
-
-    // Se não houver negócio, redirecione para criar um
-    if (!$selectedBusiness) {
-        return redirect()->route('business.create')
-            ->with('warning', 'Por favor, cadastre um negócio primeiro.');
-    }
-
-    // Define período de análise (últimos 30 dias)
-    $endDate = Carbon::now();
-    $startDate = Carbon::now()->subDays(30);
-
-    // Busca analytics do período
-    $analytics = BusinessAnalytics::where('business_id', $selectedBusiness->id)
-        ->whereBetween('date', [$startDate, $endDate])
-        ->orderBy('date')
-        ->get();
-
-    // Calcula totais
-    $totalViews = $analytics->sum('views');
-    $totalClicks = $analytics->sum('clicks');
-    $totalCalls = $analytics->sum('calls');
-
-    // Calcula taxa de conversão
-    $conversionRate = $totalViews > 0 
-        ? round((($totalClicks + $totalCalls) / $totalViews) * 100, 1)
-        : 0;
-
-    // Prepara dados para o dashboard
-    $analyticsData = [
-        'views' => $totalViews,
-        'clicks' => $totalClicks,
-        'calls' => $totalCalls,
-        'conversion_rate' => $conversionRate,
-        'dates' => $analytics->pluck('date')->map(fn($date) => $date->format('d/m')),
-        'daily_views' => $analytics->pluck('views'),
-        'daily_clicks' => $analytics->pluck('clicks'),
-        'daily_calls' => $analytics->pluck('calls'),
-        'devices' => $analytics->last()?->devices ?? [
-            'desktop' => 0,
-            'mobile' => 0,
-            'tablet' => 0
-        ],
-        'top_locations' => $this->getTopLocations($analytics),
-        'trends' => $this->calculateTrends($analytics)
-    ];
-
-    // Obtém ou gera análise de IA
-    $aiAnalysis = $this->getOrGenerateAIAnalysis($selectedBusiness, $analyticsData);
-
-    // Busca ações recentes
-    $actions = Action::where('business_id', $selectedBusiness->id)
-        ->orderBy('created_at', 'desc')
-        ->take(5)
-        ->get();
-
-    // Gera sugestões baseadas nos dados
-    $suggestions = $this->generateSuggestions($analyticsData, $selectedBusiness);
-
-    return view('dashboard', [
-        'businesses' => $businesses,
-        'selectedBusiness' => $selectedBusiness,
-        'analytics' => $analyticsData,
-        'aiAnalysis' => $aiAnalysis,
-        'actions' => $actions,
-        'suggestions' => $suggestions
-    ]);
 }
 
 
-
-protected function getOrGenerateAIAnalysis($business, $analytics)
+protected function getOrGenerateAIAnalysis($business, $analyticsData)
 {
-    $cacheKey = "business_{$business->id}_analysis";
-    
-    // Tenta obter análise do cache
-    $analysis = Cache::get($cacheKey);
-    
-    // Se não existir no cache ou estiver expirada, gera nova análise
-    if (!$analysis) {
-        try {
-            $analysis = [
-                'market_overview' => "O negócio demonstra forte presença digital com crescimento consistente nas visualizações. A taxa de engajamento está acima da média do setor, especialmente em dispositivos móveis.",
-                
-                'competitor_insights' => [
-                    "Performance superior em busca local comparado a concorrentes similares",
-                    "Oportunidade de melhorar presença em horários de pico",
-                    "Taxa de resposta a avaliações acima da média do setor"
-                ],
-                
-                'recommendations' => [
-                    "Considere expandir horário de funcionamento nos fins de semana",
-                    "Implemente promoções específicas para horários de menor movimento",
-                    "Aumente presença em redes sociais para maior engajamento",
-                    "Desenvolva programa de fidelidade para clientes frequentes"
-                ],
-                
-                'alerts' => [
-                    [
-                        'type' => 'positive',
-                        'message' => 'Aumento de 15% nas visualizações esta semana'
-                    ],
-                    [
-                        'type' => 'opportunity',
-                        'message' => 'Potencial para expandir alcance em Guarulhos'
-                    ],
-                    [
-                        'type' => 'attention',
-                        'message' => 'Queda no engajamento aos domingos'
-                    ]
-                ]
-            ];
-            
-            // Armazena no cache por 24 horas
-            Cache::put($cacheKey, $analysis, now()->addHours(24));
-        } catch (\Exception $e) {
-            \Log::error('Erro ao gerar análise de IA: ' . $e->getMessage());
-            $analysis = null;
-        }
+    try {
+        return Cache::remember(
+            "business_{$business->id}_ai_analysis",
+            now()->addHours(24),
+            function () use ($business, $analyticsData) {
+                $prompt = $this->buildAIAnalysisPrompt($business, $analyticsData);
+                return $this->geminiService->analyze($prompt);
+            }
+        );
+    } catch (\Exception $e) {
+        \Log::error('Erro na análise de IA: ' . $e->getMessage());
+        return 'Análise temporariamente indisponível';
     }
-
-    return $analysis;
 }
     public function getData(Request $request, Business $business)
     {
