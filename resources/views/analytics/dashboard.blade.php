@@ -418,49 +418,80 @@
             </div>
             <h3 class="text-lg font-semibold text-gray-800">Palavras-chave Populares</h3>
         </div>
-
-        <button class="p-2 hover:bg-gray-50 rounded-lg transition-colors duration-200" title="Atualizar">
+        
+        <button onclick="refreshKeywords()" class="p-2 hover:bg-gray-50 rounded-lg transition-colors duration-200" title="Atualizar">
             <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
             </svg>
         </button>
     </div>
     
-    @if(!empty($keywords))
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            @foreach($keywords as $term => $count)
-                <div class="bg-gradient-to-br from-indigo-50/50 to-white p-4 rounded-xl border border-indigo-100/50 hover:shadow-sm transition-all duration-300">
-                    <div class="flex flex-col">
-                        <span class="text-sm text-gray-600 mb-1">{{ $term }}</span>
-                        <div class="flex items-baseline space-x-2">
-                            <span class="text-xl font-semibold text-gray-900">{{ number_format($count) }}</span>
-                            <span class="text-xs text-gray-500">buscas</span>
-                        </div>
-                        <div class="mt-2 pt-2 border-t border-indigo-100/50">
-                            <div class="flex items-center text-xs text-gray-500">
-                                <svg class="w-4 h-4 mr-1 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-                                </svg>
-                                <span>Posição média: 2.4</span>
+    <div id="keywords-container">
+        @if(!empty($keywords))
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                @foreach($keywords as $term => $count)
+                    <div class="bg-gradient-to-br from-indigo-50/50 to-white p-4 rounded-xl border border-indigo-100/50 hover:shadow-sm transition-all duration-300">
+                        <div class="flex flex-col">
+                            <span class="text-sm text-gray-600 mb-1">{{ $term }}</span>
+                            <div class="flex items-baseline space-x-2">
+                                <span class="text-xl font-semibold text-gray-900">{{ number_format($count) }}</span>
+                                <span class="text-xs text-gray-500">buscas</span>
                             </div>
                         </div>
                     </div>
-                </div>
-            @endforeach
-        </div>
-    @else
-        <div class="flex flex-col items-center justify-center py-8 px-4 text-center">
-            <div class="p-3 bg-indigo-50 rounded-full mb-4">
-                <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                </svg>
+                @endforeach
             </div>
-            <p class="text-gray-500 mb-2">Nenhuma palavra-chave encontrada no período.</p>
-            <span class="text-sm text-gray-400">Tente ajustar o período de análise ou aguarde mais dados.</span>
-        </div>
-    @endif
+        @else
+            <div class="flex flex-col items-center justify-center py-8 px-4 text-center">
+                <div class="p-3 bg-indigo-50 rounded-full mb-4">
+                    <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                </div>
+                <p class="text-gray-500">Carregando palavras-chave...</p>
+            </div>
+        @endif
+    </div>
 </div>
 
+@push('scripts')
+<script>
+function refreshKeywords() {
+    const container = document.getElementById('keywords-container');
+    container.innerHTML = `
+        <div class="flex justify-center items-center py-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+        </div>
+    `;
+    
+    fetch(`/analytics/keywords/${businessId}`, {
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.keywords) {
+            updateKeywordsDisplay(data.keywords);
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao atualizar palavras-chave:', error);
+        container.innerHTML = `
+            <div class="text-center py-4 text-red-500">
+                Erro ao carregar palavras-chave. Tente novamente.
+            </div>
+        `;
+    });
+}
+
+function updateKeywordsDisplay(keywords) {
+    // Atualiza a exibição das palavras-chave
+    const container = document.getElementById('keywords-container');
+    // ... lógica de atualização do display
+}
+</script>
+@endpush
 <!-- Seção de Insights e Análises -->
 <div class="mt-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between mb-8">

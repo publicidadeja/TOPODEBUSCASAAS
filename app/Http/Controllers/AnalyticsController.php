@@ -14,6 +14,7 @@ use App\Models\Action;
 use App\Services\GeminiService;
 use Illuminate\Support\Facades\Cache;
 use App\Services\AIAnalysisService;
+use App\Services\KeywordService;
 
 class AnalyticsController extends Controller
 {
@@ -32,11 +33,17 @@ class AnalyticsController extends Controller
     protected $geminiService;
     protected $aiAnalysisService;
     
-    public function __construct(GeminiService $geminiService, AIAnalysisService $aiAnalysisService)
-    {
+    public function __construct(
+        GeminiService $geminiService, 
+        AIAnalysisService $aiAnalysisService,
+        KeywordService $keywordService
+    ) {
         $this->geminiService = $geminiService;
         $this->aiAnalysisService = $aiAnalysisService;
+        $this->keywordService = $keywordService;
     }
+
+    
 
     public function index(Business $business)
 {
@@ -370,6 +377,8 @@ private function calculateMetricsGrowth($previous, $current)
         'suggestions' => $suggestions
     ]);
 }
+
+
 
 protected function getOrGenerateAIAnalysis($business, $analytics)
 {
@@ -1376,34 +1385,19 @@ protected function generateSuggestions($analyticsData, Business $business)
 
     return $suggestions;
 }
-private function getKeywordAnalytics($business, $startDate, $endDate)
+protected function getKeywordAnalytics($business, $startDate = null, $endDate = null)
 {
     try {
-        // Busca palavras-chave do Google My Business
-        $keywords = $this->googleBusinessService->getSearchKeywords(
-            $business->google_business_id,
-            $startDate,
-            $endDate
-        );
-
-        // Organiza as palavras-chave por frequência
-        $keywordStats = [];
-        foreach ($keywords as $keyword) {
-            $term = strtolower($keyword['term']);
-            if (!isset($keywordStats[$term])) {
-                $keywordStats[$term] = 0;
-            }
-            $keywordStats[$term] += $keyword['count'];
+        // Se datas forem fornecidas, podemos passá-las para o serviço
+        if ($startDate && $endDate) {
+            return $this->keywordService->getPopularKeywords($business, $startDate, $endDate);
         }
-
-        // Ordena por frequência e pega os top 10
-        arsort($keywordStats);
-        return array_slice($keywordStats, 0, 10, true);
-
+        
+        // Caso contrário, usa apenas o business
+        return $this->keywordService->getPopularKeywords($business);
     } catch (\Exception $e) {
-        \Log::error('Erro ao buscar palavras-chave: ' . $e->getMessage());
+        \Log::error('Erro ao buscar análise de palavras-chave: ' . $e->getMessage());
         return [];
     }
 }
-
 }
