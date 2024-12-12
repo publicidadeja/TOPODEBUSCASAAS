@@ -519,5 +519,134 @@ public function checkGeminiSetup(GeminiService $gemini)
         $this->error('Falha na conexão com Gemini API. Verifique suas credenciais.');
     }
 }
+
+public function analyzeMarketData($business, $competitors)
+{
+    try {
+        // Garante que $competitors seja um array
+        $competitorsData = $competitors->map(function ($competitor) {
+            return [
+                'name' => $competitor->name ?? 'Nome não disponível',
+                'rating' => $competitor->rating ?? 0,
+                'reviews_count' => $competitor->reviews_count ?? 0,
+                'analytics' => [
+                    'views' => $competitor->analytics->sum('views') ?? 0,
+                    'clicks' => $competitor->analytics->sum('clicks') ?? 0,
+                    'calls' => $competitor->analytics->sum('calls') ?? 0
+                ]
+            ];
+        })->toArray();
+
+        $prompt = "Analise os seguintes dados e forneça uma análise de mercado detalhada em português:
+
+        Negócio Principal:
+        Nome: {$business->name}
+        Segmento: {$business->segment}
+        Descrição: {$business->description}
+        
+        Dados dos Concorrentes:
+        " . json_encode($competitorsData, JSON_PRETTY_PRINT) . "
+
+        Forneça uma análise estruturada incluindo:
+        1. Visão geral do mercado atual
+        2. Análise detalhada dos concorrentes
+        3. Oportunidades identificadas no mercado
+        4. Recomendações estratégicas específicas";
+
+        $response = $this->generateResponse($prompt);
+        
+        // Extrai as seções da resposta
+        $sections = $this->extractMarketAnalysisSections($response);
+
+        return [
+            'market_overview' => $sections['market_overview'] ?? 'Análise de mercado não disponível',
+            'competitor_analysis' => $sections['competitor_analysis'] ?? 'Análise de concorrentes não disponível',
+            'opportunities' => $sections['opportunities'] ?? 'Oportunidades não identificadas',
+            'recommendations' => $sections['recommendations'] ?? 'Recomendações não disponíveis'
+        ];
+
+    } catch (\Exception $e) {
+        Log::error('Erro na análise de mercado: ' . $e->getMessage());
+        return [
+            'market_overview' => 'Erro ao gerar análise de mercado',
+            'competitor_analysis' => 'Erro ao analisar concorrentes',
+            'opportunities' => 'Erro ao identificar oportunidades',
+            'recommendations' => 'Erro ao gerar recomendações'
+        ];
+    }
+}
+
+private function extractMarketAnalysisSections($content)
+{
+    $sections = [];
+    
+    // Padrões para encontrar cada seção
+    $patterns = [
+        'market_overview' => '/(?:1\.|Visão geral do mercado:?)(.*?)(?=(?:2\.|Análise|$))/is',
+        'competitor_analysis' => '/(?:2\.|Análise detalhada dos concorrentes:?)(.*?)(?=(?:3\.|Oportunidades|$))/is',
+        'opportunities' => '/(?:3\.|Oportunidades identificadas:?)(.*?)(?=(?:4\.|Recomendações|$))/is',
+        'recommendations' => '/(?:4\.|Recomendações estratégicas:?)(.*?)(?=$)/is'
+    ];
+
+    foreach ($patterns as $key => $pattern) {
+        if (preg_match($pattern, $content, $matches)) {
+            $sections[$key] = trim($matches[1]);
+        } else {
+            // Tenta uma busca mais flexível se o padrão anterior falhar
+            $simplePattern = "/$key:?(.*?)(?=(?:market_overview|competitor_analysis|opportunities|recommendations|$))/is";
+            if (preg_match($simplePattern, $content, $matches)) {
+                $sections[$key] = trim($matches[1]);
+            } else {
+                $sections[$key] = null;
+            }
+        }
+    }
+
+    // Limpa e formata o texto de cada seção
+    foreach ($sections as $key => $value) {
+        if ($value) {
+            $sections[$key] = $this->cleanAnalysisText($value);
+        }
+    }
+
+    return $sections;
+}
+
+private function cleanAnalysisText($text)
+{
+    // Remove caracteres especiais e formata o texto
+    $text = preg_replace('/[\n\r]+/', ' ', $text);
+    $text = preg_replace('/\s+/', ' ', $text);
+    $text = trim($text);
+    
+    // Remove marcadores numéricos no início
+    $text = preg_replace('/^\d+\.\s*/', '', $text);
+    
+    return $text;
+}
+
+public function testMarketAnalysis($business, $competitors)
+{
+    try {
+        $result = $this->analyzeMarketData($business, $competitors);
+        
+        Log::info('Teste de análise de mercado:', [
+            'business' => $business->name,
+            'competitors_count' => count($competitors),
+            'result' => $result
+        ]);
+
+        return [
+            'success' => true,
+            'data' => $result
+        ];
+    } catch (\Exception $e) {
+        Log::error('Erro no teste de análise de mercado: ' . $e->getMessage());
+        return [
+            'success' => false,
+            'error' => $e->getMessage()
+        ];
+    }
+}
     
 }

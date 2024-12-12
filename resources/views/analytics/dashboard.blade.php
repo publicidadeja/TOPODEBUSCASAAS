@@ -427,29 +427,39 @@
                 </div>
             </div>
 
-            <!-- Análise de Mercado -->
-            <div class="bg-gradient-to-br from-blue-50 to-white rounded-lg p-4">
-                <h3 class="text-lg font-semibold text-blue-800 mb-3">Análise de Mercado</h3>
-                <div class="space-y-4" id="market-analysis">
-                    @foreach($marketAnalysis ?? [] as $analysis)
-                        <div class="bg-white rounded-lg p-4 shadow-sm">
-                            <h4 class="font-medium text-gray-900 mb-2">{{ $analysis['title'] }}</h4>
-                            <p class="text-sm text-gray-600">{{ $analysis['description'] }}</p>
-                            @if(isset($analysis['metrics']))
-                                <div class="mt-2 grid grid-cols-2 gap-2">
-                                    @foreach($analysis['metrics'] as $metric)
-                                        <div class="bg-gray-50 p-2 rounded">
-                                            <span class="text-xs text-gray-500">{{ $metric['label'] }}</span>
-                                            <div class="font-medium">{{ $metric['value'] }}</div>
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @endif
-                        </div>
-                    @endforeach
-                </div>
+            <div class="mt-8">
+    <div class="bg-white rounded-lg shadow-lg p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-xl font-bold text-gray-800">
+                <span class="flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                    Análise de Mercado
+                </span>
+            </h2>
+            <button onclick="refreshMarketAnalysis()" class="text-sm text-blue-500 hover:text-blue-700 flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Atualizar Análise
+            </button>
+        </div>
+
+        <!-- Loading State -->
+        <div id="market-analysis-loading" class="hidden">
+            <div class="flex justify-center items-center py-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <span class="ml-2 text-gray-600">Analisando mercado...</span>
             </div>
         </div>
+
+        <!-- Content -->
+        <div id="market-analysis-content" class="space-y-6">
+            <!-- O conteúdo será preenchido via JavaScript -->
+        </div>
+    </div>
+</div>
 
         <!-- Recomendações Estratégicas -->
 <div class="mt-6">
@@ -1248,8 +1258,86 @@ document.addEventListener('DOMContentLoaded', function() {
         // Implement error notification system here
         console.error(message);
     }
+    
 
 });
+</script>
+
+<script>
+function refreshMarketAnalysis() {
+    const loadingElement = document.getElementById('market-analysis-loading');
+    const contentElement = document.getElementById('market-analysis-content');
+    const businessId = document.getElementById('business-selector').value;
+
+    // Mostra loading
+    loadingElement.classList.remove('hidden');
+    contentElement.classList.add('opacity-50');
+
+    // Faz a requisição
+    fetch(`/market-analysis/${businessId}`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erro na requisição');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // Verifica se os dados existem antes de usar
+        const marketOverview = data.market_overview || 'Análise não disponível';
+        const competitorAnalysis = data.competitor_analysis || 'Análise não disponível';
+        const opportunities = data.opportunities || 'Análise não disponível';
+        const recommendations = data.recommendations || 'Análise não disponível';
+
+        // Cria o HTML para a análise
+        const html = `
+            <div class="space-y-6">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-blue-800 mb-2">Visão Geral do Mercado</h3>
+                    <p class="text-gray-700">${marketOverview}</p>
+                </div>
+
+                <div class="bg-purple-50 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-purple-800 mb-2">Análise dos Concorrentes</h3>
+                    <p class="text-gray-700">${competitorAnalysis}</p>
+                </div>
+
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-green-800 mb-2">Oportunidades Identificadas</h3>
+                    <p class="text-gray-700">${opportunities}</p>
+                </div>
+
+                <div class="bg-yellow-50 p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-yellow-800 mb-2">Recomendações Estratégicas</h3>
+                    <p class="text-gray-700">${recommendations}</p>
+                </div>
+            </div>
+        `;
+
+        // Atualiza o conteúdo
+        contentElement.innerHTML = html;
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        contentElement.innerHTML = `
+            <div class="bg-red-50 p-4 rounded-lg">
+                <h3 class="text-lg font-semibold text-red-800 mb-2">Erro</h3>
+                <p class="text-red-700">Não foi possível carregar a análise de mercado. Por favor, tente novamente.</p>
+            </div>
+        `;
+    })
+    .finally(() => {
+        // Esconde loading
+        loadingElement.classList.add('hidden');
+        contentElement.classList.remove('opacity-50');
+    });
+}
 </script>
 @endpush
 </x-app-layout>

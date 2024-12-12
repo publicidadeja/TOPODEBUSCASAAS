@@ -59,6 +59,7 @@ class Business extends Model
         return $this->belongsToMany(Business::class, 'business_competitors', 
             'business_id', 'competitor_id')
             ->withTimestamps();
+            return $this->hasMany(Competitor::class);
     }
 
     /**

@@ -12,6 +12,12 @@ use App\Http\Controllers\GoogleController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\CompetitorAnalysisController;
+use App\Http\Controllers\MarketAnalysisController;
+
+Route::middleware(['auth'])->group(function () {
+    Route::post('/market-analysis/{business}', [MarketAnalysisController::class, 'analyze'])
+        ->name('market-analysis.analyze');
+});
 
 Route::post('/competitor-analysis/analyze', [CompetitorAnalysisController::class, 'analyze'])
     ->name('competitor.analyze')

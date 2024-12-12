@@ -127,51 +127,55 @@ class CompetitorAnalysisController extends Controller
     }
     
     private function generateRecommendations($competitors)
-    {
-        try {
-            // Prepara os dados dos concorrentes para análise
-            $competitorsData = array_map(function($competitor) {
-                return [
-                    'name' => $competitor['title'] ?? 'Nome não disponível',
-                    'rating' => $competitor['rating'] ?? 0,
-                    'reviews' => $competitor['reviews'] ?? 0,
-                    'has_website' => !empty($competitor['website']),
-                    'location' => $competitor['location'] ?? 'Localização não disponível',
-                ];
-            }, $competitors);
-
-            // Cria um prompt estruturado para o Gemini
-            $prompt = "Analise os seguintes dados de concorrentes e forneça 3 recomendações estratégicas:\n\n";
-            $prompt .= "Dados dos concorrentes:\n";
-            foreach ($competitorsData as $data) {
-                $prompt .= "- Empresa: {$data['name']}\n";
-                $prompt .= "  Avaliação: {$data['rating']}/5\n";
-                $prompt .= "  Número de reviews: {$data['reviews']}\n";
-                $prompt .= "  Possui website: " . ($data['has_website'] ? 'Sim' : 'Não') . "\n";
-                $prompt .= "  Localização: {$data['location']}\n\n";
-            }
-            
-            $prompt .= "Por favor, forneça 3 recomendações estratégicas no seguinte formato:\n";
-            $prompt .= "1. Título da recomendação: descrição detalhada (prioridade: alta/média/baixa)\n";
-
-            // Obtém a análise do Gemini
-            $geminiAnalysis = $this->gemini->generateResponse($prompt);
-
-            // Processa a resposta do Gemini
-            $recommendations = $this->parseGeminiRecommendations($geminiAnalysis);
-
-            // Se a análise do Gemini falhar, usa as recomendações padrão
-            if (empty($recommendations)) {
-                return $this->generateDefaultRecommendations($competitors);
-            }
-
-            return $recommendations;
-
-        } catch (\Exception $e) {
-            \Log::error('Erro ao gerar recomendações com Gemini: ' . $e->getMessage());
-            return $this->generateDefaultRecommendations($competitors);
+{
+    try {
+        $prompt = "Analise os seguintes dados de concorrentes e forneça exatamente 3 recomendações estratégicas.\n\n";
+        $prompt .= "Dados dos concorrentes:\n";
+        foreach ($competitorsData as $data) {
+            $prompt .= "- Empresa: {$data['name']}\n";
+            $prompt .= "  Avaliação: {$data['rating']}/5\n";
+            $prompt .= "  Número de reviews: {$data['reviews']}\n";
+            $prompt .= "  Possui website: " . ($data['has_website'] ? 'Sim' : 'Não') . "\n";
+            $prompt .= "  Localização: {$data['location']}\n\n";
         }
+        
+        $prompt .= "\nForneça suas recomendações no seguinte formato JSON:\n";
+        $prompt .= "{\n";
+        $prompt .= "  \"recommendations\": [\n";
+        $prompt .= "    {\n";
+        $prompt .= "      \"title\": \"título da recomendação\",\n";
+        $prompt .= "      \"description\": \"descrição detalhada\",\n";
+        $prompt .= "      \"priority\": \"high/medium/low\"\n";
+        $prompt .= "    }\n";
+        $prompt .= "  ]\n";
+        $prompt .= "}";
+
+        // Obter resposta do Gemini
+        $geminiAnalysis = $this->gemini->generateResponse($prompt);
+        
+        // Tentar decodificar o JSON
+        $decodedResponse = json_decode($geminiAnalysis, true);
+        
+        // Validar a resposta
+        if (json_last_error() === JSON_ERROR_NONE && 
+            isset($decodedResponse['recommendations']) && 
+            !empty($decodedResponse['recommendations'])) {
+            
+            return $decodedResponse['recommendations'];
+        }
+
+        // Log do erro se a resposta não for válida
+        \Log::warning('Resposta do Gemini não está no formato esperado', [
+            'response' => $geminiAnalysis
+        ]);
+        
+        return $this->generateDefaultRecommendations($competitors);
+
+    } catch (\Exception $e) {
+        \Log::error('Erro ao gerar recomendações com Gemini: ' . $e->getMessage());
+        return $this->generateDefaultRecommendations($competitors);
     }
+}
 
     private function parseGeminiRecommendations($analysis)
     {
