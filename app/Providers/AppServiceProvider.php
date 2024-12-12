@@ -15,6 +15,10 @@ class AppServiceProvider extends ServiceProvider
             return new GoogleAuthService();
         });
 
+        $this->app->singleton(KeywordService::class, function ($app) {
+            return new KeywordService($app->make(GeminiService::class));
+        });
+
         // Adicione este trecho para registrar o SerperService
         $this->app->singleton(SerperService::class, function ($app) {
             return new SerperService();

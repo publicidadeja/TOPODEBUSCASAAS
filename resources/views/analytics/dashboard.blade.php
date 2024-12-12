@@ -448,7 +448,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                 </svg>
             </div>
-            <p class="text-gray-500">Carregando palavras-chave...</p>
+            <p class="text-gray-500">Nenhuma palavra-chave encontrada</p>
             <button onclick="refreshKeywords()" class="mt-4 text-sm text-indigo-600 hover:text-indigo-700">
                 Tentar novamente
             </button>
@@ -456,64 +456,43 @@
     @endif
 </div>
 
-@push('scripts')
 <script>
 function refreshKeywords() {
     const container = document.getElementById('keywords-container');
+    const businessId = '{{ $business->id }}';
+    
     container.innerHTML = `
         <div class="flex justify-center items-center py-8">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+            <span class="ml-3">Atualizando palavras-chave...</span>
         </div>
     `;
 
-    fetch(`/analytics/keywords/{{ $business->id }}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.keywords) {
-                let html = '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">';
-                Object.entries(data.keywords).forEach(([term, count]) => {
-                    html += `
-                        <div class="bg-gradient-to-br from-indigo-50/50 to-white p-4 rounded-xl border border-indigo-100/50 hover:shadow-sm transition-all duration-300">
-                            <div class="flex flex-col">
-                                <span class="text-sm text-gray-600 mb-1">${term}</span>
-                                <div class="flex items-baseline space-x-2">
-                                    <span class="text-xl font-semibold text-gray-900">${new Intl.NumberFormat().format(count)}</span>
-                                    <span class="text-xs text-gray-500">buscas</span>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                html += '</div>';
-                container.innerHTML = html;
-            } else {
-                container.innerHTML = `
-                    <div class="text-center py-8">
-                        <p class="text-gray-500">Não foi possível carregar as palavras-chave.</p>
-                        <button onclick="refreshKeywords()" class="mt-4 text-sm text-indigo-600 hover:text-indigo-700">
-                            Tentar novamente
-                        </button>
-                    </div>
-                `;
-            }
-        })
-        .catch(error => {
-            console.error('Erro ao buscar palavras-chave:', error);
-            container.innerHTML = `
-                <div class="text-center py-8">
-                    <p class="text-red-500">Erro ao carregar palavras-chave.</p>
-                    <button onclick="refreshKeywords()" class="mt-4 text-sm text-indigo-600 hover:text-indigo-700">
-                        Tentar novamente
-                    </button>
-                </div>
-            `;
-        });
+    fetch(`/analytics/refresh-keywords/${businessId}`, {
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            throw new Error(data.message || 'Erro ao atualizar palavras-chave');
+        }
+    })
+    .catch(error => {
+        container.innerHTML = `
+            <div class="text-center py-8">
+                <p class="text-red-500">${error.message}</p>
+                <button onclick="refreshKeywords()" class="mt-4 text-sm text-indigo-600 hover:text-indigo-700">
+                    Tentar novamente
+                </button>
+            </div>
+        `;
+    });
 }
-
-// Carrega palavras-chave automaticamente na primeira vez
-document.addEventListener('DOMContentLoaded', refreshKeywords);
 </script>
-@endpush
 <!-- Seção de Insights e Análises -->
 <div class="mt-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex items-center justify-between mb-8">

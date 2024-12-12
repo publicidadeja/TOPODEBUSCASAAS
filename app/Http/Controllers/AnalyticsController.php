@@ -63,13 +63,7 @@ class AnalyticsController extends Controller
 
     // 3. Busca palavras-chave do Google Meu Negócio (NOVO)
     try {
-        $keywords = Cache::remember(
-            "business_{$selectedBusiness->id}_keywords",
-            now()->addHours(24),
-            function () use ($selectedBusiness, $startDate, $endDate) {
-                return $this->getKeywordAnalytics($selectedBusiness, $startDate, $endDate);
-            }
-        );
+        $keywords = $this->keywordService->getPopularKeywords($selectedBusiness);
     } catch (\Exception $e) {
         \Log::error('Erro ao buscar palavras-chave: ' . $e->getMessage());
         $keywords = [];
@@ -1407,11 +1401,32 @@ public function getKeywords(Business $business)
         $keywords = $this->keywordService->getPopularKeywords($business);
         return response()->json(['keywords' => $keywords]);
     } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
+}
+
+public function refreshKeywords(Business $business)
+{
+    try {
+        // Limpa o cache existente
+        $cacheKey = "business_{$business->id}_keywords";
+        Cache::forget($cacheKey);
+        
+        // Busca novas palavras-chave
+        $keywords = $this->keywordService->getPopularKeywords($business);
+        
         return response()->json([
-            'error' => 'Não foi possível buscar as palavras-chave',
-            'message' => $e->getMessage()
+            'success' => true,
+            'keywords' => $keywords
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao atualizar palavras-chave: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao atualizar palavras-chave'
         ], 500);
     }
 }
+
 
 }

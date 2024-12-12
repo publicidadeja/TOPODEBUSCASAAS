@@ -14,8 +14,8 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\CompetitorAnalysisController;
 use App\Http\Controllers\MarketAnalysisController;
 
-Route::get('/analytics/keywords/{business}', [AnalyticsController::class, 'getKeywords'])
-    ->name('analytics.keywords')
+Route::get('/analytics/refresh-keywords/{business}', [AnalyticsController::class, 'refreshKeywords'])
+    ->name('analytics.refresh-keywords')
     ->middleware('auth');
 
 Route::get('/analytics/keywords/{business}', [AnalyticsController::class, 'getKeywords'])
