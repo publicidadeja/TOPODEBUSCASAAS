@@ -27,10 +27,11 @@ class ShareCurrentBusiness
             if ($currentBusiness) {
                 // Store the current business ID in session
                 session(['current_business_id' => $currentBusiness->id]);
+                
+                // Share both the business object and ID with views
+                view()->share('currentBusiness', $currentBusiness);
+                view()->share('currentBusinessId', $currentBusiness->id);
             }
-            
-            // Share with all views
-            view()->share('currentBusiness', $currentBusiness);
         }
 
         return $next($request);

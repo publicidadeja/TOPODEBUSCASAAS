@@ -1,33 +1,70 @@
 <x-app-layout>
+    <!-- Header Section -->
     <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="font-google-sans text-xl text-gray-800 leading-tight">
-                {{ __('Dashboard') }}
-            </h2>
-            <x-business-selector :businesses="$businesses" :selected="$selectedBusiness" route="dashboard" />
+        <div class="flex justify-between items-center bg-white/80 backdrop-blur-sm border-b border-gray-100/50 p-4 rounded-xl shadow-sm">
+            <!-- Left Side - Title -->
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-xl font-semibold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                        {{ __('Dashboard') }}
+                    </h2>
+                    <p class="text-sm text-gray-500">Visão geral do seu negócio</p>
+                </div>
+            </div>
+
+            <!-- Right Side - Business Selector -->
+            <div class="flex items-center space-x-4">
+                <x-business-selector 
+                    :businesses="$businesses" 
+                    :selected="$selectedBusiness" 
+                    route="dashboard"
+                    class="min-w-[200px]" />
+            </div>
         </div>
     </x-slot>
 
+    <!-- Main Content Area -->
     <div class="py-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <!-- Mensagem de erro do Google -->
+            <!-- Google Error Message -->
             @if(session('google_error'))
-            <div class="mb-8">
-                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm text-yellow-700">
-                                {{ session('google_error') }}
-                            </p>
+                <div class="mb-8 animate-fade-in">
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-xl shadow-sm">
+                        <div class="flex items-start space-x-3">
+                            <!-- Warning Icon -->
+                            <div class="flex-shrink-0">
+                                <div class="p-1 bg-yellow-100 rounded-full">
+                                    <svg class="h-5 w-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            
+                            <!-- Error Message -->
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-yellow-800">
+                                    {{ session('google_error') }}
+                                </p>
+                                <p class="mt-1 text-sm text-yellow-600">
+                                    Por favor, verifique suas credenciais e tente novamente.
+                                </p>
+                            </div>
+
+                            <!-- Close Button -->
+                            <button onclick="this.parentElement.parentElement.remove()" 
+                                    class="flex-shrink-0 p-1.5 rounded-lg hover:bg-yellow-100 transition-colors duration-200">
+                                <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
             @endif
 
             <!-- Período de Análise -->

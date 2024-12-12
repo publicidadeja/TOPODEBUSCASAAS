@@ -1,27 +1,57 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex justify-between items-center">
-            <h2 class="font-google-sans text-xl text-gray-800">
-                {{ __('Meus Negócios') }}
-            </h2>
-            <div class="flex space-x-4">
+        <div class="flex justify-between items-center bg-white/80 backdrop-blur-sm border-b border-gray-100/50 p-4 rounded-xl shadow-sm">
+            <!-- Título da Página -->
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg">
+                    <svg class="w-6 h-6 text-google-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-xl font-semibold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                        {{ __('Meus Negócios') }}
+                    </h2>
+                    <p class="text-sm text-gray-500">Gerencie seus estabelecimentos</p>
+                </div>
+            </div>
+
+            <!-- Botões de Ação -->
+            <div class="flex items-center space-x-4">
+                <!-- Botão Importar do Google -->
                 <a href="{{ route('google.auth') }}" 
-                   class="inline-flex items-center px-4 py-2 bg-white rounded-md text-sm text-gray-700 border border-gray-300 hover:bg-gray-50 transition-colors">
-                    <svg class="w-5 h-5 mr-2 text-google-blue" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/>
-                    </svg>
-                    Importar do Google
+                   class="group flex items-center px-4 py-2 bg-white rounded-xl text-sm text-gray-700 border border-gray-200 hover:border-google-blue/20 hover:bg-blue-50/50 transition-all duration-200 shadow-sm hover:shadow">
+                    <div class="mr-2 relative">
+                        <svg class="w-5 h-5 text-google-blue transform group-hover:scale-110 transition-transform duration-200" 
+                             viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/>
+                        </svg>
+                        <div class="absolute -top-1 -right-1 w-2 h-2 bg-google-blue rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                    </div>
+                    <span class="relative">
+                        Importar do Google
+                        <span class="absolute inset-x-0 -bottom-0.5 h-0.5 bg-google-blue transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></span>
+                    </span>
                 </a>
+
+                <!-- Botão Novo Negócio -->
                 <a href="{{ route('business.create') }}" 
-                   class="inline-flex items-center px-4 py-2 bg-google-blue text-white rounded-md text-sm hover:bg-google-blue/90 transition-colors">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                   class="group flex items-center px-4 py-2 bg-google-blue text-white rounded-xl text-sm hover:bg-google-blue/90 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-105">
+                    <svg class="w-5 h-5 mr-2 transform group-hover:rotate-90 transition-transform duration-300" 
+                         fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
                     </svg>
-                    Novo Negócio
+                    <span class="relative">
+                        Novo Negócio
+                        <span class="absolute inset-x-0 -bottom-0.5 h-0.5 bg-white/30 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-200"></span>
+                    </span>
                 </a>
             </div>
         </div>
     </x-slot>
+
 
     <div class="py-6">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

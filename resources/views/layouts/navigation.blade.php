@@ -1,186 +1,180 @@
-<nav x-data="{ open: false, sidebarOpen: false }" class="bg-white border-b border-gray-100 shadow-sm">
-    <!-- Main Navigation Container -->
-    <div class="max-w-full mx-auto">
+<nav x-data="{ open: false, sidebarOpen: false }" class="bg-white border-b border-gray-100/50 backdrop-blur-sm sticky top-0 z-50">
+    <!-- Container Principal -->
+    <div class="max-w-full mx-auto px-4">
         <div class="flex justify-between h-16">
-            <!-- Left Side Navigation -->
+            <!-- Navegação Lado Esquerdo -->
             <div class="flex items-center">
-                <!-- Hamburger for Sidebar (Mobile) -->
-                <button @click="sidebarOpen = !sidebarOpen" class="p-4 focus:outline-none lg:hidden">
-                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <!-- Botão do Menu Mobile -->
+                <button @click="sidebarOpen = !sidebarOpen" 
+                        class="p-2 m-2 rounded-xl hover:bg-gray-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50 lg:hidden">
+                    <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                     </svg>
                 </button>
 
-                <!-- Logo -->
+                <!-- Logo com Efeito Hover -->
                 <div class="flex-shrink-0 flex items-center px-4">
-                    <a href="{{ route('dashboard') }}" class="flex items-center">
-                        <x-application-logo class="block h-8 w-auto" />
-                        <span class="ml-2 text-lg font-google-sans text-gray-800">TopoSaaS</span>
+                    <a href="{{ route('dashboard') }}" 
+                       class="flex items-center group transition-transform duration-200 hover:scale-105">
+                        <x-application-logo class="block h-8 w-auto transition-all duration-200 group-hover:opacity-80" />
+                        <span class="ml-2 text-lg font-google-sans bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                            {{ config('app.name') }}
+                        </span>
                     </a>
                 </div>
 
-                <!-- Desktop Navigation Links -->
+                <!-- Links de Navegação Desktop -->
                 <div class="hidden lg:flex lg:space-x-1 lg:ml-6">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" 
-                        class="px-4 py-2 rounded-full text-sm font-google-sans transition-colors duration-200">
-                        <i class="material-icons-outlined text-xl mr-1">dashboard</i>
-                        {{ __('Dashboard') }}
-                    </x-nav-link>
-
-                    <x-nav-link :href="route('business.index')" :active="request()->routeIs('business.*')"
-                        class="px-4 py-2 rounded-full text-sm font-google-sans transition-colors duration-200">
-                        <i class="material-icons-outlined text-xl mr-1">business</i>
-                        {{ __('Negócios') }}
-                    </x-nav-link>
-
-                    <x-nav-link :href="route('automation.index')" :active="request()->routeIs('automation.*')"
-                        class="px-4 py-2 rounded-full text-sm font-google-sans transition-colors duration-200">
-                        <i class="material-icons-outlined text-xl mr-1">auto_fix_high</i>
-                        {{ __('Automação') }}
-                    </x-nav-link>
-
-                    @php
-                        $currentBusinessId = auth()->user()->businesses->first()->id ?? null;
-                    @endphp
-
-                    @if($currentBusinessId)
-                        <x-nav-link :href="route('analytics.index', ['business' => $currentBusinessId])" 
-                            :active="request()->routeIs('analytics.*')"
-                            class="px-4 py-2 rounded-full text-sm font-google-sans transition-colors duration-200">
-                            <i class="material-icons-outlined text-xl mr-1">analytics</i>
-                            {{ __('Analytics') }}
-                        </x-nav-link>
-
-                        <x-nav-link :href="route('goals.index', ['business' => $currentBusinessId])" 
-                            :active="request()->routeIs('goals.index')"
-                            class="px-4 py-2 rounded-full text-sm font-google-sans transition-colors duration-200">
-                            <i class="material-icons-outlined text-xl mr-1">flag</i>
-                            {{ __('Metas') }}
-                        </x-nav-link>
-                    @endif
+                    @foreach([
+                        ['route' => 'dashboard', 'icon' => 'dashboard', 'label' => 'Dashboard'],
+                        ['route' => 'business.index', 'icon' => 'business', 'label' => 'Negócios'],
+                        ['route' => 'automation.index', 'icon' => 'auto_fix_high', 'label' => 'Automação'],
+                        ['route' => 'analytics.index', 'icon' => 'analytics', 'label' => 'Analytics', 'requires_business' => true],
+                        ['route' => 'goals.index', 'icon' => 'flag', 'label' => 'Metas', 'requires_business' => true]
+                    ] as $link)
+                        @if(!($link['requires_business'] ?? false) || $currentBusinessId)
+                            <x-nav-link 
+                                :href="route($link['route'], isset($link['requires_business']) && $link['requires_business'] ? ['business' => $currentBusinessId] : [])"
+                                :active="request()->routeIs($link['route'] . (isset($link['requires_business']) ? '.*' : ''))"
+                                class="flex items-center px-4 py-2 rounded-xl text-sm font-google-sans transition-all duration-200 hover:scale-105 hover:bg-gray-50">
+                                <i class="material-icons-outlined text-xl mr-1 transition-transform duration-200 group-hover:rotate-12">
+                                    {{ $link['icon'] }}
+                                </i>
+                                {{ __($link['label']) }}
+                            </x-nav-link>
+                        @endif
+                    @endforeach
                 </div>
             </div>
 
-            <!-- Right Side Navigation -->
-            <div class="flex items-center">
-                <!-- Notifications -->
-                <div class="relative mr-4">
-                    <button class="p-2 rounded-full hover:bg-gray-100 transition-colors duration-200">
-                        <i class="material-icons-outlined text-xl text-gray-600">notifications</i>
+            <!-- Navegação Lado Direito -->
+            <div class="flex items-center space-x-4">
+                <!-- Centro de Notificações -->
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" 
+                            class="p-2 rounded-xl hover:bg-gray-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/50">
+                        <div class="relative">
+                            <i class="material-icons-outlined text-xl text-gray-700">notifications</i>
+                            <!-- Indicador de Notificações -->
+                            <span class="absolute -top-1 -right-1 h-2 w-2 bg-red-500 rounded-full"></span>
+                        </div>
                     </button>
+                    
+                    <!-- Dropdown de Notificações -->
+                    <div x-show="open" 
+                         @click.away="open = false"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 scale-95"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 scale-100"
+                         x-transition:leave-end="opacity-0 scale-95"
+                         class="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+                        <div class="p-4">
+                            <h3 class="text-sm font-semibold text-gray-900">Notificações</h3>
+                            <div class="mt-2 divide-y divide-gray-100">
+                                <!-- Lista de Notificações -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- User Profile Dropdown -->
-                <div class="relative">
-                    <x-dropdown align="right" width="48">
-                        <x-slot name="trigger">
-                            <button class="flex items-center px-3 py-2 rounded-full hover:bg-gray-100 transition-colors duration-200">
-                                <img class="h-8 w-8 rounded-full object-cover" 
-                                     src="{{ Auth::user()->profile_photo_url ?? 'https://ui-avatars.com/api/?name='.urlencode(Auth::user()->name) }}" 
-                                     alt="{{ Auth::user()->name }}">
-                                <span class="ml-2 text-sm font-google-sans text-gray-700">
-                                    {{ Auth::user()->name }}
-                                </span>
-                            </button>
-                        </x-slot>
+                <!-- Perfil do Usuário -->
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" 
+                            class="flex items-center px-3 py-2 rounded-xl hover:bg-gray-50 transition-all duration-200 group">
+                        <img class="h-8 w-8 rounded-xl object-cover ring-2 ring-gray-100 group-hover:ring-blue-100" 
+                             src="{{ Auth::user()->profile_photo_url ?? 'https://ui-avatars.com/api/?name='.urlencode(Auth::user()->name) }}" 
+                             alt="{{ Auth::user()->name }}">
+                        <span class="ml-2 text-sm font-google-sans text-gray-700">
+                            {{ Auth::user()->name }}
+                        </span>
+                        <svg class="ml-2 h-4 w-4 text-gray-400 group-hover:text-gray-500" 
+                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
 
-                        <x-slot name="content">
-                            <div class="py-1">
-                                <x-dropdown-link :href="route('profile.edit')" class="flex items-center">
-                                    <i class="material-icons-outlined text-lg mr-2">person</i>
-                                    {{ __('Profile') }}
+                    <!-- Menu Dropdown do Perfil -->
+                    <div x-show="open"
+                         @click.away="open = false"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 scale-95"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 scale-100"
+                         x-transition:leave-end="opacity-0 scale-95"
+                         class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+                        <div class="py-1">
+                            <x-dropdown-link :href="route('profile.edit')" 
+                                           class="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors duration-150">
+                                <i class="material-icons-outlined text-lg mr-2 text-gray-500">person</i>
+                                {{ __('Profile') }}
+                            </x-dropdown-link>
+
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <x-dropdown-link :href="route('logout')"
+                                    onclick="event.preventDefault(); this.closest('form').submit();"
+                                    class="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors duration-150">
+                                    <i class="material-icons-outlined text-lg mr-2 text-gray-500">logout</i>
+                                    {{ __('Log Out') }}
                                 </x-dropdown-link>
-
-                                <form method="POST" action="{{ route('logout') }}">
-                                    @csrf
-                                    <x-dropdown-link :href="route('logout')"
-                                        onclick="event.preventDefault(); this.closest('form').submit();"
-                                        class="flex items-center">
-                                        <i class="material-icons-outlined text-lg mr-2">logout</i>
-                                        {{ __('Log Out') }}
-                                    </x-dropdown-link>
-                                </form>
-                            </div>
-                        </x-slot>
-                    </x-dropdown>
+                            </form>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Mobile Sidebar -->
+    <!-- Sidebar Mobile -->
     <div x-show="sidebarOpen" 
-         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="-translate-x-full"
          x-transition:enter-end="translate-x-0"
-         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave="transition ease-in duration-300"
          x-transition:leave-start="translate-x-0"
          x-transition:leave-end="-translate-x-full"
-         class="fixed inset-0 z-40 lg:hidden">
+         class="fixed inset-0 z-50 lg:hidden">
         
-        <!-- Sidebar Backdrop -->
-        <div class="fixed inset-0 bg-gray-600 bg-opacity-50" 
+        <!-- Backdrop com Blur -->
+        <div class="fixed inset-0 bg-gray-600/20 backdrop-blur-sm" 
              @click="sidebarOpen = false"></div>
 
-        <!-- Sidebar Content -->
-        <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-lg">
+        <!-- Conteúdo da Sidebar -->
+        <div class="fixed inset-y-0 left-0 w-64 bg-white shadow-xl border-r border-gray-100">
             <div class="flex flex-col h-full">
                 <div class="p-4">
                     <a href="{{ route('dashboard') }}" class="flex items-center">
                         <x-application-logo class="block h-8 w-auto" />
-                        <span class="ml-2 text-lg font-google-sans text-gray-800">TopoSaaS</span>
+                        <span class="ml-2 text-lg font-google-sans text-gray-800">
+                            {{ config('app.name') }}
+                        </span>
                     </a>
                 </div>
 
                 <div class="flex-1 px-2 py-4 space-y-1">
-                    <!-- Mobile Navigation Links -->
-                    <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')"
-                        class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-50">
-                        <i class="material-icons-outlined text-xl mr-2">dashboard</i>
-                        {{ __('Dashboard') }}
-                    </x-responsive-nav-link>
-
-                    <x-responsive-nav-link :href="route('business.index')" :active="request()->routeIs('business.*')"
-                        class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-50">
-                        <i class="material-icons-outlined text-xl mr-2">business</i>
-                        {{ __('Negócios') }}
-                    </x-responsive-nav-link>
-
-                    <x-responsive-nav-link :href="route('automation.index')" :active="request()->routeIs('automation.*')"
-                        class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-50">
-                        <i class="material-icons-outlined text-xl mr-2">auto_fix_high</i>
-                        {{ __('Automação') }}
-                    </x-responsive-nav-link>
-
-                    @if($currentBusinessId)
-                        <x-responsive-nav-link :href="route('analytics.index', ['business' => $currentBusinessId])" 
-                            :active="request()->routeIs('analytics.*')"
-                            class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-50">
-                            <i class="material-icons-outlined text-xl mr-2">analytics</i>
-                            {{ __('Analytics') }}
-                        </x-responsive-nav-link>
-
-                        <x-responsive-nav-link :href="route('goals.index', ['business' => $currentBusinessId])" 
-                            :active="request()->routeIs('goals.*')"
-                            class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-50">
-                            <i class="material-icons-outlined text-xl mr-2">flag</i>
-                            {{ __('Metas') }}
-                        </x-responsive-nav-link>
-
-                        <x-responsive-nav-link :href="route('notifications.index', ['business' => $currentBusinessId])" 
-                            :active="request()->routeIs('notifications.*')"
-                            class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-50">
-                            <i class="material-icons-outlined text-xl mr-2">notifications</i>
-                            {{ __('Notificações') }}
-                        </x-responsive-nav-link>
-
-                        <x-responsive-nav-link :href="route('automation.protection', ['business' => $currentBusinessId])" 
-                            :active="request()->routeIs('automation.protection')"
-                            class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-50">
-                            <i class="material-icons-outlined text-xl mr-2">security</i>
-                            {{ __('Proteção') }}
-                        </x-responsive-nav-link>
-                    @endif
+                    <!-- Links Mobile -->
+                    @foreach([
+                        ['route' => 'dashboard', 'icon' => 'dashboard', 'label' => 'Dashboard'],
+                        ['route' => 'business.index', 'icon' => 'business', 'label' => 'Negócios'],
+                        ['route' => 'automation.index', 'icon' => 'auto_fix_high', 'label' => 'Automação'],
+                        ['route' => 'analytics.index', 'icon' => 'analytics', 'label' => 'Analytics', 'requires_business' => true],
+                        ['route' => 'goals.index', 'icon' => 'flag', 'label' => 'Metas', 'requires_business' => true],
+                        ['route' => 'notifications.index', 'icon' => 'notifications', 'label' => 'Notificações', 'requires_business' => true],
+                        
+                    ] as $link)
+                        @if(!($link['requires_business'] ?? false) || $currentBusinessId)
+                            <x-responsive-nav-link 
+                                :href="route($link['route'], isset($link['requires_business']) && $link['requires_business'] ? ['business' => $currentBusinessId] : [])"
+                                :active="request()->routeIs($link['route'] . (isset($link['requires_business']) ? '.*' : ''))"
+                                class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors duration-150">
+                                <i class="material-icons-outlined text-xl mr-2">{{ $link['icon'] }}</i>
+                                {{ __($link['label']) }}
+                            </x-responsive-nav-link>
+                        @endif
+                    @endforeach
                 </div>
             </div>
         </div>
@@ -195,13 +189,15 @@
         font-family: 'Google Sans', sans-serif;
     }
 
-    /* Active state for navigation links */
     .nav-link-active {
         @apply bg-blue-50 text-blue-700;
     }
 
-    /* Hover state for navigation links */
     .nav-link:hover {
         @apply bg-gray-50;
+    }
+
+    [x-cloak] { 
+        display: none !important; 
     }
 </style>
