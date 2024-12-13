@@ -550,48 +550,57 @@ public function analyzeMarketData($business, $competitors)
 
         $prompt = "Analise os seguintes dados e forneça uma análise de mercado detalhada em português:
 
-        Negócio Principal:
-        Nome: {$business->name}
-        Segmento: {$business->segment}
-        Descrição: {$business->description}
-        
-        Dados dos Concorrentes:
-        " . json_encode($competitorsData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "
-
-        Forneça uma análise estruturada incluindo:
-        1. Visão geral do mercado atual
-        2. Análise detalhada dos concorrentes
-        3. Oportunidades identificadas no mercado
-        4. Recomendações estratégicas específicas";
-
-        $response = $this->generateResponse($prompt);
-        
-        // Extrai as seções da resposta
-        $sections = $this->extractMarketAnalysisSections($response);
-
-        return [
-            'market_overview' => $sections['market_overview'] ?? 'Análise de mercado não disponível',
-            'competitor_analysis' => $sections['competitor_analysis'] ?? 'Análise de concorrentes não disponível',
-            'opportunities' => $sections['opportunities'] ?? 'Oportunidades não identificadas',
-            'recommendations' => $sections['recommendations'] ?? 'Recomendações não disponíveis'
-        ];
-
-    } catch (\Exception $e) {
-        Log::error('Erro na análise de mercado: ' . $e->getMessage());
-        return [
-            'market_overview' => 'Erro ao gerar análise de mercado',
-            'competitor_analysis' => 'Erro ao analisar concorrentes',
-            'opportunities' => 'Erro ao identificar oportunidades',
-            'recommendations' => 'Erro ao gerar recomendações'
-        ];
+            Negócio Principal:
+            Nome: {$business->name}
+            Segmento: {$business->segment}
+            Descrição: {$business->description}
+            
+            Dados dos Concorrentes:
+            " . json_encode($competitorsData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "
+    
+            Forneça uma análise estruturada no seguinte formato:
+    
+            1. Visão geral do mercado:
+               [Análise geral do mercado]
+    
+            2. Análise detalhada dos concorrentes:
+               • [Ponto específico sobre concorrente 1]
+               • [Ponto específico sobre concorrente 2]
+               • [Análise comparativa]
+               • [Posicionamento no mercado]
+    
+            3. Oportunidades identificadas:
+               [Lista de oportunidades]
+    
+            4. Recomendações estratégicas:
+               [Lista de recomendações]";
+    
+            $response = $this->generateResponse($prompt);
+            $sections = $this->extractMarketAnalysisSections($response);
+    
+            return [
+                'market_overview' => $sections['market_overview'] ?? 'Análise de mercado não disponível',
+                'competitor_analysis' => $sections['competitor_analysis'] ?? 'Análise de concorrentes não disponível',
+                'opportunities' => $sections['opportunities'] ?? 'Oportunidades não identificadas',
+                'recommendations' => $sections['recommendations'] ?? 'Recomendações não disponíveis'
+            ];
+    
+        } catch (\Exception $e) {
+            Log::error('Erro na análise de mercado: ' . $e->getMessage());
+            return [
+                'market_overview' => 'Erro ao gerar análise de mercado',
+                'competitor_analysis' => 'Erro ao analisar concorrentes',
+                'opportunities' => 'Erro ao identificar oportunidades',
+                'recommendations' => 'Erro ao gerar recomendações'
+            ];
+        }
     }
-}
 
 private function extractMarketAnalysisSections($content)
 {
     $sections = [];
     
-    // Padrões para encontrar cada seção
+    // Padrões atualizados para melhor extração
     $patterns = [
         'market_overview' => '/(?:1\.|Visão geral do mercado:?)(.*?)(?=(?:2\.|Análise|$))/is',
         'competitor_analysis' => '/(?:2\.|Análise detalhada dos concorrentes:?)(.*?)(?=(?:3\.|Oportunidades|$))/is',
@@ -601,22 +610,18 @@ private function extractMarketAnalysisSections($content)
 
     foreach ($patterns as $key => $pattern) {
         if (preg_match($pattern, $content, $matches)) {
-            $sections[$key] = trim($matches[1]);
-        } else {
-            // Tenta uma busca mais flexível se o padrão anterior falhar
-            $simplePattern = "/$key:?(.*?)(?=(?:market_overview|competitor_analysis|opportunities|recommendations|$))/is";
-            if (preg_match($simplePattern, $content, $matches)) {
-                $sections[$key] = trim($matches[1]);
-            } else {
-                $sections[$key] = null;
+            // Formata o texto mantendo a estrutura de lista
+            $text = trim($matches[1]);
+            
+            // Converte marcadores de lista em HTML
+            $text = preg_replace('/^\s*[-•]\s*/m', '<li>', $text);
+            $text = preg_replace('/(?<=<li>)(.*?)(?=(?:<li>|$))/s', '$1</li>', $text);
+            
+            if (strpos($text, '<li>') !== false) {
+                $text = '<ul class="list-disc list-inside space-y-2">' . $text . '</ul>';
             }
-        }
-    }
-
-    // Limpa e formata o texto de cada seção
-    foreach ($sections as $key => $value) {
-        if ($value) {
-            $sections[$key] = $this->cleanAnalysisText($value);
+            
+            $sections[$key] = $text;
         }
     }
 
@@ -658,6 +663,20 @@ public function testMarketAnalysis($business, $competitors)
             'error' => $e->getMessage()
         ];
     }
+}
+
+// No GeminiService ou Controller
+private function formatAnalysisText($text) {
+    // Remove espaços extras
+    $text = preg_replace('/\s+/', ' ', $text);
+    
+    // Converte marcadores em HTML
+    $text = preg_replace('/•\s*/', "\n• ", $text);
+    
+    // Adiciona quebras de linha entre parágrafos
+    $text = preg_replace('/\.\s+(?=[A-Z])/', ".\n\n", $text);
+    
+    return trim($text);
 }
     
 }

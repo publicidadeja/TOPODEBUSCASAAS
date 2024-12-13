@@ -732,246 +732,277 @@ function refreshInsights() {
 </script>
 @endpush
 
-   
-
-<!-- Análise de Concorrentes -->
-<div class="mt-8">
-    <div class="bg-white rounded-xl shadow-xl p-6 border border-gray-100">
-        <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold text-gray-800">
-                <span class="flex items-center">
-                    <svg class="w-6 h-6 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+ <!-- Análise de Concorrentes -->
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300">
+        <!-- Cabeçalho Aprimorado -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
+            <div class="flex items-center space-x-4">
+                <div class="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
                     </svg>
-                    Análise de Concorrentes
-                </span>
-            </h2>
-            <button onclick="refreshCompetitorAnalysis()" 
-                    class="inline-flex items-center px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg text-purple-700 hover:bg-purple-100 transition-colors duration-200">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                Atualizar Análise
-            </button>
-        </div>
-
-        
-
-        <!-- Estado de Carregamento Animado -->
-        <div id="competitor-loading" class="hidden">
-            <div class="flex justify-center items-center py-8">
-                <div class="relative">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500"></div>
-                    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                        <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                        </svg>
-                    </div>
                 </div>
-                <span class="ml-3 text-gray-600 font-medium">Analisando concorrentes...</span>
+                <div>
+                    <h2 class="text-2xl font-bold">
+                        <span class="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                            Análise de Concorrentes
+                        </span>
+                    </h2>
+                    <p class="text-sm text-gray-500">Monitoramento competitivo em tempo real</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center space-x-4">
+                <span class="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium hidden sm:inline-block">
+                    Última atualização: {{ $lastUpdate ?? 'Hoje' }}
+                </span>
+                <button onclick="refreshCompetitorAnalysis()" 
+                        class="group inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+                    <svg class="w-5 h-5 mr-2 group-hover:animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Atualizar Análise
+                </button>
             </div>
         </div>
 
-        <!-- Grid de Conteúdo -->
-        <div id="competitor-content" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Principais Concorrentes -->
-            <div class="bg-gradient-to-br from-purple-50 via-purple-25 to-white rounded-xl p-6 border border-purple-100">
-                <h3 class="text-lg font-semibold text-purple-800 mb-4 flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                    </svg>
-                    Principais Concorrentes
-                </h3>
-                
-                <div class="space-y-4" id="top-competitors">
-                    @foreach($competitors ?? [] as $competitor)
-                        <div class="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow duration-200 border border-gray-100">
-                            <div class="flex space-x-4">
-                                <!-- Imagem do Negócio com Fallback Inteligente -->
-                                <div class="flex-shrink-0 relative">
-                                    <img src="{{ $competitor['serper_image'] ?? $competitor['image_url'] ?? 'https://via.placeholder.com/80x80?text=Sem+Imagem' }}"
+        <!-- Estado de Carregamento Aprimorado -->
+        <div id="competitor-loading" class="hidden">
+            <div class="flex flex-col items-center justify-center py-12">
+                <div class="relative">
+                    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600">
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="h-10 w-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full animate-pulse"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-6 text-center">
+                    <h3 class="text-lg font-semibold text-gray-700">Analisando concorrentes...</h3>
+                    <div class="flex items-center justify-center space-x-2 mt-2">
+                        <span class="text-sm text-gray-500">Coletando dados</span>
+                        <div class="flex space-x-1">
+                            <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"></div>
+                            <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                            <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Conteúdo Principal -->
+        <div id="competitor-content" class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+            <!-- Lista de Concorrentes (9 colunas) -->
+            <div class="xl:col-span-9">
+                <div class="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-xl p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2 bg-indigo-100 rounded-lg">
+                                <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-800">Principais Concorrentes</h3>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-500">Total encontrado:</span>
+                            <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
+                                {{ count($competitors ?? []) }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6" id="top-competitors">
+                        @foreach($competitors ?? [] as $competitor)
+                        <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 group">
+                            <div class="flex flex-col sm:flex-row gap-6">
+                                <!-- Imagem e Status -->
+                                <div class="relative flex-shrink-0">
+                                    <img src="{{ $competitor['serper_image'] ?? $competitor['image_url'] ?? 'https://via.placeholder.com/100x100?text=Sem+Imagem' }}"
                                          alt="{{ $competitor['title'] }}"
-                                         class="w-20 h-20 object-cover rounded-lg shadow-sm"
-                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/80x80?text=Sem+Imagem';">
-                                    <div class="absolute -top-2 -right-2 bg-green-500 rounded-full w-4 h-4 border-2 border-white"
-                                         title="Ativo"></div>
+                                         class="w-24 h-24 object-cover rounded-xl shadow-md group-hover:shadow-lg transition-all duration-300"
+                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/100x100?text=Sem+Imagem';">
+                                    <div class="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 bg-gradient-to-r {{ $competitor['status'] === 'active' ? 'from-green-500 to-emerald-600' : 'from-gray-400 to-gray-500' }} rounded-full shadow-lg border-2 border-white transform group-hover:scale-110 transition-all duration-300"
+                                         title="{{ $competitor['status'] === 'active' ? 'Ativo' : 'Inativo' }}">
+                                        <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $competitor['status'] === 'active' ? 'M5 13l4 4L19 7' : 'M6 18L18 6M6 6l12 12' }}"/>
+                                        </svg>
+                                    </div>
                                 </div>
 
-                                <!-- Informações do Negócio -->
+                                <!-- Informações do Concorrente -->
                                 <div class="flex-grow">
-                                    <div class="flex justify-between items-start">
-                                        <h4 class="font-medium text-gray-900">{{ $competitor['title'] }}</h4>
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ $competitor['status'] === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
+                                    <div class="flex flex-wrap justify-between items-start gap-3">
+                                        <div>
+                                            <h4 class="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">
+                                                {{ $competitor['title'] }}
+                                            </h4>
+                                            <p class="text-sm text-gray-600 flex items-center mt-2">
+                                                <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                                </svg>
+                                                {{ $competitor['location'] }}
+                                            </p>
+                                        </div>
+                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $competitor['status'] === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
                                             {{ $competitor['status'] === 'active' ? 'Ativo' : 'Inativo' }}
                                         </span>
                                     </div>
-                                    
-                                    <p class="text-sm text-gray-500 flex items-center mt-1">
-                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                        </svg>
-                                        {{ $competitor['location'] }}
-                                    </p>
-                                    
+
                                     <!-- Sistema de Avaliação Aprimorado -->
-                                    <div class="flex items-center mt-2">
-                                        <div class="flex text-yellow-400">
-                                            @for($i = 1; $i <= 5; $i++)
-                                                @if($i <= floor($competitor['rating']))
-                                                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                                                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-                                                    </svg>
-                                                @elseif($i - 0.5 <= $competitor['rating'])
-                                                    <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                                                        <path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4V6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z"/>
-                                                    </svg>
-                                                @else
-                                                    <svg class="w-4 h-4 fill-current text-gray-300" viewBox="0 0 24 24">
-                                                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-                                                    </svg>
-                                                @endif
-                                            @endfor
-                                            <span class="ml-2 text-sm text-gray-600">
-                                                {{ number_format($competitor['rating'], 1) }}/5
+                                    <div class="flex items-center mt-4">
+                                        <div class="flex items-center">
+                                            <div class="flex -space-x-1">
+                                                @for($i = 1; $i <= 5; $i++)
+                                                    @if($i <= floor($competitor['rating']))
+                                                        <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                                        </svg>
+                                                    @else
+                                                        <svg class="w-5 h-5 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                                        </svg>
+                                                    @endif
+                                                @endfor
+                                            </div>
+                                            <div class="ml-3">
+                                                <span class="text-sm font-medium text-gray-700">{{ number_format($competitor['rating'], 1) }}/5</span>
                                                 @if($competitor['reviews'])
-                                                    <span class="text-gray-400">({{ number_format($competitor['reviews']) }} avaliações)</span>
+                                                    <span class="mx-2 text-gray-400">•</span>
+                                                    <span class="text-sm text-gray-500">{{ number_format($competitor['reviews']) }} avaliações</span>
                                                 @endif
-                                            </span>
+                                            </div>
                                         </div>
                                     </div>
-
-                                    <!-- Ações e Contatos -->
-                                    <div class="flex items-center space-x-4 mt-3">
+                                    <!-- Ações do Concorrente -->
+                                    <div class="flex flex-wrap gap-3 mt-4">
                                         @if($competitor['phone'])
                                             <a href="tel:{{ $competitor['phone'] }}" 
-                                               class="inline-flex items-center px-3 py-1 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 transition-colors duration-200">
-                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                               class="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 hover:shadow-md">
+                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
                                                 </svg>
-                                                Ligar
+                                                Contatar
                                             </a>
                                         @endif
                                         
                                         @if($competitor['website'])
                                             <a href="{{ $competitor['website'] }}" 
                                                target="_blank" 
-                                               class="inline-flex items-center px-3 py-1 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors duration-200">
-                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                               class="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 hover:shadow-md">
+                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                                                 </svg>
                                                 Visitar site
                                             </a>
                                         @endif
+
+                                        <button class="inline-flex items-center px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-300">
+                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                            Mais detalhes
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    @endforeach
+                        @endforeach
+                    </div>
+
+                    <!-- Paginação ou "Ver mais" -->
+                    @if(count($competitors ?? []) > 5)
+                        <div class="mt-8 text-center">
+                            <button class="inline-flex items-center px-6 py-3 bg-white border border-gray-200 rounded-xl text-indigo-600 hover:bg-indigo-50 transition-all duration-300">
+                                <span>Ver mais concorrentes</span>
+                                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                        </div>
+                    @endif
                 </div>
             </div>
 
-<!-- Análise de Mercado -->
-<div class="mt-8">
-    <div class="bg-white rounded-xl shadow-xl p-6 border border-gray-100">
-        <div class="flex items-center justify-between mb-6">
-            <h2 class="text-xl font-bold text-gray-800">
-                <span class="flex items-center">
-                    <svg class="w-6 h-6 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                    </svg>
-                    <span class="bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
-                        Análise de Mercado
-                    </span>
-                </span>
-            </h2>
-            <button onclick="refreshMarketAnalysis()" 
-                    class="inline-flex items-center px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 hover:bg-blue-100 transition-all duration-200 transform hover:scale-105">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                Atualizar Análise
-            </button>
-        </div>
-
-        <!-- Estado de Carregamento Aprimorado -->
-        <div id="market-analysis-loading" class="hidden">
-            <div class="flex flex-col items-center justify-center py-8">
-                <div class="relative">
-                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500">
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
+            <!-- Resumo e Estatísticas (3 colunas) -->
+            <div class="xl:col-span-3 space-y-6">
+                <!-- Card de Resumo -->
+                <div class="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-xl p-6">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Resumo Competitivo</h4>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Total de Concorrentes</span>
+                            <span class="font-semibold text-indigo-600">{{ count($competitors ?? []) }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Média de Avaliação</span>
+                            <div class="flex items-center">
+                                <svg class="w-4 h-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                                <span class="font-semibold text-indigo-600">4.5</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-gray-600">Concorrentes Ativos</span>
+                            <span class="font-semibold text-green-600">80%</span>
                         </div>
                     </div>
                 </div>
-                <span class="mt-4 text-gray-600 font-medium">Analisando mercado...</span>
-                <span class="text-sm text-gray-400 mt-2">Isso pode levar alguns segundos</span>
-            </div>
-        </div>
 
-        <!-- Conteúdo com Layout Aprimorado -->
-        <div id="market-analysis-content" class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Visão Geral do Mercado -->
-                <div class="bg-gradient-to-br from-blue-50 to-white rounded-xl p-6 border border-blue-100 shadow-sm">
-                    <div class="flex items-center mb-4">
-                        <svg class="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-                        </svg>
-                        <h3 class="text-lg font-semibold text-gray-800">Visão Geral do Mercado</h3>
-                    </div>
-                    <div class="prose prose-blue max-w-none">
-                        <!-- Conteúdo dinâmico -->
-                    </div>
-                </div>
-
-                <!-- Tendências e Oportunidades -->
-                <div class="bg-gradient-to-br from-green-50 to-white rounded-xl p-6 border border-green-100 shadow-sm">
-                    <div class="flex items-center mb-4">
-                        <svg class="w-5 h-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-                        </svg>
-                        <h3 class="text-lg font-semibold text-gray-800">Tendências e Oportunidades</h3>
-                    </div>
-                    <div class="prose prose-green max-w-none">
-                        <!-- Conteúdo dinâmico -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Insights e Recomendações -->
-            <div class="bg-gradient-to-br from-purple-50 to-white rounded-xl p-6 border border-purple-100 shadow-sm">
-                <div class="flex items-center mb-4">
-                    <svg class="w-5 h-5 text-purple-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                    </svg>
-                    <h3 class="text-lg font-semibold text-gray-800">Insights e Recomendações</h3>
-                </div>
-                <div class="prose prose-purple max-w-none">
-                    <!-- Conteúdo dinâmico -->
-                </div>
-            </div>
-
-            <!-- Indicadores de Desempenho -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium text-gray-500">Taxa de Crescimento</span>
-                        <span class="text-green-500">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                <!-- Ações Rápidas -->
+                <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Ações Rápidas</h4>
+                    <div class="space-y-3">
+                        <button class="w-full flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors duration-300">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                             </svg>
-                        </span>
+                            Gerar Relatório
+                        </button>
+                        <button class="w-full flex items-center px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors duration-300">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/>
+                            </svg>
+                            Análise Detalhada
+                        </button>
                     </div>
-                    <p class="text-2xl font-bold text-gray-900 mt-2">+12.5%</p>
                 </div>
-                <!-- Adicione mais indicadores conforme necessário -->
             </div>
         </div>
     </div>
 </div>
+
+<!-- Scripts JavaScript necessários -->
+<script>
+    function refreshCompetitorAnalysis() {
+        // Mostrar loading
+        document.getElementById('competitor-loading').classList.remove('hidden');
+        document.getElementById('competitor-content').classList.add('opacity-50');
+
+        // Simular chamada de API
+        setTimeout(() => {
+            // Esconder loading
+            document.getElementById('competitor-loading').classList.add('hidden');
+            document.getElementById('competitor-content').classList.remove('opacity-50');
+        }, 2000);
+    }
+
+    function refreshMarketAnalysis() {
+        // Mostrar loading
+        document.getElementById('market-analysis-loading').classList.remove('hidden');
+        document.getElementById('market-analysis-content').classList.add('opacity-50');
+
+        // Simular chamada de API
+        setTimeout(() => {
+            // Esconder loading
+            document.getElementById('market-analysis-loading').classList.add('hidden');
+            document.getElementById('market-analysis-content').classList.remove('opacity-50');
+        }, 2000);
+    }
+</script>
+
 
 @push('scripts')
 <script>

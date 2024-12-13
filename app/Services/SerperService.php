@@ -327,14 +327,25 @@ public function searchCompetitors($businessName, $city)
     try {
         \Log::info("Searching competitors for: {$businessName} in {$city}");
         
-        // Construct the search query
-        $query = "{$businessName} competitors {$city}";
+        // Construct a more specific search query
+        $query = sprintf(
+            '%s %s em %s',
+            $businessName,
+            'concorrentes locais próximos',
+            $city
+        );
         
-        // Make the API request
-        $response = Http::post($this->apiEndpoint, [
+        // Make the API request with enhanced parameters
+        $response = Http::withHeaders([
+            'X-API-KEY' => $this->apiKey,
+            'Content-Type' => 'application/json'
+        ])->post($this->apiEndpoint, [
             'q' => $query,
-            'api_key' => $this->apiKey,
-            'search_type' => 'places'
+            'gl' => 'br', // Região Brasil
+            'num' => 20,  // Aumenta número de resultados para melhor filtragem
+            'type' => 'places',
+            'search_type' => 'places',
+            'hl' => 'pt-br'
         ]);
 
         if (!$response->successful()) {
@@ -344,7 +355,7 @@ public function searchCompetitors($businessName, $city)
 
         $data = $response->json();
         
-        // Filter and format the results
+        // Filter and format the results with enhanced data
         $competitors = [];
         if (isset($data['places'])) {
             foreach ($data['places'] as $place) {
@@ -353,29 +364,70 @@ public function searchCompetitors($businessName, $city)
                     continue;
                 }
 
-                $competitors[] = [
+                // Estrutura mais completa dos dados do concorrente
+                $competitor = [
                     'title' => $place['title'] ?? '',
-                    'snippet' => $this->generateDescription($place),
-                    'rating' => $place['rating'] ?? null,
-                    'reviews' => $place['reviewsCount'] ?? 0,
+                    'name' => $place['title'] ?? '',
+                    'location' => $place['address'] ?? '',
                     'address' => $place['address'] ?? '',
+                    'rating' => floatval($place['rating'] ?? 0),
+                    'reviews' => intval($place['reviewsCount'] ?? 0),
+                    'phone' => $place['phoneNumber'] ?? '',
                     'website' => $place['website'] ?? '',
-                    'phone' => $place['phone'] ?? '',
+                    'image_url' => $place['thumbnailUrl'] ?? '',
                     'categories' => $place['categories'] ?? [],
+                    'hours' => $place['hours'] ?? [],
+                    'description' => $this->generateDescription($place),
+                    'metrics' => [
+                        'rating_score' => $this->calculateRatingScore($place),
+                        'popularity_score' => $this->calculatePopularityScore($place),
+                        'online_presence_score' => $this->calculateOnlinePresenceScore($place)
+                    ],
+                    'additional_data' => [
+                        'price_level' => $place['priceLevel'] ?? null,
+                        'status' => $place['status'] ?? null,
+                        'place_id' => $place['placeId'] ?? null,
+                        'latitude' => $place['latitude'] ?? null,
+                        'longitude' => $place['longitude'] ?? null
+                    ]
                 ];
+
+                // Adiciona informações de distância se disponíveis
+                if (isset($place['distance'])) {
+                    $competitor['distance'] = $place['distance'];
+                }
+
+                // Adiciona informações de serviços se disponíveis
+                if (isset($place['services'])) {
+                    $competitor['services'] = $place['services'];
+                }
+
+                $competitors[] = $competitor;
             }
+
+            // Ordena por relevância (rating e número de reviews)
+            usort($competitors, function($a, $b) {
+                $scoreA = ($a['rating'] * 2) + ($a['reviews'] / 100);
+                $scoreB = ($b['rating'] * 2) + ($b['reviews'] / 100);
+                return $scoreB <=> $scoreA;
+            });
+
+            // Limita aos 10 concorrentes mais relevantes
+            $competitors = array_slice($competitors, 0, 10);
         }
 
-        // Sort competitors by rating (descending)
-        usort($competitors, function($a, $b) {
-            return ($b['rating'] ?? 0) <=> ($a['rating'] ?? 0);
-        });
+        \Log::info('Competitor search completed', [
+            'query' => $query,
+            'total_found' => count($competitors)
+        ]);
 
-        // Return top 5 competitors
-        return array_slice($competitors, 0, 5);
+        return $competitors;
 
     } catch (\Exception $e) {
-        \Log::error('Error searching competitors: ' . $e->getMessage());
+        \Log::error('Error searching competitors: ' . $e->getMessage(), [
+            'businessName' => $businessName,
+            'city' => $city
+        ]);
         return [];
     }
 }
