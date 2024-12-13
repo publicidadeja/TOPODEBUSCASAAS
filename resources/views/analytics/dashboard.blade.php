@@ -407,6 +407,8 @@
     </div>
 </div>
 
+
+
  <!-- Seção de Palavras-chave -->
 <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100">
     <div class="flex items-center justify-between mb-6">
