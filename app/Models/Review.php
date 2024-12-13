@@ -13,8 +13,16 @@ class Review extends Model
         'business_id',
         'author',
         'rating',
-        'comment'
+        'comment',
+        'scheduled_date',
+        'notes',
+        'status'
     ];
+
+    protected $casts = [
+        'scheduled_date' => 'datetime'
+    ];
+
 
     public function business()
     {

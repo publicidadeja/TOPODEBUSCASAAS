@@ -46,7 +46,7 @@ class CompetitorAnalysisController extends Controller
                     'website' => $competitor['website'] ?? null,
                     'image_url' => $competitor['thumbnailUrl'] ?? $competitor['image_url'] ?? null,
                     'score' => $score,
-                    'summary' => $competitor['snippet'] ?? 'Resumo não disponível'
+                    'summary' => $competitor['snippet'] ?? 'Resumo não disponível',
                 ];
             }, $competitors);
     

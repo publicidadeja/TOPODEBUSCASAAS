@@ -1503,6 +1503,47 @@ public function refreshKeywords(Business $business)
         ], 500);
     }
 }
+public function export($type, $businessId, Request $request)
+{
+    $period = $request->get('period', 30);
+    
+    // Lógica para gerar o relatório baseado no tipo (PDF/Excel)
+    if ($type === 'pdf') {
+        // Gerar PDF
+        return response()->download($pdfPath);
+    } else {
+        // Gerar Excel
+        return response()->download($excelPath);
+    }
+}
 
+public function scheduleReview($businessId, Request $request)
+{
+    try {
+        // Validar dados
+        $validated = $request->validate([
+            'review_date' => 'required|date|after:now',
+            'notes' => 'nullable|string|max:500'
+        ]);
+        
+        // Criar agendamento
+        $review = Review::create([
+            'business_id' => $businessId,
+            'scheduled_date' => $validated['review_date'],
+            'notes' => $validated['notes'],
+            'status' => 'scheduled'
+        ]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Revisão agendada com sucesso!'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao agendar revisão'
+        ], 500);
+    }
+}
 
 }

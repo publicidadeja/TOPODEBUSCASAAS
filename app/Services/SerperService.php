@@ -328,11 +328,10 @@ public function searchCompetitors($businessName, $city)
     try {
         \Log::info("Searching competitors for: {$businessName} in {$city}");
         
-        // Construct a more specific search query
         $query = sprintf(
             '%s %s em %s',
             $businessName,
-            'concorrentes locais próximos',
+            'concorrentes locais de google meu negocio próximos',
             $city
         );
         
@@ -378,6 +377,7 @@ public function searchCompetitors($businessName, $city)
                 // Processa e valida a URL da imagem
                 $imageUrl = $this->processImageUrl($place);
 
+
                 $competitor = [
                     'title' => $place['title'] ?? '',
                     'name' => $place['title'] ?? '',
@@ -388,8 +388,10 @@ public function searchCompetitors($businessName, $city)
                     'phone' => $place['phoneNumber'] ?? '',
                     'website' => $place['website'] ?? '',
                     'image_url' => $imageUrl,
-                    'thumbnailUrl' => $imageUrl, // Adiciona também como thumbnailUrl
-                    'serper_image' => $imageUrl, // Adiciona também como serper_image
+                    'thumbnailUrl' => $imageUrl,
+                    'thumbnail' => $imageUrl,
+                    'serper_image' => $imageUrl,
+                    'photo' => $imageUrl,
                     'categories' => $place['categories'] ?? [],
                     'hours' => $place['hours'] ?? [],
                     'description' => $this->generateDescription($place),
@@ -434,34 +436,42 @@ public function searchCompetitors($businessName, $city)
 // Função auxiliar para processar e validar URLs de imagem
 private function processImageUrl($place)
 {
-    // Log para debug
-    \Log::debug('Processing image URL for place:', [
-        'title' => $place['title'] ?? 'Unknown',
-        'data' => $place
-    ]);
+    try {
+        // Tenta obter a URL da imagem de diferentes campos possíveis
+        $imageUrl = null;
 
-    // Tenta obter a URL da imagem de diferentes campos possíveis
-    $imageUrl = null;
+        // Prioridade 1: thumbnailUrl
+        if (!empty($place['thumbnailUrl'])) {
+            $imageUrl = $place['thumbnailUrl'];
+        }
+        // Prioridade 2: photos array
+        elseif (!empty($place['photos']) && is_array($place['photos'])) {
+            $imageUrl = $place['photos'][0] ?? null;
+        }
+        // Prioridade 3: imageUrl
+        elseif (!empty($place['imageUrl'])) {
+            $imageUrl = $place['imageUrl'];
+        }
 
-    // Verifica thumbnailUrl
-    if (!empty($place['thumbnailUrl'])) {
-        $imageUrl = $place['thumbnailUrl'];
-    }
-    // Verifica photos array
-    elseif (!empty($place['photos']) && is_array($place['photos'])) {
-        $imageUrl = $place['photos'][0] ?? null;
-    }
-    // Verifica imageUrl
-    elseif (!empty($place['imageUrl'])) {
-        $imageUrl = $place['imageUrl'];
-    }
+        // Se não encontrou nenhuma imagem, retorna uma imagem padrão
+        if (!$imageUrl) {
+            return asset('images/default-business.png'); // Crie uma imagem padrão
+        }
 
-    // Valida a URL
-    if ($imageUrl && $this->isValidImageUrl($imageUrl)) {
+        // Remove possíveis parâmetros de URL que possam invalidar a imagem
+        $imageUrl = strtok($imageUrl, '?');
+
+        // Verifica se a URL começa com http ou https
+        if (!preg_match("~^(?:f|ht)tps?://~i", $imageUrl)) {
+            $imageUrl = 'https://' . ltrim($imageUrl, '/');
+        }
+
         return $imageUrl;
-    }
 
-    return null;
+    } catch (\Exception $e) {
+        \Log::error('Error processing image URL: ' . $e->getMessage());
+        return asset('images/default-business.png');
+    }
 }
 
 // Função auxiliar para validar URLs de imagem

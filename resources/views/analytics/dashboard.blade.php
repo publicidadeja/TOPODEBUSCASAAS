@@ -1034,11 +1034,11 @@ function refreshInsights() {
             <div class="lg:col-span-2 space-y-4 sm:space-y-6">
                 <!-- Visão Geral -->
                 <div class="bg-gray-50 rounded-xl p-4 sm:p-6">
-                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Visão Geral</h4>
-                    <div class="prose max-w-none text-gray-600 text-sm sm:text-base">
-                        {!! preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', nl2br(e($competitorAnalysis['content'] ?? ''))) !!}
-                    </div>
-                </div>
+    <h4 class="text-lg font-semibold text-gray-800 mb-4">Visão Geral</h4>
+    <div class="prose max-w-none text-gray-600 text-sm sm:text-base">
+        {!! preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', nl2br(e($competitorAnalysis['content'] ?? ''))) !!}
+    </div>
+</div>
 
                 <!-- Metrics Grid -->
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
@@ -1098,18 +1098,14 @@ function refreshInsights() {
                 <div class="bg-gray-50 rounded-xl p-4 sm:p-6">
                     <h4 class="text-lg font-semibold text-gray-800 mb-4">Ações Recomendadas</h4>
                     <div class="space-y-3">
-                        <button class="w-full flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-blue-500 hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <span class="text-gray-700">Exportar Relatório</span>
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-                            </svg>
-                        </button>
-                        <button class="w-full flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-blue-500 hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <span class="text-gray-700">Agendar Revisão</span>
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                        </button>
+                    <button onclick="exportDetailedReport('pdf')" 
+        class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
+    Exportar Relatório
+</button>
+<button onclick="scheduleReview()" 
+        class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">
+    Agendar Revisão
+</button>
                     </div>
                 </div>
 
@@ -1146,9 +1142,167 @@ function refreshInsights() {
 
 
 
-
 <!-- Scripts -->
 <script>
+
+    // Função para exportar relatório
+function exportDetailedReport(type) {
+    const businessId = document.getElementById('business-selector').value;
+    const period = document.getElementById('period-selector').value;
+    
+    // Construir URL com parâmetros
+    const url = `/analytics/export/${type}/${businessId}?period=${period}`;
+    
+    // Mostrar indicador de carregamento
+    showLoadingIndicator();
+    
+    fetch(url, {
+        method: 'GET',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            return response.blob();
+        }
+        throw new Error('Erro ao exportar relatório');
+    })
+    .then(blob => {
+        // Criar link para download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `relatorio-${type}-${new Date().toISOString().split('T')[0]}.${type}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        hideLoadingIndicator();
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showNotification('Erro ao exportar relatório', 'error');
+        hideLoadingIndicator();
+    });
+}
+
+// Função para agendar revisão
+function scheduleReview() {
+    const businessId = document.getElementById('business-selector').value;
+    
+    // Abrir modal de agendamento
+    const modal = document.createElement('div');
+    modal.innerHTML = `
+        <div class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 flex items-center justify-center">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Agendar Revisão</h3>
+                    <button onclick="closeModal(this)" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <form id="review-form" onsubmit="submitReviewSchedule(event)">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Data da Revisão
+                        </label>
+                        <input type="datetime-local" 
+                               name="review_date" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                               required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Observações
+                        </label>
+                        <textarea name="notes" 
+                                  class="w-full px-3 py-2 border border-gray-300 rounded-md"
+                                  rows="3"></textarea>
+                    </div>
+                    <div class="flex justify-end space-x-3">
+                        <button type="button" 
+                                onclick="closeModal(this)"
+                                class="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">
+                            Cancelar
+                        </button>
+                        <button type="submit" 
+                                class="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700">
+                            Agendar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// Função para fechar modal
+function closeModal(element) {
+    const modal = element.closest('.fixed');
+    modal.remove();
+}
+
+// Função para submeter agendamento
+function submitReviewSchedule(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const businessId = document.getElementById('business-selector').value;
+    const formData = new FormData(form);
+    
+    fetch(`/analytics/schedule-review/${businessId}`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            review_date: formData.get('review_date'),
+            notes: formData.get('notes')
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Revisão agendada com sucesso!', 'success');
+            closeModal(form);
+        } else {
+            showNotification('Erro ao agendar revisão', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showNotification('Erro ao agendar revisão', 'error');
+    });
+}
+
+// Função auxiliar para mostrar notificações
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white ${
+        type === 'success' ? 'bg-green-500' : 'bg-red-500'
+    } animate-fade-in z-50`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Funções auxiliares para indicador de carregamento
+function showLoadingIndicator() {
+    // Implementar indicador de carregamento
+}
+
+function hideLoadingIndicator() {
+    // Implementar remoção do indicador de carregamento
+}
+
 function fetchCompetitors() {
     fetch(`/analytics/detailed-analysis/{{ $business->id }}`)
         .then(response => response.json())
