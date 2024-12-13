@@ -520,22 +520,33 @@ public function checkGeminiSetup(GeminiService $gemini)
     }
 }
 
+// Em GeminiService.php
 public function analyzeMarketData($business, $competitors)
 {
     try {
-        // Garante que $competitors seja um array
-        $competitorsData = $competitors->map(function ($competitor) {
-            return [
-                'name' => $competitor->name ?? 'Nome não disponível',
-                'rating' => $competitor->rating ?? 0,
-                'reviews_count' => $competitor->reviews_count ?? 0,
-                'analytics' => [
-                    'views' => $competitor->analytics->sum('views') ?? 0,
-                    'clicks' => $competitor->analytics->sum('clicks') ?? 0,
-                    'calls' => $competitor->analytics->sum('calls') ?? 0
-                ]
-            ];
-        })->toArray();
+        // Primeiro, vamos garantir que temos um array de competidores
+        $competitorsData = [];
+        
+        // Verifica se $competitors é uma Collection ou um array
+        if ($competitors instanceof \Illuminate\Support\Collection) {
+            $competitorsData = $competitors->map(function ($competitor) {
+                return [
+                    'name' => $competitor['title'] ?? 'Nome não disponível',
+                    'rating' => $competitor['rating'] ?? 0,
+                    'reviews_count' => $competitor['reviews'] ?? 0,
+                    'location' => $competitor['location'] ?? 'Localização não disponível'
+                ];
+            })->toArray();
+        } elseif (is_array($competitors)) {
+            foreach ($competitors as $competitor) {
+                $competitorsData[] = [
+                    'name' => $competitor['title'] ?? 'Nome não disponível',
+                    'rating' => $competitor['rating'] ?? 0,
+                    'reviews_count' => $competitor['reviews'] ?? 0,
+                    'location' => $competitor['location'] ?? 'Localização não disponível'
+                ];
+            }
+        }
 
         $prompt = "Analise os seguintes dados e forneça uma análise de mercado detalhada em português:
 
@@ -545,7 +556,7 @@ public function analyzeMarketData($business, $competitors)
         Descrição: {$business->description}
         
         Dados dos Concorrentes:
-        " . json_encode($competitorsData, JSON_PRETTY_PRINT) . "
+        " . json_encode($competitorsData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "
 
         Forneça uma análise estruturada incluindo:
         1. Visão geral do mercado atual

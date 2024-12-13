@@ -131,11 +131,11 @@ class CompetitorAnalysisController extends Controller
     try {
         $prompt = "Analise os seguintes dados de concorrentes e forneça exatamente 3 recomendações estratégicas.\n\n";
         $prompt .= "Dados dos concorrentes:\n";
-        foreach ($competitorsData as $data) {
+        foreach ($competitors as $data) { // Changed from $competitorsData to $competitors
             $prompt .= "- Empresa: {$data['name']}\n";
             $prompt .= "  Avaliação: {$data['rating']}/5\n";
             $prompt .= "  Número de reviews: {$data['reviews']}\n";
-            $prompt .= "  Possui website: " . ($data['has_website'] ? 'Sim' : 'Não') . "\n";
+            $prompt .= "  Possui website: " . (!empty($data['website']) ? 'Sim' : 'Não') . "\n";
             $prompt .= "  Localização: {$data['location']}\n\n";
         }
         
