@@ -321,4 +321,62 @@ private function extractKeywords($data)
     // Retornar os 10 termos mais frequentes
     return array_slice($keywords, 0, 10, true);
 }
+
+public function searchCompetitors($businessName, $city)
+{
+    try {
+        \Log::info("Searching competitors for: {$businessName} in {$city}");
+        
+        // Construct the search query
+        $query = "{$businessName} competitors {$city}";
+        
+        // Make the API request
+        $response = Http::post($this->apiEndpoint, [
+            'q' => $query,
+            'api_key' => $this->apiKey,
+            'search_type' => 'places'
+        ]);
+
+        if (!$response->successful()) {
+            \Log::error('Serper API request failed: ' . $response->body());
+            return [];
+        }
+
+        $data = $response->json();
+        
+        // Filter and format the results
+        $competitors = [];
+        if (isset($data['places'])) {
+            foreach ($data['places'] as $place) {
+                // Skip if it's the same business
+                if (strtolower($place['title']) === strtolower($businessName)) {
+                    continue;
+                }
+
+                $competitors[] = [
+                    'title' => $place['title'] ?? '',
+                    'snippet' => $this->generateDescription($place),
+                    'rating' => $place['rating'] ?? null,
+                    'reviews' => $place['reviewsCount'] ?? 0,
+                    'address' => $place['address'] ?? '',
+                    'website' => $place['website'] ?? '',
+                    'phone' => $place['phone'] ?? '',
+                    'categories' => $place['categories'] ?? [],
+                ];
+            }
+        }
+
+        // Sort competitors by rating (descending)
+        usort($competitors, function($a, $b) {
+            return ($b['rating'] ?? 0) <=> ($a['rating'] ?? 0);
+        });
+
+        // Return top 5 competitors
+        return array_slice($competitors, 0, 5);
+
+    } catch (\Exception $e) {
+        \Log::error('Error searching competitors: ' . $e->getMessage());
+        return [];
+    }
+}
 }

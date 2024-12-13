@@ -238,4 +238,44 @@ private function processKeywordAnalysis($analysis)
     
     return $keywords;
 }
+
+public function getCompetitorAnalysis($business, $analyticsData)
+{
+    try {
+        // Search for competitors
+        $competitors = $this->serper->searchCompetitors($business->name, $business->city);
+        
+        // Format competitor data for analysis
+        $formattedCompetitors = [];
+        foreach ($competitors as $competitor) {
+            $formattedCompetitors[] = [
+                'name' => $competitor['title'] ?? '',
+                'description' => $competitor['snippet'] ?? '',
+                'rating' => $competitor['rating'] ?? null,
+                'reviews' => $competitor['reviews'] ?? 0,
+            ];
+        }
+
+     // Generate analysis prompt
+     $prompt = "Analyze these competitors for {$business->name} in {$business->city}:\n\n";
+     foreach ($formattedCompetitors as $competitor) {
+         $prompt .= "Competitor: {$competitor['name']}\n";
+         $prompt .= "Description: {$competitor['description']}\n";
+         if ($competitor['rating']) {
+             $prompt .= "Rating: {$competitor['rating']} ({$competitor['reviews']} reviews)\n";
+         }
+         $prompt .= "\n";
+     }
+
+     // Get analysis from Gemini
+     $analysis = $this->gemini->generateContent($prompt);
+
+     // Return just the content string instead of an array
+     return $analysis;
+
+ } catch (\Exception $e) {
+     \Log::error('Error generating competitor analysis: ' . $e->getMessage());
+     return "Não foi possível gerar a análise de concorrentes no momento. Por favor, tente novamente mais tarde.";
+ }
+}
 }

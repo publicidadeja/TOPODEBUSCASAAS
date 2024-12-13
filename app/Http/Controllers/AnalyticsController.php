@@ -69,6 +69,7 @@ class AnalyticsController extends Controller
         $keywords = [];
     }
 
+
     // 4. Busca e processamento dos dados analíticos
     $analytics = BusinessAnalytics::where('business_id', $selectedBusiness->id)
         ->whereBetween('date', [$startDate, $endDate])
@@ -252,7 +253,7 @@ $topLocations = $locationData
     })
     ->values()
     ->toArray();
-
+    $competitorAnalysis = $this->aiAnalysisService->getCompetitorAnalysis($business, $analyticsData);
 
 // 15. Retorno da view com dados atualizados
 return view('analytics.dashboard', compact(
@@ -272,7 +273,8 @@ return view('analytics.dashboard', compact(
     'locationData',
     'topLocations',
     'suggestions',
-    'keywords'
+    'keywords',
+    'competitorAnalysis'
 ));
 }
 

@@ -1783,12 +1783,23 @@ function refreshMarketAnalysis() {
                     </div>
                 </div>
 
-                <div class="bg-purple-50 p-6 rounded-lg border-l-4 border-purple-500">
-                    <h3 class="text-lg font-semibold text-purple-800 mb-3">Análise dos Concorrentes</h3>
-                    <div class="prose prose-purple max-w-none">
-                        <p class="text-gray-700 leading-relaxed">${formatAnalysisText(competitorAnalysis)}</p>
-                    </div>
-                </div>
+<div class="bg-purple-50 p-6 rounded-lg border-l-4 border-purple-500">
+    <h3 class="text-lg font-semibold text-purple-800 mb-3">Análise dos Concorrentes</h3>
+    <div class="prose prose-purple max-w-none">
+        <p class="text-gray-700 leading-relaxed">
+            @if(isset($competitorAnalysis) && !empty($competitorAnalysis))
+                @if(isset($competitorAnalysis['title']))
+                    <h4 class="text-lg font-medium mb-2">{{ $competitorAnalysis['title'] }}</h4>
+                @endif
+                @if(isset($competitorAnalysis['content']))
+                    {!! nl2br(e($competitorAnalysis['content'])) !!}
+                @endif
+            @else
+                Nenhuma análise de concorrentes disponível no momento.
+            @endif
+        </p>
+    </div>
+</div>
 
                 <div class="bg-green-50 p-6 rounded-lg border-l-4 border-green-500">
                     <h3 class="text-lg font-semibold text-green-800 mb-3">Oportunidades Identificadas</h3>
