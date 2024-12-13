@@ -524,77 +524,67 @@ public function checkGeminiSetup(GeminiService $gemini)
 public function analyzeMarketData($business, $competitors)
 {
     try {
-        // Primeiro, vamos garantir que temos um array de competidores
-        $competitorsData = [];
+        $response = $this->generateResponse($this->buildMarketAnalysisPrompt($business, $competitors));
+        $formattedResponse = $this->formatAnalysisResponse($response);
         
-        // Verifica se $competitors é uma Collection ou um array
-        if ($competitors instanceof \Illuminate\Support\Collection) {
-            $competitorsData = $competitors->map(function ($competitor) {
-                return [
-                    'name' => $competitor['title'] ?? 'Nome não disponível',
-                    'rating' => $competitor['rating'] ?? 0,
-                    'reviews_count' => $competitor['reviews'] ?? 0,
-                    'location' => $competitor['location'] ?? 'Localização não disponível'
-                ];
-            })->toArray();
-        } elseif (is_array($competitors)) {
-            foreach ($competitors as $competitor) {
-                $competitorsData[] = [
-                    'name' => $competitor['title'] ?? 'Nome não disponível',
-                    'rating' => $competitor['rating'] ?? 0,
-                    'reviews_count' => $competitor['reviews'] ?? 0,
-                    'location' => $competitor['location'] ?? 'Localização não disponível'
-                ];
-            }
-        }
-
-        $prompt = "Analise os seguintes dados e forneça uma análise de mercado detalhada em português:
-
-            Negócio Principal:
-            Nome: {$business->name}
-            Segmento: {$business->segment}
-            Descrição: {$business->description}
-            
-            Dados dos Concorrentes:
-            " . json_encode($competitorsData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "
-    
-            Forneça uma análise estruturada no seguinte formato:
-    
-            1. Visão geral do mercado:
-               [Análise geral do mercado]
-    
-            2. Análise detalhada dos concorrentes:
-               • [Ponto específico sobre concorrente 1]
-               • [Ponto específico sobre concorrente 2]
-               • [Análise comparativa]
-               • [Posicionamento no mercado]
-    
-            3. Oportunidades identificadas:
-               [Lista de oportunidades]
-    
-            4. Recomendações estratégicas:
-               [Lista de recomendações]";
-    
-            $response = $this->generateResponse($prompt);
-            $sections = $this->extractMarketAnalysisSections($response);
-    
-            return [
-                'market_overview' => $sections['market_overview'] ?? 'Análise de mercado não disponível',
-                'competitor_analysis' => $sections['competitor_analysis'] ?? 'Análise de concorrentes não disponível',
-                'opportunities' => $sections['opportunities'] ?? 'Oportunidades não identificadas',
-                'recommendations' => $sections['recommendations'] ?? 'Recomendações não disponíveis'
-            ];
-    
-        } catch (\Exception $e) {
-            Log::error('Erro na análise de mercado: ' . $e->getMessage());
-            return [
-                'market_overview' => 'Erro ao gerar análise de mercado',
-                'competitor_analysis' => 'Erro ao analisar concorrentes',
-                'opportunities' => 'Erro ao identificar oportunidades',
-                'recommendations' => 'Erro ao gerar recomendações'
-            ];
-        }
+        return [
+            'success' => true,
+            'data' => $formattedResponse
+        ];
+    } catch (\Exception $e) {
+        Log::error('Erro na análise de mercado: ' . $e->getMessage());
+        return [
+            'success' => false,
+            'error' => 'Erro ao processar análise'
+        ];
     }
+}
+
+private function formatAnalysisResponse($response)
+{
+    $sections = $this->extractMarketAnalysisSections($response);
+    
+    return [
+        'market_overview' => [
+            'content' => $sections['market_overview'] ?? 'Análise não disponível',
+            'formatted_html' => $this->convertToHtml($sections['market_overview'])
+        ],
+        'competitor_analysis' => [
+            'content' => $sections['competitor_analysis'] ?? 'Análise não disponível',
+            'formatted_html' => $this->convertToHtml($sections['competitor_analysis'])
+        ],
+        'opportunities' => [
+            'content' => $sections['opportunities'] ?? 'Análise não disponível',
+            'formatted_html' => $this->convertToHtml($sections['opportunities'])
+        ],
+        'recommendations' => [
+            'content' => $sections['recommendations'] ?? 'Análise não disponível',
+            'formatted_html' => $this->convertToHtml($sections['recommendations'])
+        ]
+    ];
+}
+
+private function convertToHtml($text)
+{
+    if (empty($text)) return '';
+    
+    // Remove caracteres especiais
+    $text = preg_replace('/[\x00-\x1F\x7F]/u', '', $text);
+    
+    // Converte marcadores em HTML
+    $text = preg_replace('/•\s*([^•]+)(?=(?:•|$))/u', '<li>$1</li>', $text);
+    
+    // Adiciona classes do Tailwind
+    if (strpos($text, '<li>') !== false) {
+        $text = '<ul class="list-disc pl-5 space-y-2 text-gray-700">' . $text . '</ul>';
+    }
+    
+    // Formata parágrafos
+    $text = preg_replace('/\n{2,}/', '</p><p class="mb-4">', $text);
+    $text = '<p class="mb-4">' . $text . '</p>';
+    
+    return $text;
+}
 
 private function extractMarketAnalysisSections($content)
 {

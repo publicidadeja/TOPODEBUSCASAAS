@@ -938,7 +938,7 @@ function refreshInsights() {
     <h4 class="text-lg font-semibold text-gray-800 mb-4">Resumo Competitivo</h4>
     <div class="space-y-4">
         <div class="flex items-center justify-between">
-            <span class="text-sm text-gray-600">Total de Concorrentes</span>
+            <span class="text-sm text-gray-600">Total de Concorrentes analisados</span>
             <span class="font-semibold text-indigo-600">{{ $competitorsSummary['total'] }}</span>
         </div>
         <div class="flex items-center justify-between">
@@ -997,7 +997,7 @@ function refreshInsights() {
                 </div>
                 <div class="ml-4 text-left">
                     <span class="block font-semibold">Análise Detalhada</span>
-                    <span class="text-xs text-purple-600 opacity-75">Visualizar métricas completas</span>
+                    <span class="text-xs text-purple-600 opacity-75">Analisar concorrentes</span>
                 </div>
             </div>
             <svg class="w-5 h-5 text-purple-400 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1036,7 +1036,7 @@ function refreshInsights() {
                 <div class="bg-gray-50 rounded-xl p-4 sm:p-6">
                     <h4 class="text-lg font-semibold text-gray-800 mb-4">Visão Geral</h4>
                     <div class="prose max-w-none text-gray-600 text-sm sm:text-base">
-                        {!! nl2br(e($competitorAnalysis['content'] ?? '')) !!}
+                        {!! preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', nl2br(e($competitorAnalysis['content'] ?? ''))) !!}
                     </div>
                 </div>
 
