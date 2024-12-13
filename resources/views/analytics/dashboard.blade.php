@@ -813,23 +813,29 @@ function refreshInsights() {
                     </div>
 
                     <div class="space-y-6" id="top-competitors">
-                        @foreach($competitors ?? [] as $competitor)
-                        <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 group">
-                            <div class="flex flex-col sm:flex-row gap-6">
-                                <!-- Imagem e Status -->
-                                <div class="relative flex-shrink-0">
-                                    <img src="{{ $competitor['serper_image'] ?? $competitor['image_url'] ?? 'https://via.placeholder.com/100x100?text=Sem+Imagem' }}"
-                                         alt="{{ $competitor['title'] }}"
-                                         class="w-24 h-24 object-cover rounded-xl shadow-md group-hover:shadow-lg transition-all duration-300"
-                                         onerror="this.onerror=null; this.src='https://via.placeholder.com/100x100?text=Sem+Imagem';">
-                                    <div class="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 bg-gradient-to-r {{ $competitor['status'] === 'active' ? 'from-green-500 to-emerald-600' : 'from-gray-400 to-gray-500' }} rounded-full shadow-lg border-2 border-white transform group-hover:scale-110 transition-all duration-300"
-                                         title="{{ $competitor['status'] === 'active' ? 'Ativo' : 'Inativo' }}">
-                                        <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $competitor['status'] === 'active' ? 'M5 13l4 4L19 7' : 'M6 18L18 6M6 6l12 12' }}"/>
-                                        </svg>
-                                    </div>
-                                </div>
-
+    @foreach($competitors ?? [] as $competitor)
+    <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 group">
+        <div class="flex flex-col sm:flex-row gap-6">
+            <!-- Imagem e Status -->
+            <div class="relative flex-shrink-0">
+                <img 
+                    src="{{ 
+                        $competitor['thumbnailUrl'] ?? 
+                        $competitor['serper_image'] ?? 
+                        $competitor['image_url'] ?? 
+                        asset('images/default-business.jpg')
+                    }}"
+                    alt="{{ $competitor['title'] ?? 'Concorrente' }}"
+                    class="w-24 h-24 object-cover rounded-xl shadow-md group-hover:shadow-lg transition-all duration-300"
+                    onerror="this.src='{{ asset('images/default-business.jpg') }}';"
+                >
+                <div class="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 bg-gradient-to-r {{ $competitor['status'] === 'active' ? 'from-green-500 to-emerald-600' : 'from-gray-400 to-gray-500' }} rounded-full shadow-lg border-2 border-white transform group-hover:scale-110 transition-all duration-300"
+                     title="{{ $competitor['status'] === 'active' ? 'Ativo' : 'Inativo' }}">
+                    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $competitor['status'] === 'active' ? 'M5 13l4 4L19 7' : 'M6 18L18 6M6 6l12 12' }}"/>
+                    </svg>
+                </div>
+            </div>
                                 <!-- Informações do Concorrente -->
                                 <div class="flex-grow">
                                     <div class="flex flex-wrap justify-between items-start gap-3">

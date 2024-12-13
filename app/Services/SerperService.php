@@ -190,7 +190,8 @@ class SerperService
                 'reviews' => $place['reviewsCount'] ?? null,
                 'phone' => $place['phone'] ?? '',
                 'website' => $place['website'] ?? '',
-                'image_url' => $place['thumbnailUrl'] ?? null, // Adiciona URL da imagem
+                'image_url' => $place['thumbnailUrl'] ?? null,
+                'serper_image' => $place['thumbnailUrl'] ?? null, 
                 'coordinates' => [
                     'lat' => $place['latitude'] ?? null,
                     'lng' => $place['longitude'] ?? null
@@ -341,8 +342,8 @@ public function searchCompetitors($businessName, $city)
             'Content-Type' => 'application/json'
         ])->post($this->apiEndpoint, [
             'q' => $query,
-            'gl' => 'br', // Região Brasil
-            'num' => 20,  // Aumenta número de resultados para melhor filtragem
+            'gl' => 'br',
+            'num' => 20,
             'type' => 'places',
             'search_type' => 'places',
             'hl' => 'pt-br'
@@ -355,7 +356,9 @@ public function searchCompetitors($businessName, $city)
 
         $data = $response->json();
         
-        // Filter and format the results with enhanced data
+        // Log da resposta completa para debug
+        \Log::debug('Serper API Response:', $data);
+        
         $competitors = [];
         if (isset($data['places'])) {
             foreach ($data['places'] as $place) {
@@ -364,7 +367,17 @@ public function searchCompetitors($businessName, $city)
                     continue;
                 }
 
-                // Estrutura mais completa dos dados do concorrente
+                // Log dos dados da imagem para debug
+                \Log::debug('Place Image Data:', [
+                    'title' => $place['title'],
+                    'thumbnailUrl' => $place['thumbnailUrl'] ?? null,
+                    'photos' => $place['photos'] ?? null,
+                    'imageUrl' => $place['imageUrl'] ?? null
+                ]);
+
+                // Processa e valida a URL da imagem
+                $imageUrl = $this->processImageUrl($place);
+
                 $competitor = [
                     'title' => $place['title'] ?? '',
                     'name' => $place['title'] ?? '',
@@ -374,7 +387,9 @@ public function searchCompetitors($businessName, $city)
                     'reviews' => intval($place['reviewsCount'] ?? 0),
                     'phone' => $place['phoneNumber'] ?? '',
                     'website' => $place['website'] ?? '',
-                    'image_url' => $place['thumbnailUrl'] ?? '',
+                    'image_url' => $imageUrl,
+                    'thumbnailUrl' => $imageUrl, // Adiciona também como thumbnailUrl
+                    'serper_image' => $imageUrl, // Adiciona também como serper_image
                     'categories' => $place['categories'] ?? [],
                     'hours' => $place['hours'] ?? [],
                     'description' => $this->generateDescription($place),
@@ -383,36 +398,20 @@ public function searchCompetitors($businessName, $city)
                         'popularity_score' => $this->calculatePopularityScore($place),
                         'online_presence_score' => $this->calculateOnlinePresenceScore($place)
                     ],
-                    'additional_data' => [
-                        'price_level' => $place['priceLevel'] ?? null,
-                        'status' => $place['status'] ?? null,
-                        'place_id' => $place['placeId'] ?? null,
-                        'latitude' => $place['latitude'] ?? null,
-                        'longitude' => $place['longitude'] ?? null
-                    ]
+                    'status' => 'active'
                 ];
-
-                // Adiciona informações de distância se disponíveis
-                if (isset($place['distance'])) {
-                    $competitor['distance'] = $place['distance'];
-                }
-
-                // Adiciona informações de serviços se disponíveis
-                if (isset($place['services'])) {
-                    $competitor['services'] = $place['services'];
-                }
 
                 $competitors[] = $competitor;
             }
 
-            // Ordena por relevância (rating e número de reviews)
+            // Ordena por relevância
             usort($competitors, function($a, $b) {
                 $scoreA = ($a['rating'] * 2) + ($a['reviews'] / 100);
                 $scoreB = ($b['rating'] * 2) + ($b['reviews'] / 100);
                 return $scoreB <=> $scoreA;
             });
 
-            // Limita aos 10 concorrentes mais relevantes
+            // Limita aos 10 mais relevantes
             $competitors = array_slice($competitors, 0, 10);
         }
 
@@ -431,4 +430,59 @@ public function searchCompetitors($businessName, $city)
         return [];
     }
 }
+
+// Função auxiliar para processar e validar URLs de imagem
+private function processImageUrl($place)
+{
+    // Log para debug
+    \Log::debug('Processing image URL for place:', [
+        'title' => $place['title'] ?? 'Unknown',
+        'data' => $place
+    ]);
+
+    // Tenta obter a URL da imagem de diferentes campos possíveis
+    $imageUrl = null;
+
+    // Verifica thumbnailUrl
+    if (!empty($place['thumbnailUrl'])) {
+        $imageUrl = $place['thumbnailUrl'];
+    }
+    // Verifica photos array
+    elseif (!empty($place['photos']) && is_array($place['photos'])) {
+        $imageUrl = $place['photos'][0] ?? null;
+    }
+    // Verifica imageUrl
+    elseif (!empty($place['imageUrl'])) {
+        $imageUrl = $place['imageUrl'];
+    }
+
+    // Valida a URL
+    if ($imageUrl && $this->isValidImageUrl($imageUrl)) {
+        return $imageUrl;
+    }
+
+    return null;
+}
+
+// Função auxiliar para validar URLs de imagem
+private function isValidImageUrl($url)
+{
+    if (empty($url)) {
+        return false;
+    }
+
+    // Verifica se a URL é válida
+    if (!filter_var($url, FILTER_VALIDATE_URL)) {
+        return false;
+    }
+
+    // Verifica se a URL termina com uma extensão de imagem comum
+    $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    $urlPath = parse_url($url, PHP_URL_PATH);
+    $extension = strtolower(pathinfo($urlPath, PATHINFO_EXTENSION));
+
+    return in_array($extension, $imageExtensions);
+}
+
+
 }
