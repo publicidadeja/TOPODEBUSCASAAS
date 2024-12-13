@@ -927,52 +927,238 @@ function refreshInsights() {
 
             <!-- Resumo e Estatísticas (3 colunas) -->
             <div class="xl:col-span-3 space-y-6">
-                <!-- Card de Resumo -->
-                <div class="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-xl p-6">
-                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Resumo Competitivo</h4>
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-600">Total de Concorrentes</span>
-                            <span class="font-semibold text-indigo-600">{{ count($competitors ?? []) }}</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-600">Média de Avaliação</span>
-                            <div class="flex items-center">
-                                <svg class="w-4 h-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                                </svg>
-                                <span class="font-semibold text-indigo-600">4.5</span>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-sm text-gray-600">Concorrentes Ativos</span>
-                            <span class="font-semibold text-green-600">80%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Ações Rápidas -->
-                <div class="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Ações Rápidas</h4>
-                    <div class="space-y-3">
-                        <button class="w-full flex items-center px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors duration-300">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                            </svg>
-                            Gerar Relatório
-                        </button>
-                        <button class="w-full flex items-center px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors duration-300">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/>
-                            </svg>
-                            Análise Detalhada
-                        </button>
-                    </div>
-                </div>
+               <!-- Card de Resumo -->
+<div class="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-xl p-6">
+    <h4 class="text-lg font-semibold text-gray-800 mb-4">Resumo Competitivo</h4>
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">Total de Concorrentes</span>
+            <span class="font-semibold text-indigo-600">{{ $competitorsSummary['total'] }}</span>
+        </div>
+        <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">Média de Avaliação</span>
+            <div class="flex items-center">
+                <svg class="w-4 h-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                </svg>
+                <span class="font-semibold text-indigo-600">{{ $competitorsSummary['average_rating'] }}</span>
             </div>
+        </div>
+        <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-600">Concorrentes Ativos</span>
+            <span class="font-semibold text-green-600">{{ $competitorsSummary['active_percentage'] }}%</span>
         </div>
     </div>
 </div>
+
+ <!-- Ações Rápidas -->
+<div class="bg-white rounded-2xl p-6 border border-gray-100 shadow-lg hover:shadow-xl transition-shadow duration-300">
+    <div class="flex items-center justify-between mb-6">
+        <h4 class="text-xl font-semibold text-gray-800">Ações Rápidas</h4>
+        <span class="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">2 ações disponíveis</span>
+    </div>
+    
+    <div class="space-y-4">
+        <!-- Gerar Relatório Button -->
+        <button class="group w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 rounded-xl hover:from-indigo-100 hover:to-blue-100 transition-all duration-300 border border-indigo-100">
+            <div class="flex items-center">
+                <div class="bg-white p-2 rounded-lg shadow-sm group-hover:shadow-md transition-shadow duration-300">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                </div>
+                <div class="ml-4 text-left">
+                    <span class="block font-semibold">Gerar Relatório</span>
+                    <span class="text-xs text-indigo-600 opacity-75">Exportar dados em PDF</span>
+                </div>
+            </div>
+            <svg class="w-5 h-5 text-indigo-400 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </button>
+
+        <!-- Análise Detalhada Button -->
+        <button 
+            x-data
+            @click="$dispatch('open-modal', 'competitor-analysis')"
+            class="group w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-purple-50 to-pink-50 text-purple-700 rounded-xl hover:from-purple-100 hover:to-pink-100 transition-all duration-300 border border-purple-100"
+        >
+            <div class="flex items-center">
+                <div class="bg-white p-2 rounded-lg shadow-sm group-hover:shadow-md transition-shadow duration-300">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/>
+                    </svg>
+                </div>
+                <div class="ml-4 text-left">
+                    <span class="block font-semibold">Análise Detalhada</span>
+                    <span class="text-xs text-purple-600 opacity-75">Visualizar métricas completas</span>
+                </div>
+            </div>
+            <svg class="w-5 h-5 text-purple-400 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+            </svg>
+        </button>
+    </div>
+</div>
+
+<!-- Modal for Análise Detalhada -->
+<x-modal name="competitor-analysis" :maxWidth="'4xl'">
+    <div class="bg-white p-4 sm:p-6 lg:p-8">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-100 pb-4 sm:pb-6 mb-4 sm:mb-6">
+            <div>
+                <h3 class="text-xl sm:text-2xl font-semibold text-gray-800 mb-2">
+                    {{ $competitorAnalysis['title'] ?? 'Análise Detalhada' }}
+                </h3>
+                <p class="text-sm text-gray-500">
+                    Última atualização: {{ now()->format('d/m/Y H:i') }}
+                </p>
+            </div>
+            <button @click="show = false" 
+                    class="mt-4 sm:mt-0 p-2 hover:bg-gray-100 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            <!-- Main Analysis -->
+            <div class="lg:col-span-2 space-y-4 sm:space-y-6">
+                <!-- Visão Geral -->
+                <div class="bg-gray-50 rounded-xl p-4 sm:p-6">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Visão Geral</h4>
+                    <div class="prose max-w-none text-gray-600 text-sm sm:text-base">
+                        {!! nl2br(e($competitorAnalysis['content'] ?? '')) !!}
+                    </div>
+                </div>
+
+                <!-- Metrics Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <!-- Posição Média -->
+                    <div class="bg-blue-50 rounded-xl p-4 transform hover:scale-105 transition-transform duration-200">
+                        <span class="text-sm text-blue-600 font-medium">Posição Média</span>
+                        <div class="flex items-baseline mt-2">
+                            <p class="text-xl sm:text-2xl font-bold text-blue-700">
+                                {{ number_format($metrics['average_position'] ?? 0, 1) }}
+                            </p>
+                            @if(isset($metrics['position_trend']))
+                                <span class="ml-2 text-sm {{ $metrics['position_trend'] > 0 ? 'text-green-500' : 'text-red-500' }}">
+                                    {{ $metrics['position_trend'] > 0 ? '↑' : '↓' }} 
+                                    {{ abs($metrics['position_trend']) }}%
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                    
+                    <!-- Avaliações -->
+                    <div class="bg-green-50 rounded-xl p-4 transform hover:scale-105 transition-transform duration-200">
+                        <span class="text-sm text-green-600 font-medium">Avaliações</span>
+                        <div class="flex items-baseline mt-2">
+                            <p class="text-xl sm:text-2xl font-bold text-green-700">
+                                {{ number_format($metrics['rating'] ?? 0, 1) }}
+                            </p>
+                            @if(isset($metrics['rating_trend']))
+                                <span class="ml-2 text-sm {{ $metrics['rating_trend'] > 0 ? 'text-green-500' : 'text-red-500' }}">
+                                    {{ $metrics['rating_trend'] > 0 ? '↑' : '↓' }} 
+                                    {{ abs($metrics['rating_trend']) }}%
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                    
+                    <!-- Engajamento -->
+                    <div class="bg-purple-50 rounded-xl p-4 transform hover:scale-105 transition-transform duration-200">
+                        <span class="text-sm text-purple-600 font-medium">Engajamento</span>
+                        <div class="flex items-baseline mt-2">
+                            <p class="text-xl sm:text-2xl font-bold text-purple-700">
+                                {{ number_format($metrics['engagement_rate'] ?? 0, 0) }}%
+                            </p>
+                            @if(isset($metrics['engagement_trend']))
+                                <span class="ml-2 text-sm {{ $metrics['engagement_trend'] > 0 ? 'text-green-500' : 'text-red-500' }}">
+                                    {{ $metrics['engagement_trend'] > 0 ? '↑' : '↓' }} 
+                                    {{ abs($metrics['engagement_trend']) }}%
+                                </span>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-4 sm:space-y-6">
+                <!-- Quick Actions -->
+                <div class="bg-gray-50 rounded-xl p-4 sm:p-6">
+                    <h4 class="text-lg font-semibold text-gray-800 mb-4">Ações Recomendadas</h4>
+                    <div class="space-y-3">
+                        <button class="w-full flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-blue-500 hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <span class="text-gray-700">Exportar Relatório</span>
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                            </svg>
+                        </button>
+                        <button class="w-full flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-blue-500 hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <span class="text-gray-700">Agendar Revisão</span>
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status Card -->
+                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 sm:p-6 hover:shadow-md transition-all duration-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-lg font-semibold text-gray-800">Status</h4>
+                        <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                            Atualizado
+                        </span>
+                    </div>
+                    <p class="text-gray-600 text-sm">
+                        Próxima análise programada para {{ now()->addDays(7)->format('d/m/Y') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-100 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
+            <button @click="show = false" 
+                    class="w-full sm:w-auto px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                Fechar
+            </button>
+            <button class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-lg transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+                </svg>
+                Salvar Análise
+            </button>
+        </div>
+    </div>
+</x-modal>
+
+
+
+
+<!-- Scripts -->
+<script>
+function fetchCompetitors() {
+    fetch(`/analytics/detailed-analysis/{{ $business->id }}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                this.competitors = data.data;
+            } else {
+                alert('Erro ao carregar dados dos concorrentes');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao carregar dados dos concorrentes');
+        });
+}
+</script>
 
 <!-- Scripts JavaScript necessários -->
 <script>
