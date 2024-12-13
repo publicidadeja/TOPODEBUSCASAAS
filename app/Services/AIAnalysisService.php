@@ -180,7 +180,6 @@ class AIAnalysisService
 {
     // Adicione mais contexto e estrutura aos dados
     $prompt = "Analise detalhadamente os seguintes concorrentes:\n\n";
-    
     foreach ($competitors as $competitor) {
         $prompt .= "Nome: {$competitor['title']}\n";
         $prompt .= "Avaliação: {$competitor['rating']}\n";
@@ -257,15 +256,16 @@ public function getCompetitorAnalysis($business, $analyticsData)
         }
 
      // Generate analysis prompt
-     $prompt = "Analyze these competitors for {$business->name} in {$business->city}:\n\n";
+     $prompt = "Analise estes concorrentes para {$business->name} em {$business->city}:\n\n";
+
      foreach ($formattedCompetitors as $competitor) {
-         $prompt .= "Competitor: {$competitor['name']}\n";
-         $prompt .= "Description: {$competitor['description']}\n";
-         if ($competitor['rating']) {
-             $prompt .= "Rating: {$competitor['rating']} ({$competitor['reviews']} reviews)\n";
-         }
-         $prompt .= "\n";
-     }
+        $prompt .= "Concorrente: {$competitor['name']}\n";
+        $prompt .= "Descrição: {$competitor['description']}\n";
+        if ($competitor['rating']) {
+            $prompt .= "Avaliação: {$competitor['rating']} ({$competitor['reviews']} avaliações)\n";
+        }
+        $prompt .= "\n";
+    }
 
      // Get analysis from Gemini
      $analysis = $this->gemini->generateContent($prompt);
@@ -277,5 +277,31 @@ public function getCompetitorAnalysis($business, $analyticsData)
      \Log::error('Error generating competitor analysis: ' . $e->getMessage());
      return "Não foi possível gerar a análise de concorrentes no momento. Por favor, tente novamente mais tarde.";
  }
+}
+private function formatCompetitorAnalysis($analysis)
+{
+    // Divide a análise em seções
+    $sections = preg_split('/([A-Z\s]+:)/', $analysis, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+    
+    $formattedSections = [];
+    
+    // Processa cada seção mantendo a formatação
+    for ($i = 0; $i < count($sections) - 1; $i += 2) {
+        $title = trim($sections[$i]);
+        $content = trim($sections[$i + 1]);
+        
+        // Formata o conteúdo em linhas organizadas
+        $contentLines = array_map('trim', explode("\n", $content));
+        $contentLines = array_filter($contentLines, function($line) {
+            return !empty($line);
+        });
+        
+        $formattedSections[] = [
+            'title' => $title,
+            'content' => $contentLines
+        ];
+    }
+    
+    return $formattedSections;
 }
 }

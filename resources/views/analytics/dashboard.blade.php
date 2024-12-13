@@ -755,6 +755,8 @@ function refreshInsights() {
             </button>
         </div>
 
+        
+
         <!-- Estado de Carregamento Animado -->
         <div id="competitor-loading" class="hidden">
             <div class="flex justify-center items-center py-8">
