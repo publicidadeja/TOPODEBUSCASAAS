@@ -1100,12 +1100,12 @@ function refreshInsights() {
     <div class="space-y-3">
         <!-- Botão Exportar Relatório -->
         <button onclick="exportReport({{ $business->id }})" 
-                class="flex items-center space-x-2 w-full px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-            </svg>
-            <span>Exportar Relatório</span>
-        </button>
+        class="flex items-center space-x-2 w-full px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors">
+    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+    </svg>
+    <span>Exportar Relatório</span>
+</button>
 
 
 @push('scripts')
@@ -1114,12 +1114,27 @@ function refreshInsights() {
 function exportReport(businessId) {
     showNotification('Gerando relatório...', 'info');
 
+    // Capturar dados da análise
+    const analysisData = {
+        title: document.querySelector('.text-xl.sm\\:text-2xl.font-semibold').textContent,
+        content: document.querySelector('.prose.max-w-none').innerHTML,
+        metrics: {
+            average_position: document.querySelector('.text-blue-700').textContent,
+            rating: document.querySelector('.text-green-700').textContent,
+            engagement_rate: document.querySelector('.text-purple-700').textContent
+        },
+        lastUpdate: document.querySelector('.text-sm.text-gray-500').textContent
+    };
+
+    // Enviar dados para o servidor
     fetch(`/analytics/export/${businessId}`, {
-        method: 'GET',
+        method: 'POST',
         headers: {
+            'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
             'Accept': 'application/pdf'
-        }
+        },
+        body: JSON.stringify(analysisData)
     })
     .then(response => {
         if (!response.ok) {
@@ -1133,7 +1148,7 @@ function exportReport(businessId) {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `relatorio_${businessId}.pdf`;
+        a.download = `analise_concorrentes_${businessId}.pdf`;
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
@@ -1284,12 +1299,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     class="w-full sm:w-auto px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500">
                 Fechar
             </button>
-            <button class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-lg transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
-                </svg>
-                Salvar Análise
-            </button>
+            <button onclick="exportReport({{ $business->id }})" 
+        class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-lg transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+    </svg>
+    Salvar Análise
+</button>
         </div>
     </div>
 </x-modal>
