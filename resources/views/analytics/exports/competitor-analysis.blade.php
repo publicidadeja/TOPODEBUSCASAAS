@@ -46,6 +46,16 @@
             border-radius: 8px;
             margin-bottom: 20px;
         }
+        .recommendations {
+            margin-top: 20px;
+        }
+        .recommendation-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: #fff;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
         .footer {
             text-align: center;
             font-size: 12px;
@@ -84,9 +94,22 @@
     <div class="section">
         <h3>Análise Detalhada</h3>
         <div class="analysis-content">
-            {!! $analysis['content'] !!}
+            {!! nl2br(e($analysis['content'])) !!}
         </div>
     </div>
+
+    @if(!empty($analysis['recommendations']))
+    <div class="section recommendations">
+        <h3>Recomendações Estratégicas</h3>
+        @foreach($analysis['recommendations'] as $recommendation)
+        <div class="recommendation-item">
+            <strong>{{ $recommendation['title'] ?? '' }}</strong>
+            <p>{{ $recommendation['description'] ?? '' }}</p>
+            <small>Prioridade: {{ ucfirst($recommendation['priority'] ?? 'média') }}</small>
+        </div>
+        @endforeach
+    </div>
+    @endif
 
     <div class="footer">
         <p>Relatório gerado em {{ now()->format('d/m/Y H:i') }}</p>

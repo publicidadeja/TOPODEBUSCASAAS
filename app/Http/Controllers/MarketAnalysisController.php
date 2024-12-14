@@ -78,4 +78,56 @@ public function exportAnalysisPDF(Business $business)
         return response()->json(['error' => 'Erro ao gerar relatório'], 500);
     }
 }
+
+
+public function exportCompetitorAnalysis(Business $business)
+{
+    try {
+        // Obter dados dos concorrentes
+        $competitors = $business->competitors()
+            ->with(['analytics', 'reviews'])
+            ->get();
+        
+        // Obter análise do Gemini
+        $analysis = $this->geminiService->analyzeMarketData($business, $competitors);
+        
+        if (!$analysis['success']) {
+            Log::error('Erro na análise de mercado: ' . ($analysis['error'] ?? 'Erro desconhecido'));
+            return response()->json(['error' => 'Erro ao gerar análise'], 422);
+        }
+
+        // Preparar dados para o PDF
+        $data = [
+            'business' => $business,
+            'competitors' => $competitors,
+            'analysis' => [
+                'metrics' => [
+                    'average_position' => $analysis['data']['metrics']['average_position'] ?? 'N/A',
+                    'rating' => $analysis['data']['metrics']['rating'] ?? 'N/A',
+                    'engagement_rate' => $analysis['data']['metrics']['engagement_rate'] ?? 'N/A'
+                ],
+                'content' => $analysis['data']['analysis'] ?? 'Análise não disponível',
+                'recommendations' => $analysis['data']['recommendations'] ?? [],
+                'lastUpdate' => now()->format('d/m/Y H:i')
+            ],
+            'period' => [
+                'start' => now()->subDays(30)->format('d/m/Y'),
+                'end' => now()->format('d/m/Y')
+            ]
+        ];
+
+        // Gerar PDF
+        $pdf = PDF::loadView('analytics.exports.competitor-analysis', $data);
+        
+        // Definir nome do arquivo
+        $filename = 'analise-concorrentes-' . \Str::slug($business->name) . '.pdf';
+        
+        // Retornar o PDF para download
+        return $pdf->download($filename);
+
+    } catch (\Exception $e) {
+        Log::error('Erro ao gerar PDF de análise: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao gerar relatório'], 500);
+    }
+}
 }

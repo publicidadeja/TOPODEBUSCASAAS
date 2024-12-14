@@ -558,15 +558,40 @@ public function checkGeminiSetup(GeminiService $gemini)
 public function analyzeMarketData($business, $competitors)
 {
     try {
-        $response = $this->generateResponse($this->buildMarketAnalysisPrompt($business, $competitors));
-        $formattedResponse = $this->formatAnalysisResponse($response);
+        // Add analytics data from the business
+        $analytics = $business->analytics()
+            ->whereBetween('date', [now()->subDays(30), now()])
+            ->get();
+
+        // Build the prompt with all three required parameters
+        $prompt = $this->buildAnalysisPrompt($business, $competitors, $analytics);
         
+        // Make the API call
+        $response = $this->generateContent($prompt);
+        
+        if (!$response['success']) {
+            return [
+                'success' => false,
+                'error' => 'Falha ao gerar análise'
+            ];
+        }
+
+        // Format and return the analysis
         return [
             'success' => true,
-            'data' => $formattedResponse
+            'data' => [
+                'metrics' => [
+                    'average_position' => $this->calculateAveragePosition($competitors),
+                    'rating' => $this->calculateAverageRating($competitors),
+                    'engagement_rate' => $this->calculateEngagementRate($competitors)
+                ],
+                'analysis' => $response['content'],
+                'recommendations' => $this->extractRecommendations($response['content'])
+            ]
         ];
+
     } catch (\Exception $e) {
-        Log::error('Erro na análise de mercado: ' . $e->getMessage());
+        \Log::error('Erro na análise de mercado: ' . $e->getMessage());
         return [
             'success' => false,
             'error' => 'Erro ao processar análise'
