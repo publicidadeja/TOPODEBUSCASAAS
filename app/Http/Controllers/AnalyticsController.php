@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Cache;
 use App\Services\AIAnalysisService;
 use App\Services\KeywordService;
 
+
 class AnalyticsController extends Controller
 {
 
@@ -1580,43 +1581,49 @@ public function scheduleReview(Request $request, Business $business)
     }
 }
 
-public function exportCompetitorAnalysis(Request $request, Business $business)
+public function exportCompetitorAnalysis(Business $business)
 {
     try {
-        // Verifica autorização
-        if ($business->user_id !== auth()->id()) {
-            return response()->json(['error' => 'Não autorizado'], 403);
-        }
-
-        // Prepara os dados para o PDF
+        // Obter dados dos concorrentes
+        $competitors = $business->competitors()->with(['analytics', 'reviews'])->get();
+        
+        // Obter análise do Gemini
+        $analysis = $this->geminiService->analyzeMarketData($business, $competitors);
+        
+        // Preparar dados para o PDF
         $data = [
             'business' => $business,
+            'analysis' => [
+                'metrics' => [
+                    'average_position' => $analysis['average_position'] ?? 'N/A',
+                    'rating' => $analysis['rating'] ?? 'N/A',
+                    'engagement_rate' => $analysis['engagement_rate'] ?? 'N/A'
+                ],
+                'content' => $analysis['content'] ?? '',
+                'lastUpdate' => now()->format('d/m/Y H:i')
+            ],
             'period' => [
                 'start' => now()->subDays(30)->format('d/m/Y'),
                 'end' => now()->format('d/m/Y')
-            ],
-            'analysis' => [
-                'metrics' => [
-                    'average_position' => $request->input('metrics.average_position'),
-                    'rating' => $request->input('metrics.rating'),
-                    'engagement_rate' => $request->input('metrics.engagement_rate')
-                ],
-                'content' => $request->input('content'),
-                'lastUpdate' => now()->format('d/m/Y H:i')
             ]
         ];
 
-        // Gera o PDF usando o template específico
+        // Gerar PDF usando o template existente
         $pdf = PDF::loadView('analytics.exports.competitor-analysis', $data);
         
-        return $pdf->download("analise-concorrentes-{$business->name}.pdf");
+        // Configurar opções do PDF
+        $pdf->setPaper('a4');
+        $pdf->setOptions([
+            'isHtml5ParserEnabled' => true,
+            'isRemoteEnabled' => true
+        ]);
+        
+        return $pdf->download('analise-concorrentes-' . $business->name . '.pdf');
 
     } catch (\Exception $e) {
-        \Log::error('Erro ao exportar análise', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        return response()->json(['error' => $e->getMessage()], 500);
+        Log::error('Erro ao gerar PDF de análise de concorrentes: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao gerar relatório'], 500);
     }
 }
+
 }

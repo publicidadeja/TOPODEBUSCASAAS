@@ -1325,17 +1325,119 @@ function showNotification(message, type = 'success') {
     <h4 class="text-lg font-semibold text-gray-800 mb-4">Ações Recomendadas</h4>
     <div class="space-y-3">
         <!-- Botão Exportar Relatório -->
-        <button onclick="exportReport({{ $business->id }})" 
-        class="flex items-center space-x-2 w-full px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors">
-    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button onclick="exportCompetitorAnalysis()" class="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors duration-200">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
     </svg>
-    <span>Exportar Relatório</span>
+    <span>Exportar Análise</span>
 </button>
 
 
 @push('scripts')
 <script>
+
+function exportCompetitorAnalysis() {
+    const businessId = document.getElementById('business-selector').value;
+    
+    // Mostrar indicador de carregamento
+    Swal.fire({
+        title: 'Gerando relatório...',
+        text: 'Por favor, aguarde...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // Fazer a requisição para gerar o PDF
+    fetch(`/analytics/export-competitor-analysis/${businessId}`, {
+        method: 'GET',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Erro ao gerar relatório');
+        return response.blob();
+    })
+    .then(blob => {
+        // Criar URL do blob e fazer download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'analise-concorrentes.pdf';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Relatório gerado com sucesso!',
+            showConfirmButton: false,
+            timer: 1500
+        });
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Erro ao gerar o relatório. Tente novamente.'
+        });
+    });
+}
+
+function exportAnalysisReport() {
+    const businessId = document.getElementById('business-selector').value;
+    
+    // Mostrar indicador de carregamento
+    Swal.fire({
+        title: 'Gerando relatório...',
+        text: 'Por favor, aguarde...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // Fazer a requisição para gerar o PDF
+    fetch(`/analytics/export-analysis/${businessId}`, {
+        method: 'GET',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Erro ao gerar relatório');
+        return response.blob();
+    })
+    .then(blob => {
+        // Criar URL do blob e fazer download
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'analise-detalhada.pdf';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Relatório gerado com sucesso!',
+            showConfirmButton: false,
+            timer: 1500
+        });
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Erro ao gerar o relatório. Tente novamente.'
+        });
+    });
+}
+
 // Função para exportar relatório
 function exportReport(businessId) {
     console.log('Iniciando exportação...');

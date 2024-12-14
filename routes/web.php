@@ -14,6 +14,13 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\CompetitorAnalysisController;
 use App\Http\Controllers\MarketAnalysisController;
 
+
+Route::get('/analytics/export-competitor-analysis/{business}', [AnalyticsController::class, 'exportCompetitorAnalysis'])
+    ->name('analytics.export.competitor-analysis');
+
+Route::get('/analytics/export-analysis/{business}', [MarketAnalysisController::class, 'exportAnalysisPDF'])
+    ->name('analytics.export.analysis');
+
 Route::get('/analytics/{business}/keywords', [AnalyticsController::class, 'getKeywords'])
     ->name('analytics.keywords');
 Route::post('/analytics/{business}/keywords/refresh', [AnalyticsController::class, 'refreshKeywords'])

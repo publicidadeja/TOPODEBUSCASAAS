@@ -336,20 +336,34 @@ class GeminiService
     }
     
     private function buildAnalysisPrompt($business, $analytics, $competitors)
-    {
-        return "Analise os seguintes dados do negócio e forneça insights estratégicos:
+{
+    // Dados existentes do prompt
+    $basePrompt = "Analise os seguintes dados do negócio e forneça insights estratégicos:
         
-        Negócio: {$business->name}
-        Setor: {$business->sector}
-        
-        Métricas dos últimos 30 dias:
-        - Visualizações: {$analytics->total_views}
-        - Cliques: {$analytics->total_clicks}
-        - Ligações: {$analytics->total_calls}
-        - Taxa de conversão: {$analytics->conversion_rate}%
-        
-        " . ($competitors ? "Dados dos competidores:\n" . $this->formatCompetitorsData($competitors) : "");
-    }
+    Negócio: {$business->name}
+    Setor: {$business->sector}
+    
+    Métricas dos últimos 30 dias:
+    - Visualizações: {$analytics->total_views}
+    - Cliques: {$analytics->total_clicks}
+    - Ligações: {$analytics->total_calls}
+    - Taxa de conversão: {$analytics->conversion_rate}%";
+
+    // Adicionar dados específicos do Google Meu Negócio
+    $gmbData = "
+    
+    Dados do Google Meu Negócio:
+    - Avaliação média: {$business->rating}
+    - Total de avaliações: {$business->reviews_count}
+    - Tempo médio de resposta: {$business->response_time}
+    - Categorias principais: {$business->categories}
+    - Posts realizados: {$business->posts_count}
+    - Fotos publicadas: {$business->photos_count}
+    - Perguntas respondidas: {$business->questions_answered}
+    ";
+
+    return $basePrompt . $gmbData . ($competitors ? "\n\nDados dos competidores:\n" . $this->formatCompetitorsData($competitors) : "");
+}
 /**
  * Analisa os dados do negócio usando o Gemini API
  * 
