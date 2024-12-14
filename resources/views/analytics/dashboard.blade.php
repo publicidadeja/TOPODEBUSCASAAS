@@ -1098,6 +1098,7 @@ function refreshInsights() {
 <div class="bg-gray-50 rounded-xl p-4 sm:p-6">
     <h4 class="text-lg font-semibold text-gray-800 mb-4">Ações Recomendadas</h4>
     <div class="space-y-3">
+        <!-- Botão Exportar Relatório -->
         <button onclick="exportReport({{ $business->id }})" 
                 class="flex items-center space-x-2 w-full px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1106,20 +1107,11 @@ function refreshInsights() {
             <span>Exportar Relatório</span>
         </button>
 
-        <button onclick="openReviewScheduleModal({{ $business->id }})" 
-                class="flex items-center space-x-2 w-full px-4 py-2 text-sm font-medium text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-            <span>Agendar Revisão</span>
-        </button>
-    </div>
-</div>
 
 @push('scripts')
 <script>
+// Função para exportar relatório
 function exportReport(businessId) {
-    // Mostra um indicador de carregamento
     showNotification('Gerando relatório...', 'info');
 
     fetch(`/analytics/export/${businessId}`, {
@@ -1154,27 +1146,42 @@ function exportReport(businessId) {
     });
 }
 
+// Função para abrir o modal de agendamento
 function openReviewScheduleModal(businessId) {
     const modal = document.getElementById('event-modal');
     const form = document.getElementById('event-form');
     
+    if (!modal || !form) {
+        console.error('Modal ou form não encontrado');
+        return;
+    }
+
     // Reseta o formulário
     form.reset();
     
     // Configura o título do modal
-    document.getElementById('modal-title').textContent = 'Agendar Revisão';
+    const modalTitle = document.getElementById('modal-title');
+    if (modalTitle) {
+        modalTitle.textContent = 'Agendar Revisão';
+    }
     
     // Define valores padrão para revisão
-    document.getElementById('event-type').value = 'review';
-    document.getElementById('event-title').value = 'Revisão do Negócio';
+    const eventType = document.getElementById('event-type');
+    const eventTitle = document.getElementById('event-title');
+    
+    if (eventType) eventType.value = 'review';
+    if (eventTitle) eventTitle.value = 'Revisão do Negócio';
     
     // Define data e hora padrão
     const now = new Date();
-    const startTime = new Date(now.setMinutes(now.getMinutes() + 30)); // Agenda para 30 minutos depois
-    const endTime = new Date(now.setHours(now.getHours() + 1)); // Duração de 1 hora
+    const startTime = new Date(now.setMinutes(now.getMinutes() + 30));
+    const endTime = new Date(now.setHours(now.getHours() + 1));
     
-    document.getElementById('event-start').value = startTime.toISOString().slice(0, 16);
-    document.getElementById('event-end').value = endTime.toISOString().slice(0, 16);
+    const eventStart = document.getElementById('event-start');
+    const eventEnd = document.getElementById('event-end');
+    
+    if (eventStart) eventStart.value = startTime.toISOString().slice(0, 16);
+    if (eventEnd) eventEnd.value = endTime.toISOString().slice(0, 16);
     
     // Configura o formulário para submissão
     form.onsubmit = async function(e) {
@@ -1182,19 +1189,19 @@ function openReviewScheduleModal(businessId) {
         
         try {
             const response = await fetch(`/automation/schedule-review/${businessId}`, {
-    method: 'POST',
-    headers: {
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-    },
-    body: JSON.stringify({
-        title: document.getElementById('event-title').value,
-        description: document.getElementById('event-description').value,
-        start: document.getElementById('event-start').value,
-        end: document.getElementById('event-end').value,
-        type: 'review'
-    })
-});
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify({
+                    title: document.getElementById('event-title').value,
+                    description: document.getElementById('event-description').value,
+                    start: document.getElementById('event-start').value,
+                    end: document.getElementById('event-end').value,
+                    type: 'review'
+                })
+            });
 
             const data = await response.json();
             
@@ -1208,6 +1215,7 @@ function openReviewScheduleModal(businessId) {
                 throw new Error(data.message || 'Erro ao agendar revisão');
             }
         } catch (error) {
+            console.error('Erro:', error);
             showNotification(error.message, 'error');
         }
     };
@@ -1216,7 +1224,7 @@ function openReviewScheduleModal(businessId) {
     modal.classList.remove('hidden');
 }
 
-// Função de notificação (se ainda não existir no seu código)
+// Função de notificação
 function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
     notification.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white ${
@@ -1233,9 +1241,11 @@ function showNotification(message, type = 'success') {
     }, 3000);
 }
 
-// Adiciona listeners para fechar o modal
+// Inicialização dos listeners do modal
 document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('event-modal');
+    if (!modal) return;
+
     const closeButtons = modal.querySelectorAll('.modal-close');
     
     closeButtons.forEach(button => {
@@ -2366,4 +2376,5 @@ function updateGeminiAnalysis() {
 
 </script>
 @endpush
+@include('automation.modals.event-modal')
 </x-app-layout>
