@@ -1094,11 +1094,11 @@ function refreshInsights() {
 
             <!-- Sidebar -->
             <div class="space-y-4 sm:space-y-6">
-   <!-- Quick Actions -->
+ <!-- Quick Actions -->
 <div class="bg-gray-50 rounded-xl p-4 sm:p-6">
     <h4 class="text-lg font-semibold text-gray-800 mb-4">Ações Recomendadas</h4>
     <div class="space-y-3">
-        <button onclick="exportReport('pdf', {{ $business->id }})" 
+        <button onclick="exportReport({{ $business->id }})" 
                 class="flex items-center space-x-2 w-full px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
@@ -1106,7 +1106,7 @@ function refreshInsights() {
             <span>Exportar Relatório</span>
         </button>
 
-        <button onclick="scheduleReview({{ $business->id }})" 
+        <button onclick="openReviewScheduleModal({{ $business->id }})" 
                 class="flex items-center space-x-2 w-full px-4 py-2 text-sm font-medium text-white bg-green-500 rounded-lg hover:bg-green-600 transition-colors">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
@@ -1118,7 +1118,10 @@ function refreshInsights() {
 
 @push('scripts')
 <script>
-function exportReport(type, businessId) {
+function exportReport(businessId) {
+    // Mostra um indicador de carregamento
+    showNotification('Gerando relatório...', 'info');
+
     fetch(`/analytics/export/${businessId}`, {
         method: 'GET',
         headers: {
@@ -1143,36 +1146,111 @@ function exportReport(type, businessId) {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+        showNotification('Relatório gerado com sucesso!', 'success');
     })
     .catch(error => {
         console.error('Export error:', error);
-        alert(error.message);
+        showNotification(error.message, 'error');
     });
 }
 
-    function scheduleReview(businessId) {
-        const date = prompt('Digite a data da revisão (YYYY-MM-DD):');
-        if (!date) return;
+function openReviewScheduleModal(businessId) {
+    const modal = document.getElementById('event-modal');
+    const form = document.getElementById('event-form');
+    
+    // Reseta o formulário
+    form.reset();
+    
+    // Configura o título do modal
+    document.getElementById('modal-title').textContent = 'Agendar Revisão';
+    
+    // Define valores padrão para revisão
+    document.getElementById('event-type').value = 'review';
+    document.getElementById('event-title').value = 'Revisão do Negócio';
+    
+    // Define data e hora padrão
+    const now = new Date();
+    const startTime = new Date(now.setMinutes(now.getMinutes() + 30)); // Agenda para 30 minutos depois
+    const endTime = new Date(now.setHours(now.getHours() + 1)); // Duração de 1 hora
+    
+    document.getElementById('event-start').value = startTime.toISOString().slice(0, 16);
+    document.getElementById('event-end').value = endTime.toISOString().slice(0, 16);
+    
+    // Configura o formulário para submissão
+    form.onsubmit = async function(e) {
+        e.preventDefault();
         
-        const notes = prompt('Observações (opcional):');
-        
-        fetch(`/analytics/schedule-review/${businessId}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify({ date, notes })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) throw new Error(data.error);
-            alert('Revisão agendada com sucesso!');
-        })
-        .catch(error => {
-            alert('Erro ao agendar revisão: ' + error.message);
+        try {
+            const response = await fetch(`/automation/schedule-review/${businessId}`, {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+    },
+    body: JSON.stringify({
+        title: document.getElementById('event-title').value,
+        description: document.getElementById('event-description').value,
+        start: document.getElementById('event-start').value,
+        end: document.getElementById('event-end').value,
+        type: 'review'
+    })
+});
+
+            const data = await response.json();
+            
+            if (response.ok) {
+                showNotification('Revisão agendada com sucesso!', 'success');
+                modal.classList.add('hidden');
+                if (typeof calendar !== 'undefined') {
+                    calendar.refetchEvents();
+                }
+            } else {
+                throw new Error(data.message || 'Erro ao agendar revisão');
+            }
+        } catch (error) {
+            showNotification(error.message, 'error');
+        }
+    };
+    
+    // Mostra o modal
+    modal.classList.remove('hidden');
+}
+
+// Função de notificação (se ainda não existir no seu código)
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white ${
+        type === 'success' ? 'bg-green-500' : 
+        type === 'error' ? 'bg-red-500' : 
+        'bg-blue-500'
+    } animate-fade-in z-50`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('animate-fade-out');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Adiciona listeners para fechar o modal
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('event-modal');
+    const closeButtons = modal.querySelectorAll('.modal-close');
+    
+    closeButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            modal.classList.add('hidden');
         });
-    }
+    });
+    
+    // Fecha o modal ao clicar fora dele
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.classList.add('hidden');
+        }
+    });
+});
 </script>
 @endpush
                 <!-- Status Card -->

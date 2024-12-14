@@ -14,6 +14,10 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\CompetitorAnalysisController;
 use App\Http\Controllers\MarketAnalysisController;
 
+    // Rota para agendar revisão
+    Route::post('/automation/schedule-review/{business}', [AutomationController::class, 'scheduleReview'])
+        ->name('automation.schedule-review');
+
 Route::get('/analytics/export/{business}', [AnalyticsController::class, 'exportPdf'])
     ->name('analytics.export')
     ->middleware(['auth']);
