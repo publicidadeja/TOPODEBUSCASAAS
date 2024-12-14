@@ -43,66 +43,6 @@ class AnalyticsController extends Controller
         $this->keywordService = $keywordService;
     }
 
-    public function downloadReport(Business $business)
-{
-    try {
-        // Verifica autorização
-        if ($business->user_id !== auth()->id()) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Não autorizado'
-            ], 403);
-        }
-
-        // Define o período de análise
-        $endDate = now();
-        $startDate = now()->subDays(30);
-
-        // Busca os dados analíticos
-        $analytics = BusinessAnalytics::where('business_id', $business->id)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->orderBy('date')
-            ->get();
-
-        // Prepara os dados para o PDF
-        $data = [
-            'business' => $business,
-            'period' => [
-                'start' => $startDate->format('d/m/Y'),
-                'end' => $endDate->format('d/m/Y')
-            ],
-            'analysis' => [
-                'metrics' => [
-                    'average_position' => $business->average_position ?? 'N/A',
-                    'rating' => number_format($business->rating, 1) ?? 'N/A',
-                    'engagement_rate' => $this->calculateEngagementRate($analytics)
-                ],
-                'content' => $this->aiAnalysisService->getCompetitorAnalysis($business, [
-                    'views' => $analytics->sum('views'),
-                    'clicks' => $analytics->sum('clicks'),
-                    'calls' => $analytics->sum('calls')
-                ])['content'] ?? 'Análise não disponível',
-                'lastUpdate' => now()->format('d/m/Y H:i')
-            ]
-        ];
-
-        // Gera o PDF
-        $pdf = PDF::loadView('analytics.exports.competitor-analysis', $data);
-        
-        // Define o nome do arquivo
-        $fileName = "analise-concorrentes-{$business->name}-" . now()->format('Y-m-d') . ".pdf";
-        
-        // Retorna o PDF para download
-        return $pdf->download($fileName);
-
-    } catch (\Exception $e) {
-        \Log::error('Erro ao baixar relatório: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'error' => 'Erro ao baixar o relatório. Por favor, tente novamente.'
-        ], 500);
-    }
-}
 
     public function index(Business $business)
 {
@@ -1643,7 +1583,7 @@ public function scheduleReview(Request $request, Business $business)
     }
 }
 
-public function exportCompetitorAnalysis(Business $business)
+public function exportCompetitorAnalysis(Request $request, Business $business)
 {
     try {
         // Verifica autorização
@@ -1654,50 +1594,36 @@ public function exportCompetitorAnalysis(Business $business)
             ], 403);
         }
 
-        // Define o período de análise
-        $endDate = now();
-        $startDate = now()->subDays(30);
-
-        // Busca os dados analíticos
-        $analytics = BusinessAnalytics::where('business_id', $business->id)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->orderBy('date')
-            ->get();
+        // Recebe os dados da análise enviados pelo frontend
+        $analysisData = $request->all();
 
         // Prepara os dados para o PDF
         $data = [
             'business' => $business,
             'period' => [
-                'start' => $startDate->format('d/m/Y'),
-                'end' => $endDate->format('d/m/Y')
+                'start' => now()->subDays(30)->format('d/m/Y'),
+                'end' => now()->format('d/m/Y')
             ],
             'analysis' => [
                 'metrics' => [
-                    'average_position' => $business->average_position ?? 'N/A',
-                    'rating' => number_format($business->rating, 1) ?? 'N/A',
-                    'engagement_rate' => $this->calculateEngagementRate($analytics)
+                    'average_position' => $analysisData['metrics']['average_position'],
+                    'rating' => $analysisData['metrics']['rating'],
+                    'engagement_rate' => $analysisData['metrics']['engagement_rate']
                 ],
-                'content' => $this->aiAnalysisService->getCompetitorAnalysis($business, [
-                    'views' => $analytics->sum('views'),
-                    'clicks' => $analytics->sum('clicks'),
-                    'calls' => $analytics->sum('calls')
-                ])['content'] ?? 'Análise não disponível',
+                'content' => $analysisData['content'],
                 'lastUpdate' => now()->format('d/m/Y H:i')
             ]
         ];
 
-        // Gera o PDF
+        // Gera o PDF usando o template correto
         $pdf = PDF::loadView('analytics.exports.competitor-analysis', $data);
+        $pdf->setPaper('a4', 'portrait');
         
         // Define o nome do arquivo
         $fileName = "analise-concorrentes-{$business->name}-" . now()->format('Y-m-d') . ".pdf";
-        
-        // Retorna um JSON com a URL de download
-        return response()->json([
-            'success' => true,
-            'message' => 'Relatório gerado com sucesso',
-            'download_url' => route('analytics.download-report', ['business' => $business->id])
-        ]);
+
+        // Retorna o PDF para download
+        return $pdf->download($fileName);
 
     } catch (\Exception $e) {
         \Log::error('Erro ao exportar análise de concorrentes: ' . $e->getMessage());
@@ -1707,7 +1633,4 @@ public function exportCompetitorAnalysis(Business $business)
         ], 500);
     }
 }
-
-
-
 }

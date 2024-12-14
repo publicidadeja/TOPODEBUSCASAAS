@@ -1114,19 +1114,18 @@ function refreshInsights() {
 function exportReport(businessId) {
     showNotification('Gerando relatório...', 'info');
 
-    // Capturar dados da análise
+    // Capturar o conteúdo da análise de concorrentes da modal
     const analysisData = {
-        title: document.querySelector('.text-xl.sm\\:text-2xl.font-semibold').textContent,
-        content: document.querySelector('.prose.max-w-none').innerHTML,
+        business_id: businessId,
+        content: document.querySelector('.competitor-analysis-content').innerHTML, // Ajuste o seletor conforme sua estrutura HTML
         metrics: {
-            average_position: document.querySelector('.text-blue-700').textContent,
-            rating: document.querySelector('.text-green-700').textContent,
-            engagement_rate: document.querySelector('.text-purple-700').textContent
-        },
-        lastUpdate: document.querySelector('.text-sm.text-gray-500').textContent
+            average_position: document.querySelector('[data-metric="average_position"]').textContent,
+            rating: document.querySelector('[data-metric="rating"]').textContent,
+            engagement_rate: document.querySelector('[data-metric="engagement_rate"]').textContent
+        }
     };
 
-    // Enviar dados para o servidor
+    // Enviar os dados para o servidor
     fetch(`/analytics/export/${businessId}`, {
         method: 'POST',
         headers: {
