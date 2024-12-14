@@ -289,46 +289,66 @@ class GeminiService
     }
 
     public function analyzeBusinessData($business, $analytics, $competitors = null)
-{
-    $prompt = $this->buildAnalysisPrompt($business, $analytics, $competitors);
-    
-    try {
-        $response = $this->generateContent($prompt);
-        
-        return [
-            'suggestions' => $this->extractSuggestions($response),
-            'analysis' => $response
-        ];
-    } catch (\Exception $e) {
-        Log::error('Erro na análise do Gemini: ' . $e->getMessage());
-        return null;
-    }
-}
-
-private function buildAnalysisPrompt($business, $analytics, $competitors)
-{
-    return "Analise os seguintes dados e sugira melhorias específicas:
-    Negócio: {$business->name}
-    Segmento: {$business->segment}
-    Dados Analytics: " . json_encode($analytics) . "
-    Dados Concorrentes: " . json_encode($competitors);
-}
-
-    private function parseAnalysisResponse($data)
     {
-        if (!isset($data['candidates'][0]['content']['parts'][0]['text'])) {
-            throw new \Exception('Resposta inválida da API');
+        try {
+            $prompt = $this->buildAnalysisPrompt($business, $analytics, $competitors);
+            
+            $response = Http::withHeaders([
+                'Content-Type' => 'application/json',
+                'Authorization' => 'Bearer ' . $this->apiKey
+            ])->post($this->apiEndpoint, [
+                'contents' => [
+                    [
+                        'parts' => [
+                            ['text' => $prompt]
+                        ]
+                    ]
+                ]
+            ]);
+    
+            if ($response->successful()) {
+                $data = $response->json();
+                return [
+                    'success' => true,
+                    'data' => [
+                        'overview' => $this->extractContent($data),
+                        'recommendations' => $this->extractSuggestions($data),
+                        'metrics' => [
+                            'performance_score' => $this->calculatePerformanceScore($analytics),
+                            'market_position' => $this->analyzeMarketPosition($business, $competitors),
+                            'growth_trend' => $this->calculateGrowthTrend($analytics)
+                        ]
+                    ]
+                ];
+            }
+    
+            return [
+                'success' => false,
+                'error' => 'Falha ao obter análise do Gemini'
+            ];
+        } catch (\Exception $e) {
+            Log::error('Erro na análise: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => 'Erro ao processar análise'
+            ];
         }
+    }
+    
+    private function buildAnalysisPrompt($business, $analytics, $competitors)
+    {
+        return "Analise os seguintes dados do negócio e forneça insights estratégicos:
         
-        $content = $data['candidates'][0]['content']['parts'][0]['text'];
+        Negócio: {$business->name}
+        Setor: {$business->sector}
         
-        return [
-            'analysis' => $content,
-            'suggestions' => $this->extractSuggestions($content),
-            'important_dates' => $this->extractImportantDates($content),
-            'priority_actions' => $this->extractPriorityActions($content),
-            'timestamp' => now() 
-        ];
+        Métricas dos últimos 30 dias:
+        - Visualizações: {$analytics->total_views}
+        - Cliques: {$analytics->total_clicks}
+        - Ligações: {$analytics->total_calls}
+        - Taxa de conversão: {$analytics->conversion_rate}%
+        
+        " . ($competitors ? "Dados dos competidores:\n" . $this->formatCompetitorsData($competitors) : "");
     }
 /**
  * Analisa os dados do negócio usando o Gemini API

@@ -19,8 +19,8 @@ Route::get('/analytics/{business}/keywords', [AnalyticsController::class, 'getKe
 Route::post('/analytics/{business}/keywords/refresh', [AnalyticsController::class, 'refreshKeywords'])
     ->name('analytics.keywords.refresh');
 
-Route::post('/analytics/export/{business}', [AnalyticsController::class, 'exportCompetitorAnalysis'])
-    ->name('analytics.export');
+    Route::post('/analytics/export/competitor/{business}', 'AnalyticsController@exportCompetitorAnalysis')
+    ->name('analytics.export.competitor');
 
     // Rota para agendar revisão
     Route::post('/automation/schedule-review/{business}', [AutomationController::class, 'scheduleReview'])

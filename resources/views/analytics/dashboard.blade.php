@@ -631,15 +631,25 @@ setInterval(refreshKeywords, 30 * 60 * 1000);
         </div>
 
         <button onclick="refreshInsights()" 
+                id="refresh-insights-btn"
                 class="inline-flex items-center px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-sm">
-            <svg class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg id="refresh-icon" class="w-4 h-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
             </svg>
-            Atualizar Insights
+            <span id="refresh-text">Atualizar Insights</span>
         </button>
     </div>
-    
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+    <!-- Loading State -->
+    <div id="insights-loader" class="hidden">
+        <div class="flex items-center justify-center p-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <span class="ml-3 text-gray-600">Atualizando análises...</span>
+        </div>
+    </div>
+
+    <!-- Content Container -->
+    <div id="insights-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <!-- Performance Card -->
         @if(isset($aiAnalysis['performance']))
         <div class="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-blue-100 transition-all duration-300">
@@ -657,7 +667,6 @@ setInterval(refreshKeywords, 30 * 60 * 1000);
                 </div>
                 <p class="text-gray-600 leading-relaxed">{{ $aiAnalysis['performance']['message'] }}</p>
                 
-                <!-- Indicadores de Performance (opcional) -->
                 <div class="mt-4 pt-4 border-t border-gray-50">
                     <div class="flex justify-between text-sm">
                         <span class="text-gray-500">Score geral</span>
@@ -668,7 +677,7 @@ setInterval(refreshKeywords, 30 * 60 * 1000);
         </div>
         @endif
 
-        <!-- Oportunidades Card -->
+        <!-- Opportunities Card -->
         @if(isset($aiAnalysis['opportunities']))
         <div class="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-green-100 transition-all duration-300">
             <div class="p-6">
@@ -685,7 +694,6 @@ setInterval(refreshKeywords, 30 * 60 * 1000);
                 </div>
                 <p class="text-gray-600 leading-relaxed">{{ $aiAnalysis['opportunities']['message'] }}</p>
                 
-                <!-- Lista de Oportunidades (opcional) -->
                 @if(isset($aiAnalysis['opportunities']['items']))
                 <div class="mt-4 space-y-2">
                     @foreach($aiAnalysis['opportunities']['items'] as $item)
@@ -702,7 +710,7 @@ setInterval(refreshKeywords, 30 * 60 * 1000);
         </div>
         @endif
 
-        <!-- Alertas Card -->
+        <!-- Alerts Card -->
         @if(isset($aiAnalysis['alerts']))
         <div class="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-red-100 transition-all duration-300">
             <div class="p-6">
@@ -719,7 +727,6 @@ setInterval(refreshKeywords, 30 * 60 * 1000);
                 </div>
                 <p class="text-gray-600 leading-relaxed">{{ $aiAnalysis['alerts']['message'] }}</p>
                 
-                <!-- Nível de Urgência (opcional) -->
                 @if(isset($aiAnalysis['alerts']['urgency']))
                 <div class="mt-4 pt-4 border-t border-gray-50">
                     <div class="flex items-center">
@@ -740,11 +747,215 @@ setInterval(refreshKeywords, 30 * 60 * 1000);
 
 @push('scripts')
 <script>
+let isRefreshing = false;
+
 function refreshInsights() {
-    // Adicione aqui a lógica para atualizar os insights
-    // Por exemplo, uma chamada AJAX para buscar novos dados
+    if (isRefreshing) return;
+    
+    const loader = document.getElementById('insights-loader');
+    const content = document.getElementById('insights-content');
+    const refreshIcon = document.getElementById('refresh-icon');
+    const refreshText = document.getElementById('refresh-text');
+    const refreshBtn = document.getElementById('refresh-insights-btn');
+    
+    // Inicia o estado de loading
+    isRefreshing = true;
+    loader.classList.remove('hidden');
+    content.classList.add('opacity-50');
+    refreshIcon.classList.add('animate-spin');
+    refreshText.textContent = 'Atualizando...';
+    refreshBtn.disabled = true;
+    
+    // Faz a requisição para atualizar os insights
+    fetch(`/analytics/refresh/${businessId}`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Erro ao atualizar insights');
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            updateInsightCards(data.aiAnalysis);
+            showNotification('Insights atualizados com sucesso!', 'success');
+        } else {
+            throw new Error(data.message || 'Erro ao atualizar insights');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showNotification(error.message, 'error');
+    })
+    .finally(() => {
+        // Restaura o estado original
+        isRefreshing = false;
+        loader.classList.add('hidden');
+        content.classList.remove('opacity-50');
+        refreshIcon.classList.remove('animate-spin');
+        refreshText.textContent = 'Atualizar Insights';
+        refreshBtn.disabled = false;
+    });
+}
+
+function updateInsightCards(aiAnalysis) {
+    const content = document.getElementById('insights-content');
+    
+    // Template para cada tipo de card
+    const templates = {
+        performance: data => `
+            <div class="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-blue-100 transition-all duration-300">
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
+                            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-semibold text-gray-900">Performance</h4>
+                            <span class="text-sm text-gray-500">Análise de desempenho</span>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 leading-relaxed">${data.message}</p>
+                    ${data.score ? `
+                    <div class="mt-4 pt-4 border-t border-gray-50">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">Score geral</span>
+                            <span class="font-medium text-blue-600">${data.score}</span>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `,
+        opportunities: data => `
+            <div class="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-green-100 transition-all duration-300">
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-50 to-green-100 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
+                            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-semibold text-gray-900">Oportunidades</h4>
+                            <span class="text-sm text-gray-500">Potenciais melhorias</span>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 leading-relaxed">${data.message}</p>
+                    ${data.items ? `
+                    <div class="mt-4 space-y-2">
+                        ${data.items.map(item => `
+                            <div class="flex items-center text-sm text-gray-600">
+                                <svg class="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                ${item}
+                            </div>
+                        `).join('')}
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `,
+        alerts: data => `
+            <div class="group bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-red-100 transition-all duration-300">
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center mr-4 group-hover:scale-110 transition-transform duration-300">
+                            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-semibold text-gray-900">Alertas</h4>
+                            <span class="text-sm text-gray-500">Pontos de atenção</span>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 leading-relaxed">${data.message}</p>
+                    ${data.urgency ? `
+                    <div class="mt-4 pt-4 border-t border-gray-50">
+                        <div class="flex items-center">
+                            <span class="text-sm text-gray-500 mr-2">Nível de urgência:</span>
+                            <div class="flex space-x-1">
+                                ${Array(3).fill(0).map((_, i) => `
+                                    <div class="w-2 h-6 rounded-full ${i < data.urgency ? 'bg-red-500' : 'bg-gray-200'}"></div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `
+    };
+
+    // Atualiza o conteúdo
+    let newContent = '';
+    Object.entries(aiAnalysis).forEach(([key, data]) => {
+        if (templates[key]) {
+            newContent += templates[key](data);
+        }
+    });
+    
+    content.innerHTML = newContent;
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white ${
+        type === 'success' ? 'bg-green-500' : 'bg-red-500'
+    } shadow-lg transform transition-all duration-300 z-50`;
+    
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                ${type === 'success' 
+                    ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>'
+                    : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>'}
+            </svg>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Animação de entrada
+    setTimeout(() => {
+        notification.classList.add('translate-y-0', 'opacity-100');
+    }, 100);
+    
+    // Remove após 3 segundos
+    setTimeout(() => {
+        notification.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 </script>
+
+<style>
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+</style>
 @endpush
 
  <!-- Análise de Concorrentes -->
@@ -1127,45 +1338,59 @@ function refreshInsights() {
 <script>
 // Função para exportar relatório
 function exportReport(businessId) {
-    showNotification('Gerando relatório...', 'info');
+    console.log('Iniciando exportação...');
+    
+    // Captura o elemento com a classe analysis-content
+    const analysisContent = document.querySelector('.analysis-content');
+    
+    // Verifica se o elemento existe
+    if (!analysisContent) {
+        console.error('Elemento .analysis-content não encontrado');
+        showNotification('Erro: Conteúdo da análise não encontrado', 'error');
+        return;
+    }
 
-    // Captura o conteúdo da análise da modal
-    const analysisContent = document.querySelector('.analysis-content').innerHTML;
+    // Captura as métricas
     const metrics = {
-        average_position: document.querySelector('[data-metric="average_position"]').textContent,
-        rating: document.querySelector('[data-metric="rating"]').textContent,
-        engagement_rate: document.querySelector('[data-metric="engagement_rate"]').textContent
+        views: document.querySelector('[data-metric="views"]')?.textContent.trim(),
+        clicks: document.querySelector('[data-metric="clicks"]')?.textContent.trim(),
+        calls: document.querySelector('[data-metric="calls"]')?.textContent.trim()
     };
 
-    // Faz a requisição POST com os dados da análise
+    // Verifica se todas as métricas foram encontradas
+    if (!metrics.views || !metrics.clicks || !metrics.calls) {
+        console.error('Uma ou mais métricas não encontradas');
+        showNotification('Erro: Dados incompletos', 'error');
+        return;
+    }
+
+    // Mostra notificação de processamento
+    showNotification('Gerando relatório...', 'info');
+
+    // Faz a requisição para gerar o PDF
     fetch(`/analytics/export/${businessId}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            'Accept': 'application/pdf'
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
         },
         body: JSON.stringify({
-            content: analysisContent,
+            content: analysisContent.innerHTML,
             metrics: metrics
         })
     })
     .then(response => {
-        if (!response.ok) {
-            throw new Error('Erro ao gerar relatório');
-        }
+        if (!response.ok) throw new Error('Erro na resposta do servidor');
         return response.blob();
     })
     .then(blob => {
-        // Cria URL do blob e faz download
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `analise_concorrentes_${new Date().toISOString().split('T')[0]}.pdf`;
+        a.download = `analise_${new Date().toISOString().split('T')[0]}.pdf`;
         document.body.appendChild(a);
         a.click();
         
-        // Cleanup
         setTimeout(() => {
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
@@ -1174,87 +1399,9 @@ function exportReport(businessId) {
         showNotification('Relatório gerado com sucesso!', 'success');
     })
     .catch(error => {
-        console.error('Erro ao exportar:', error);
+        console.error('Erro ao gerar relatório:', error);
         showNotification('Erro ao gerar relatório. Tente novamente.', 'error');
     });
-}
-
-// Função para abrir o modal de agendamento
-function openReviewScheduleModal(businessId) {
-    const modal = document.getElementById('event-modal');
-    const form = document.getElementById('event-form');
-    
-    if (!modal || !form) {
-        console.error('Modal ou form não encontrado');
-        return;
-    }
-
-    // Reseta o formulário
-    form.reset();
-    
-    // Configura o título do modal
-    const modalTitle = document.getElementById('modal-title');
-    if (modalTitle) {
-        modalTitle.textContent = 'Agendar Revisão';
-    }
-    
-    // Define valores padrão para revisão
-    const eventType = document.getElementById('event-type');
-    const eventTitle = document.getElementById('event-title');
-    
-    if (eventType) eventType.value = 'review';
-    if (eventTitle) eventTitle.value = 'Revisão do Negócio';
-    
-    // Define data e hora padrão
-    const now = new Date();
-    const startTime = new Date(now.setMinutes(now.getMinutes() + 30));
-    const endTime = new Date(now.setHours(now.getHours() + 1));
-    
-    const eventStart = document.getElementById('event-start');
-    const eventEnd = document.getElementById('event-end');
-    
-    if (eventStart) eventStart.value = startTime.toISOString().slice(0, 16);
-    if (eventEnd) eventEnd.value = endTime.toISOString().slice(0, 16);
-    
-    // Configura o formulário para submissão
-    form.onsubmit = async function(e) {
-        e.preventDefault();
-        
-        try {
-            const response = await fetch(`/automation/schedule-review/${businessId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                },
-                body: JSON.stringify({
-                    title: document.getElementById('event-title').value,
-                    description: document.getElementById('event-description').value,
-                    start: document.getElementById('event-start').value,
-                    end: document.getElementById('event-end').value,
-                    type: 'review'
-                })
-            });
-
-            const data = await response.json();
-            
-            if (response.ok) {
-                showNotification('Revisão agendada com sucesso!', 'success');
-                modal.classList.add('hidden');
-                if (typeof calendar !== 'undefined') {
-                    calendar.refetchEvents();
-                }
-            } else {
-                throw new Error(data.message || 'Erro ao agendar revisão');
-            }
-        } catch (error) {
-            console.error('Erro:', error);
-            showNotification(error.message, 'error');
-        }
-    };
-    
-    // Mostra o modal
-    modal.classList.remove('hidden');
 }
 
 // Função de notificação

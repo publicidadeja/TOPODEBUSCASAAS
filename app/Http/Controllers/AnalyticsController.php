@@ -1588,10 +1588,6 @@ public function exportCompetitorAnalysis(Request $request, Business $business)
             return response()->json(['error' => 'Não autorizado'], 403);
         }
 
-        // Recebe os dados do request
-        $content = $request->input('content');
-        $metrics = $request->input('metrics');
-
         // Prepara os dados para o PDF
         $data = [
             'business' => $business,
@@ -1600,27 +1596,27 @@ public function exportCompetitorAnalysis(Request $request, Business $business)
                 'end' => now()->format('d/m/Y')
             ],
             'analysis' => [
-                'metrics' => $metrics,
-                'content' => $content,
+                'metrics' => [
+                    'average_position' => $request->input('metrics.average_position'),
+                    'rating' => $request->input('metrics.rating'),
+                    'engagement_rate' => $request->input('metrics.engagement_rate')
+                ],
+                'content' => $request->input('content'),
                 'lastUpdate' => now()->format('d/m/Y H:i')
             ]
         ];
 
-        // Gera o PDF
+        // Gera o PDF usando o template específico
         $pdf = PDF::loadView('analytics.exports.competitor-analysis', $data);
-        $pdf->setPaper('a4', 'portrait');
         
-        // Define o nome do arquivo
-        $fileName = "analise-concorrentes-{$business->name}-" . now()->format('Y-m-d') . ".pdf";
-
-        // Retorna o PDF como download
-        return $pdf->download($fileName);
+        return $pdf->download("analise-concorrentes-{$business->name}.pdf");
 
     } catch (\Exception $e) {
-        \Log::error('Erro ao exportar análise de concorrentes: ' . $e->getMessage());
-        return response()->json([
-            'error' => 'Não foi possível gerar o relatório: ' . $e->getMessage()
-        ], 500);
+        \Log::error('Erro ao exportar análise', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return response()->json(['error' => $e->getMessage()], 500);
     }
 }
 }
