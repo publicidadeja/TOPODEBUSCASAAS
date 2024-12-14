@@ -1513,36 +1513,33 @@ protected function getKeywordAnalytics($business, $startDate = null, $endDate = 
 
 public function getKeywords(Business $business)
 {
-    try {
+    // Verifica se existem palavras-chave em cache
+    $cacheKey = "business_keywords_{$business->id}";
+    $keywords = Cache::get($cacheKey);
+
+    if (!$keywords) {
+        // Se não houver cache, busca novas palavras-chave
         $keywords = $this->keywordService->getPopularKeywords($business);
-        return response()->json(['keywords' => $keywords]);
-    } catch (\Exception $e) {
-        return response()->json(['error' => $e->getMessage()], 500);
+        // Cache por 24 horas
+        Cache::put($cacheKey, $keywords, now()->addHours(24));
     }
+
+    return response()->json($keywords);
 }
 
 public function refreshKeywords(Business $business)
 {
-    try {
-        // Limpa o cache existente
-        $cacheKey = "business_{$business->id}_keywords";
-        Cache::forget($cacheKey);
-        
-        // Busca novas palavras-chave
-        $keywords = $this->keywordService->getPopularKeywords($business);
-        
-        return response()->json([
-            'success' => true,
-            'keywords' => $keywords
-        ]);
-    } catch (\Exception $e) {
-        \Log::error('Erro ao atualizar palavras-chave: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Erro ao atualizar palavras-chave'
-        ], 500);
-    }
+    $cacheKey = "business_keywords_{$business->id}";
+    
+    // Força uma nova busca de palavras-chave
+    $keywords = $this->keywordService->getKeywordsForBusiness($business);
+    
+    // Atualiza o cache
+    Cache::put($cacheKey, $keywords, now()->addHours(24));
+
+    return response()->json($keywords);
 }
+
 public function export($type, $businessId, Request $request)
 {
     $period = $request->get('period', 30);
@@ -1588,14 +1585,12 @@ public function exportCompetitorAnalysis(Request $request, Business $business)
     try {
         // Verifica autorização
         if ($business->user_id !== auth()->id()) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Não autorizado'
-            ], 403);
+            return response()->json(['error' => 'Não autorizado'], 403);
         }
 
-        // Recebe os dados da análise enviados pelo frontend
-        $analysisData = $request->all();
+        // Recebe os dados do request
+        $content = $request->input('content');
+        $metrics = $request->input('metrics');
 
         // Prepara os dados para o PDF
         $data = [
@@ -1605,31 +1600,26 @@ public function exportCompetitorAnalysis(Request $request, Business $business)
                 'end' => now()->format('d/m/Y')
             ],
             'analysis' => [
-                'metrics' => [
-                    'average_position' => $analysisData['metrics']['average_position'],
-                    'rating' => $analysisData['metrics']['rating'],
-                    'engagement_rate' => $analysisData['metrics']['engagement_rate']
-                ],
-                'content' => $analysisData['content'],
+                'metrics' => $metrics,
+                'content' => $content,
                 'lastUpdate' => now()->format('d/m/Y H:i')
             ]
         ];
 
-        // Gera o PDF usando o template correto
+        // Gera o PDF
         $pdf = PDF::loadView('analytics.exports.competitor-analysis', $data);
         $pdf->setPaper('a4', 'portrait');
         
         // Define o nome do arquivo
         $fileName = "analise-concorrentes-{$business->name}-" . now()->format('Y-m-d') . ".pdf";
 
-        // Retorna o PDF para download
+        // Retorna o PDF como download
         return $pdf->download($fileName);
 
     } catch (\Exception $e) {
         \Log::error('Erro ao exportar análise de concorrentes: ' . $e->getMessage());
         return response()->json([
-            'success' => false,
-            'error' => 'Não foi possível gerar o relatório. Por favor, tente novamente.'
+            'error' => 'Não foi possível gerar o relatório: ' . $e->getMessage()
         ], 500);
     }
 }

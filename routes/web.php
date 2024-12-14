@@ -14,13 +14,13 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\CompetitorAnalysisController;
 use App\Http\Controllers\MarketAnalysisController;
 
-Route::post('/export-competitor-analysis/{business}', [AnalyticsController::class, 'exportCompetitorAnalysis'])
-->name('export.competitor-analysis')
-->middleware('auth');
+Route::get('/analytics/{business}/keywords', [AnalyticsController::class, 'getKeywords'])
+    ->name('analytics.keywords');
+Route::post('/analytics/{business}/keywords/refresh', [AnalyticsController::class, 'refreshKeywords'])
+    ->name('analytics.keywords.refresh');
 
-Route::post('/export/{business}', [AnalyticsController::class, 'exportCompetitorAnalysis'])
-->name('export.competitor-analysis')
-->middleware('auth');
+Route::post('/analytics/export/{business}', [AnalyticsController::class, 'exportCompetitorAnalysis'])
+    ->name('analytics.export');
 
     // Rota para agendar revisão
     Route::post('/automation/schedule-review/{business}', [AutomationController::class, 'scheduleReview'])

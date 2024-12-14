@@ -2,6 +2,18 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
     @push('styles')
     <style>
+
+.keyword-card {
+    transition: all 0.3s ease;
+}
+
+.keyword-card:hover {
+    transform: translateY(-2px);
+}
+
+.competition-bar {
+    transition: width 0.5s ease;
+}
         :root {
             --primary-color: #4285F4;
             --success-color: #0F9D58;
@@ -418,72 +430,75 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
                 </svg>
             </div>
-            <h3 class="text-lg font-semibold text-gray-800">Palavras-chave Populares</h3>
-        </div>
-        
-        <button onclick="refreshKeywords()" class="p-2 hover:bg-gray-50 rounded-lg transition-colors duration-200" title="Atualizar">
-            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
-        </button>
-    </div>
-    
-<!-- Seção de Palavras-chave -->
-<div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100">
-    <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center space-x-3">
-            <div class="p-2 bg-indigo-50 rounded-lg">
-                <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                </svg>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800">Palavras-chave Populares</h3>
+                <p class="text-sm text-gray-500">Palavras mais buscadas relacionadas ao seu negócio</p>
             </div>
-            <h3 class="text-lg font-semibold text-gray-800">Palavras-chave Populares</h3>
         </div>
         
-        <div class="flex items-center space-x-2">
+        <div class="flex items-center space-x-4">
             <span id="last-update" class="text-sm text-gray-500"></span>
-            <button onclick="refreshKeywords()" class="p-2 hover:bg-gray-50 rounded-lg transition-colors duration-200" title="Atualizar">
-                <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button onclick="refreshKeywords()" class="flex items-center space-x-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition-colors duration-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
+                <span>Atualizar</span>
             </button>
         </div>
     </div>
     
-    <div id="keywords-container">
-        @if(!empty($keywords))
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                @foreach($keywords as $term => $data)
-                    <div class="bg-gradient-to-br from-indigo-50/50 to-white p-4 rounded-xl border border-indigo-100/50 hover:shadow-sm transition-all duration-300">
-                        <div class="flex flex-col">
-                            <span class="text-sm text-gray-600 mb-1">{{ $term }}</span>
-                            <div class="flex flex-col space-y-1">
-                                <div class="flex items-baseline space-x-2">
-                                    <span class="text-xl font-semibold text-gray-900">{{ number_format($data['volume'] ?? 0) }}</span>
-                                    <span class="text-xs text-gray-500">buscas/mês</span>
-                                </div>
-                                <div class="w-full bg-gray-200 rounded-full h-1.5">
-                                    <div class="bg-indigo-500 h-1.5 rounded-full" style="width: {{ $data['relevance'] ?? 0 }}%"></div>
-                                </div>
-                                <span class="text-xs text-gray-500">{{ $data['relevance'] ?? 0 }}% relevância</span>
-                            </div>
+    <div id="keywords-container" class="relative">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            @foreach($keywords as $term => $data)
+            <div class="bg-gradient-to-br from-indigo-50/50 to-white p-6 rounded-xl border border-indigo-100/50 hover:shadow-md transition-all duration-300">
+                <div class="flex flex-col">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-lg font-semibold text-gray-800">{{ $term }}</span>
+                        <span class="px-3 py-1 text-sm bg-indigo-100 text-indigo-700 rounded-full">
+                            {{ isset($data['volume']) ? number_format($data['volume']) : 'N/A' }} buscas
+                        </span>
+                    </div>
+                    
+                    @if(isset($data['trend']))
+                    <div class="flex items-center mt-2">
+                        @if($data['trend'] > 0)
+                        <div class="flex items-center text-green-600 text-sm">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                            </svg>
+                            <span>+{{ number_format($data['trend'], 1) }}% este mês</span>
+                        </div>
+                        @else
+                        <div class="flex items-center text-red-600 text-sm">
+                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"/>
+                            </svg>
+                            <span>{{ number_format($data['trend'], 1) }}% este mês</span>
+                        </div>
+                        @endif
+                    </div>
+                    @endif
+                    
+                    @if(isset($data['competition']))
+                    <div class="mt-3">
+                        <div class="text-sm text-gray-500 mb-1">Nível de competição</div>
+                        <div class="h-2 bg-gray-100 rounded-full">
+                            <div class="h-2 bg-indigo-500 rounded-full" style="width: {{ $data['competition'] }}%"></div>
                         </div>
                     </div>
-                @endforeach
-            </div>
-        @else
-            <div class="flex flex-col items-center justify-center py-8 px-4 text-center">
-                <div class="p-3 bg-indigo-50 rounded-full mb-4">
-                    <svg class="w-6 h-6 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                    </svg>
+                    @endif
                 </div>
-                <p class="text-gray-500">Nenhuma palavra-chave encontrada</p>
-                <button onclick="refreshKeywords()" class="mt-4 text-sm text-indigo-600 hover:text-indigo-700">
-                    Tentar novamente
-                </button>
             </div>
-        @endif
+            @endforeach
+        </div>
+        
+        <!-- Estado de carregamento -->
+        <div id="keywords-loader" class="hidden absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
+            <div class="flex flex-col items-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
+                <span class="mt-4 text-sm text-gray-600">Atualizando palavras-chave...</span>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1114,18 +1129,15 @@ function refreshInsights() {
 function exportReport(businessId) {
     showNotification('Gerando relatório...', 'info');
 
-    // Capturar o conteúdo da análise de concorrentes da modal
-    const analysisData = {
-        business_id: businessId,
-        content: document.querySelector('.competitor-analysis-content').innerHTML, // Ajuste o seletor conforme sua estrutura HTML
-        metrics: {
-            average_position: document.querySelector('[data-metric="average_position"]').textContent,
-            rating: document.querySelector('[data-metric="rating"]').textContent,
-            engagement_rate: document.querySelector('[data-metric="engagement_rate"]').textContent
-        }
+    // Captura o conteúdo da análise da modal
+    const analysisContent = document.querySelector('.analysis-content').innerHTML;
+    const metrics = {
+        average_position: document.querySelector('[data-metric="average_position"]').textContent,
+        rating: document.querySelector('[data-metric="rating"]').textContent,
+        engagement_rate: document.querySelector('[data-metric="engagement_rate"]').textContent
     };
 
-    // Enviar os dados para o servidor
+    // Faz a requisição POST com os dados da análise
     fetch(`/analytics/export/${businessId}`, {
         method: 'POST',
         headers: {
@@ -1133,30 +1145,37 @@ function exportReport(businessId) {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
             'Accept': 'application/pdf'
         },
-        body: JSON.stringify(analysisData)
+        body: JSON.stringify({
+            content: analysisContent,
+            metrics: metrics
+        })
     })
     .then(response => {
         if (!response.ok) {
-            return response.json().then(data => {
-                throw new Error(data.error || 'Erro na exportação');
-            });
+            throw new Error('Erro ao gerar relatório');
         }
         return response.blob();
     })
     .then(blob => {
+        // Cria URL do blob e faz download
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `analise_concorrentes_${businessId}.pdf`;
+        a.download = `analise_concorrentes_${new Date().toISOString().split('T')[0]}.pdf`;
         document.body.appendChild(a);
         a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+        
+        // Cleanup
+        setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }, 100);
+
         showNotification('Relatório gerado com sucesso!', 'success');
     })
     .catch(error => {
-        console.error('Export error:', error);
-        showNotification(error.message, 'error');
+        console.error('Erro ao exportar:', error);
+        showNotification('Erro ao gerar relatório. Tente novamente.', 'error');
     });
 }
 
@@ -2392,4 +2411,114 @@ function updateGeminiAnalysis() {
 </script>
 @endpush
 @include('automation.modals.event-modal')
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Carrega as palavras-chave quando a página é carregada
+    loadKeywords();
+});
+
+function loadKeywords() {
+    const businessId = document.getElementById('business-selector').value;
+    
+    // Mostra indicador de carregamento
+    document.getElementById('keywords-container').innerHTML = `
+        <div class="flex justify-center items-center p-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+            <span class="ml-2 text-gray-600">Buscando palavras-chave...</span>
+        </div>
+    `;
+
+    // Faz a requisição para buscar as palavras-chave
+    fetch(`/analytics/${businessId}/keywords`, {
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        displayKeywords(data);
+        updateLastUpdate();
+    })
+    .catch(error => {
+        document.getElementById('keywords-container').innerHTML = `
+            <div class="text-center p-4 text-red-600">
+                Erro ao carregar palavras-chave. Tente novamente.
+            </div>
+        `;
+    });
+}
+
+function refreshKeywords() {
+    const businessId = document.getElementById('business-selector').value;
+    
+    // Mostra indicador de carregamento
+    document.getElementById('keywords-container').innerHTML = `
+        <div class="flex justify-center items-center p-8">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+            <span class="ml-2 text-gray-600">Atualizando palavras-chave...</span>
+        </div>
+    `;
+
+    // Faz a requisição para atualizar as palavras-chave
+    fetch(`/analytics/${businessId}/keywords/refresh`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        displayKeywords(data);
+        updateLastUpdate();
+    })
+    .catch(error => {
+        document.getElementById('keywords-container').innerHTML = `
+            <div class="text-center p-4 text-red-600">
+                Erro ao atualizar palavras-chave. Tente novamente.
+            </div>
+        `;
+    });
+}
+
+function displayKeywords(keywords) {
+    const container = document.getElementById('keywords-container');
+    
+    if (!keywords || Object.keys(keywords).length === 0) {
+        container.innerHTML = `
+            <div class="text-center p-4 text-gray-600">
+                Nenhuma palavra-chave encontrada.
+            </div>
+        `;
+        return;
+    }
+
+    let html = `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">`;
+    
+    Object.entries(keywords).forEach(([term, data]) => {
+        html += `
+            <div class="bg-gradient-to-br from-indigo-50/50 to-white p-4 rounded-xl border border-indigo-100/50 hover:shadow-sm transition-all duration-300">
+                <div class="flex flex-col">
+                    <span class="text-sm text-gray-600 mb-1">${term}</span>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full">
+                            ${typeof data === 'object' ? data.volume || 'N/A' : data}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    html += `</div>`;
+    container.innerHTML = html;
+}
+
+function updateLastUpdate() {
+    const lastUpdate = document.getElementById('last-update');
+    if (lastUpdate) {
+        lastUpdate.textContent = `Última atualização: ${new Date().toLocaleTimeString()}`;
+    }
+}
+</script>
 </x-app-layout>
