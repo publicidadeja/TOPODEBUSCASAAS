@@ -14,6 +14,10 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\CompetitorAnalysisController;
 use App\Http\Controllers\MarketAnalysisController;
 
+Route::get('/download-report/{business}', [AnalyticsController::class, 'downloadReport'])
+    ->name('analytics.download-report')
+    ->middleware('auth');
+
 Route::post('/export-competitor-analysis/{business}', [AnalyticsController::class, 'exportCompetitorAnalysis'])
 ->name('export.competitor-analysis')
 ->middleware('auth');
