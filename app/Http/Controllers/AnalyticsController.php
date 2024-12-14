@@ -533,10 +533,41 @@ protected function getOrGenerateAIAnalysis($business, $analyticsData)
             $endDate = Carbon::now();
             $startDate = Carbon::now()->subDays($period);
             
-            if ($request->has('start_date') && $request->has('end_date')) {
-                $startDate = Carbon::parse($request->start_date);
-                $endDate = Carbon::parse($request->end_date);
-            }
+            // Get analytics data
+            $analytics = BusinessAnalytics::where('business_id', $business->id)
+                ->whereBetween('date', [$startDate, $endDate])
+                ->orderBy('date')
+                ->get();
+    
+            // Calculate current totals
+            $currentTotal = [
+                'views' => $analytics->sum('views'),
+                'clicks' => $analytics->sum('clicks'),
+                'calls' => $analytics->sum('calls')
+            ];
+    
+            // Calculate growth (você precisa implementar a lógica de crescimento)
+            $growth = [
+                'views' => 0,  // Implemente o cálculo de crescimento
+                'clicks' => 0, // Implemente o cálculo de crescimento
+                'calls' => 0   // Implemente o cálculo de crescimento
+            ];
+    
+            // Prepare devices data (você precisa implementar a lógica de dispositivos)
+            $devices = [
+                'desktop' => 0,
+                'mobile' => 0,
+                'tablet' => 0
+            ];
+    
+            // Prepare locations data (você precisa implementar a lógica de localização)
+            $locations = [];
+    
+            // Prepare keywords data (você precisa implementar a lógica de palavras-chave)
+            $keywords = [];
+    
+            // Prepare insights (você precisa implementar a lógica de insights)
+            $insights = [];
     
             $data = [
                 'business' => $business,
@@ -544,10 +575,13 @@ protected function getOrGenerateAIAnalysis($business, $analyticsData)
                     'start' => $startDate->format('d/m/Y'),
                     'end' => $endDate->format('d/m/Y')
                 ],
-                'analytics' => BusinessAnalytics::where('business_id', $business->id)
-                    ->whereBetween('date', [$startDate, $endDate])
-                    ->orderBy('date')
-                    ->get()
+                'currentTotal' => $currentTotal,
+                'growth' => $growth,
+                'devices' => $devices,
+                'locations' => $locations,
+                'keywords' => $keywords,
+                'insights' => $insights,
+                'analytics' => $analytics
             ];
     
             $pdf = PDF::loadView('analytics.exports.pdf', $data);
