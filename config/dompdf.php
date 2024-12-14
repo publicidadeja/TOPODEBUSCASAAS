@@ -266,7 +266,7 @@ return [
          *
          * @var bool
          */
-        'enable_remote' => false,
+        'enable_remote' => true,
 
         /**
          * List of allowed remote hosts
@@ -281,6 +281,8 @@ return [
          * @var array|null
          */
         'allowed_remote_hosts' => null,
+
+        'isRemoteEnabled' => true,
 
         /**
          * A ratio applied to the fonts height to be more like browsers' line height

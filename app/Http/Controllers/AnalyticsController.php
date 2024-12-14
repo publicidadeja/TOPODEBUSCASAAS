@@ -525,33 +525,63 @@ protected function getOrGenerateAIAnalysis($business, $analyticsData)
     public function exportPdf(Request $request, Business $business)
     {
         try {
+            // Verify authorization
             if ($business->user_id !== auth()->id()) {
-                return response()->json(['error' => 'Não autorizado'], 403);
+                throw new \Exception('Não autorizado');
             }
-            
+    
+            // Set up date range
             $period = $request->input('period', 30);
             $endDate = Carbon::now();
             $startDate = Carbon::now()->subDays($period);
-            
-            if ($request->has('start_date') && $request->has('end_date')) {
-                $startDate = Carbon::parse($request->start_date);
-                $endDate = Carbon::parse($request->end_date);
-            }
     
-            // Fix: Pass all three required parameters
-            $data = $this->getAnalyticsData($business->id, $startDate, $endDate);
-            $data['business'] = $business;
-            $data['period'] = [
-                'start' => $startDate->format('d/m/Y'),
-                'end' => $endDate->format('d/m/Y')
+            // Get analytics data
+            $analytics = BusinessAnalytics::where('business_id', $business->id)
+                ->whereBetween('date', [$startDate, $endDate])
+                ->orderBy('date')
+                ->get();
+    
+            // Prepare data for PDF
+            $data = [
+                'business' => $business,
+                'period' => [
+                    'start' => $startDate->format('d/m/Y'),
+                    'end' => $endDate->format('d/m/Y')
+                ],
+                'currentTotal' => [
+                    'views' => $analytics->sum('views'),
+                    'clicks' => $analytics->sum('clicks'),
+                    'calls' => $analytics->sum('calls')
+                ],
+                'growth' => [
+                    'views' => 0,
+                    'clicks' => 0,
+                    'calls' => 0
+                ],
+                'devices' => [], // Add device statistics if available
+                'locations' => [], // Add location statistics if available
+                'keywords' => [], // Add keyword statistics if available
+                'insights' => [] // Add insights if available
             ];
     
+            // Generate PDF
             $pdf = PDF::loadView('analytics.exports.pdf', $data);
-            return $pdf->download("analytics-{$business->name}-{$startDate->format('Y-m-d')}-{$endDate->format('Y-m-d')}.pdf");
             
+            // Set PDF options
+            $pdf->setPaper('a4', 'portrait');
+            $pdf->setOptions([
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'defaultFont' => 'sans-serif'
+            ]);
+    
+            // Return PDF download
+            return $pdf->download("relatorio-{$business->name}-{$startDate->format('Y-m-d')}.pdf");
+    
         } catch (\Exception $e) {
+            \Log::error('PDF Export Error: ' . $e->getMessage());
             return response()->json([
-                'error' => 'Não foi possível gerar o PDF. ' . $e->getMessage()
+                'error' => 'Erro ao exportar relatório: ' . $e->getMessage()
             ], 500);
         }
     }

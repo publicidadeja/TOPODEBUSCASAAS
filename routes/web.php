@@ -14,14 +14,9 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\CompetitorAnalysisController;
 use App\Http\Controllers\MarketAnalysisController;
 
-Route::middleware(['auth'])->group(function () {
-    Route::get('/analytics/export/pdf/{business}', [AnalyticsController::class, 'exportPdf'])
-        ->name('analytics.export.pdf');
-    Route::get('/analytics/export/excel/{business}', [AnalyticsController::class, 'exportExcel'])
-        ->name('analytics.export.excel');
-    Route::post('/analytics/schedule-review/{business}', [AnalyticsController::class, 'scheduleReview'])
-        ->name('analytics.schedule.review');
-});
+Route::get('/analytics/export/{type}/{business}', [AnalyticsController::class, 'exportPdf'])
+    ->name('analytics.export')
+    ->middleware(['auth']);
 
 Route::get('/analytics/refresh-keywords/{business}', [AnalyticsController::class, 'refreshKeywords'])
     ->name('analytics.refresh-keywords')
