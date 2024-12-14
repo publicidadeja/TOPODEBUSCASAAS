@@ -1119,7 +1119,7 @@ function refreshInsights() {
 @push('scripts')
 <script>
 function exportReport(type, businessId) {
-    fetch(`/analytics/export/${type}/${businessId}`, {
+    fetch(`/analytics/export/${businessId}`, {
         method: 'GET',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,

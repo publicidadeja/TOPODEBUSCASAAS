@@ -14,7 +14,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\CompetitorAnalysisController;
 use App\Http\Controllers\MarketAnalysisController;
 
-Route::get('/analytics/export/{type}/{business}', [AnalyticsController::class, 'exportPdf'])
+Route::get('/analytics/export/{business}', [AnalyticsController::class, 'exportPdf'])
     ->name('analytics.export')
     ->middleware(['auth']);
 
