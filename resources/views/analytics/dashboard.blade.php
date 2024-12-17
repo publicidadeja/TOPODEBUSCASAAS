@@ -1179,6 +1179,14 @@ function showNotification(message, type = 'success') {
         </form>
     </div>
 
+    <!-- Add this right after the competitors search form -->
+<div id="competitors-loading" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white p-6 rounded-lg shadow-xl">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+        <p class="mt-4 text-gray-600">Buscando concorrentes...</p>
+    </div>
+</div>
+
     <!-- Controls -->
     <div class="flex justify-between items-center mb-4">
         <div class="flex items-center space-x-4">
@@ -1448,34 +1456,93 @@ function initMap() {
 
 // Search competitors
 async function searchCompetitors(page = 1) {
-    currentPage = page;
     const loading = document.getElementById('competitors-loading');
     loading.classList.remove('hidden');
 
     try {
-        const radius = document.getElementById('search-radius').value * 1000; // Convert to meters
-        const response = await fetch(`/api/places/nearby?` + new URLSearchParams({
+        // Add logging to debug request parameters
+        const params = {
             type: document.getElementById('business-type').value,
-            radius: radius,
+            radius: document.getElementById('search-radius').value * 1000,
             lat: '{{ $business->latitude }}',
             lng: '{{ $business->longitude }}',
             page: page,
             sort: document.getElementById('sort-by').value
-        }));
+        };
+        console.log('Search parameters:', params);
+
+        const response = await fetch('/api/places/nearby?' + new URLSearchParams(params));
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
         const data = await response.json();
+        
+        if (!data.results) {
+            throw new Error('No results found in response');
+        }
+
         displayResults(data.results);
         updatePagination(data.total);
         updateMap(data.results);
         
         document.getElementById('results-count').textContent = 
             `${data.total} resultados encontrados`;
+
     } catch (error) {
-        showNotification('Erro ao buscar concorrentes', 'error');
+        console.error('Error fetching competitors:', error);
+        showNotification('Erro ao buscar concorrentes: ' + error.message, 'error');
+        
+        // Clear results and show error state
+        const container = document.getElementById('competitors-list');
+        container.innerHTML = `
+            <div class="col-span-full text-center py-8">
+                <div class="text-red-500 mb-2">
+                    <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900">Erro ao carregar concorrentes</h3>
+                <p class="mt-1 text-sm text-gray-500">
+                    Por favor, tente novamente mais tarde ou contate o suporte.
+                </p>
+                <button onclick="searchCompetitors()" 
+                        class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                    Tentar Novamente
+                </button>
+            </div>
+        `;
     } finally {
         loading.classList.add('hidden');
     }
 }
+
+// Add a notification system if not already present
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white ${
+        type === 'error' ? 'bg-red-500' : 'bg-green-500'
+    }`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.remove();
+    }, 5000);
+}
+
+// Add initialization error handling
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        initMap();
+        searchCompetitors();
+    } catch (error) {
+        console.error('Error during initialization:', error);
+        showNotification('Erro ao inicializar o mapa: ' + error.message, 'error');
+    }
+});
 
 // Display results in list view
 function displayResults(results) {
