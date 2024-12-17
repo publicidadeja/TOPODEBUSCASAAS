@@ -25,15 +25,14 @@ class GoogleBusinessService
 protected $aiAnalysisService;
 
     
-    public function __construct(
-        GoogleBusinessService $googleService,
-        KeywordService $keywordService,
-        AIAnalysisService $aiAnalysisService
-    ) {
-        $this->googleService = $googleService;
-        $this->keywordService = $keywordService;
-        $this->aiAnalysisService = $aiAnalysisService;
-    }
+public function __construct(
+    KeywordService $keywordService,
+    AIAnalysisService $aiAnalysisService
+) {
+    $this->client = new Client(); // Initialize Google Client
+    $this->keywordService = $keywordService;
+    $this->aiAnalysisService = $aiAnalysisService;
+}
 
     public function importBusinesses($user)
 {
