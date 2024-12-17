@@ -1424,8 +1424,51 @@ function showNotification(message, type = 'success') {
 </style>
 
 @push('scripts')
+
+
 <script>
 
+async function searchCompetitors() {
+    const radius = document.getElementById('radius-selector')?.value || 5000;
+    const loadingEl = document.getElementById('competitors-loading');
+    const listEl = document.getElementById('competitors-list');
+
+    try {
+        if (loadingEl) loadingEl.classList.remove('hidden');
+        if (listEl) listEl.classList.add('hidden');
+
+        const response = await fetch(`/api/places/nearby?lat=${business.latitude}&lng=${business.longitude}&radius=${radius}&type=${business.business_type}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro ao buscar concorrentes');
+        }
+
+        if (data.results) {
+            updateMap(data.results);
+            renderCompetitors(data.results);
+        }
+
+    } catch (error) {
+        console.error('Erro ao buscar concorrentes:', error);
+        showNotification('Erro ao buscar concorrentes: ' + error.message, 'error');
+        
+        if (listEl) {
+            listEl.innerHTML = `
+                <div class="p-4 text-center">
+                    <p class="text-red-600">Erro ao carregar concorrentes. Tente novamente.</p>
+                    <button onclick="searchCompetitors()" 
+                            class="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                        Tentar novamente
+                    </button>
+                </div>
+            `;
+        }
+    } finally {
+        if (loadingEl) loadingEl.classList.add('hidden');
+        if (listEl) listEl.classList.remove('hidden');
+    }
+}
 // Inicialização do mapa e variáveis globais
 let map, markers = [], currentView = 'list';
 const business = @json($business);
@@ -1440,25 +1483,20 @@ async function loadCompetitors() {
         loadingEl.classList.remove('hidden');
         listEl.classList.add('hidden');
         
-        // Adicione logs para debug
-        console.log('Buscando concorrentes com params:', {
+        console.log('Buscando concorrentes:', {
             lat: business.latitude,
             lng: business.longitude,
-            radius: radius,
+            radius,
             type: business.business_type
         });
 
         const response = await fetch(`/api/places/nearby?lat=${business.latitude}&lng=${business.longitude}&radius=${radius}&type=${business.business_type}`);
         const data = await response.json();
         
-        console.log('Resposta da API:', data); // Log para debug
+        console.log('Resposta da API:', data);
 
-        if (!response.ok) {
-            throw new Error(data.error || 'Erro na requisição');
-        }
-
-        if (!data.results || !Array.isArray(data.results)) {
-            throw new Error('Formato de dados inválido');
+        if (!data.success) {
+            throw new Error(data.message || 'Erro ao carregar dados');
         }
 
         renderCompetitors(data.results);
@@ -1466,12 +1504,9 @@ async function loadCompetitors() {
         
     } catch (error) {
         console.error('Erro detalhado:', error);
-        showNotification(`Erro ao carregar concorrentes: ${error.message}`, 'error');
-        
-        // Mostrar mensagem de erro na interface
         listEl.innerHTML = `
             <div class="p-4 text-center">
-                <p class="text-red-600">Erro ao carregar concorrentes. Tente novamente.</p>
+                <p class="text-red-600">Erro ao carregar concorrentes: ${error.message}</p>
                 <button onclick="loadCompetitors()" 
                         class="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
                     Tentar novamente
@@ -1487,14 +1522,25 @@ async function loadCompetitors() {
 // Função para renderizar cards dos concorrentes
 function renderCompetitors(competitors) {
     const container = document.getElementById('competitors-list');
-    container.innerHTML = '';
     
-    competitors.forEach(competitor => {
-        const card = `
+    if (!competitors.length) {
+        container.innerHTML = `
+            <div class="p-4 text-center text-gray-600">
+                Nenhum concorrente encontrado nesta região.
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = competitors.map(competitor => {
+        // Validação dos dados necessários
+        if (!competitor || !competitor.name || !competitor.vicinity) {
+            console.warn('Dados incompletos do concorrente:', competitor);
+            return '';
+        }
+
+        return `
             <div class="competitor-card bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300">
-                ${competitor.photos?.[0] ? `
-                    <img src="${competitor.photos[0]}" class="w-full h-48 object-cover rounded-lg mb-4" alt="${competitor.name}">
-                ` : ''}
                 <div class="flex items-center justify-between mb-2">
                     <h4 class="font-semibold text-lg">${competitor.name}</h4>
                     ${competitor.rating ? `
@@ -1520,8 +1566,7 @@ function renderCompetitors(competitors) {
                 </div>
             </div>
         `;
-        container.insertAdjacentHTML('beforeend', card);
-    });
+    }).join('');
 }
 
 // Inicialização do mapa
@@ -1556,38 +1601,48 @@ function initMap() {
 
 // Atualizar marcadores no mapa
 function updateMap(competitors) {
-    // Limpar marcadores existentes
+    // Limpa marcadores existentes
     markers.forEach(marker => marker.setMap(null));
     markers = [];
-    
+
+    // Adiciona novos marcadores
     competitors.forEach(competitor => {
-        const marker = new google.maps.Marker({
-            position: { 
-                lat: competitor.geometry.location.lat, 
-                lng: competitor.geometry.location.lng 
-            },
-            map: map,
-            title: competitor.name
-        });
-        
-        markers.push(marker);
-        
-        // Adicionar InfoWindow
-        const infoWindow = new google.maps.InfoWindow({
-            content: `
-                <div class="p-2">
-                    <h3 class="font-semibold">${competitor.name}</h3>
-                    <p class="text-sm">${competitor.vicinity}</p>
-                    ${competitor.rating ? `
-                        <p class="text-sm mt-1">Rating: ${competitor.rating} ⭐</p>
-                    ` : ''}
-                </div>
-            `
-        });
-        
-        marker.addListener('click', () => {
-            infoWindow.open(map, marker);
-        });
+        if (competitor.geometry && competitor.geometry.location) {
+            const marker = new google.maps.Marker({
+                position: {
+                    lat: competitor.geometry.location.lat,
+                    lng: competitor.geometry.location.lng
+                },
+                map: map,
+                title: competitor.name,
+                icon: {
+                    url: '/images/marker-competitor.png',
+                    scaledSize: new google.maps.Size(32, 32)
+                }
+            });
+
+            // Adiciona InfoWindow ao clicar no marcador
+            const infoWindow = new google.maps.InfoWindow({
+                content: `
+                    <div class="p-2">
+                        <h3 class="font-semibold">${competitor.name}</h3>
+                        <p class="text-sm">${competitor.vicinity}</p>
+                        ${competitor.rating ? `
+                            <div class="flex items-center mt-1">
+                                <span class="text-yellow-500">★</span>
+                                <span class="ml-1">${competitor.rating}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `
+            });
+
+            marker.addListener('click', () => {
+                infoWindow.open(map, marker);
+            });
+
+            markers.push(marker);
+        }
     });
 }
 
