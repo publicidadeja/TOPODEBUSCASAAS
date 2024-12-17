@@ -21,6 +21,10 @@ class Business extends Model
         'settings',
         'city',
         'state',
+        'latitude',
+        'longitude',
+        'business_type',
+        'keywords'
     ];
 
     protected $casts = [

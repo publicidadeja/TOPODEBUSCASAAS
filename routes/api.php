@@ -3,6 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+Route::get('/business/image', [BusinessImageController::class, 'getImage']);
+
 
 
 

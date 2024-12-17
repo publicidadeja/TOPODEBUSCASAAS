@@ -19,15 +19,17 @@ class GoogleBusinessService
     protected $retryDelay = 60;
     protected $rateLimitDelay = 61;
     protected $requestDelay = 2;
-    protected $maxBackoffDelay = 300; // 5 minutos
+    protected $maxBackoffDelay = 300;
+    protected $googleService;
 
-    public function __construct()
-    {
-        $this->client = new Client();
-    $this->client->setApplicationName(config('services.google.application_name'));
-    $this->client->setClientId(config('services.google.client_id'));
-    $this->client->setClientSecret(config('services.google.client_secret'));
-    $this->client->addScope('https://www.googleapis.com/auth/business.manage');
+    public function __construct(
+        GoogleBusinessService $googleService,
+        KeywordService $keywordService,
+        AIAnalysisService $aiAnalysisService
+    ) {
+        $this->googleService = $googleService;
+        $this->keywordService = $keywordService;
+        $this->aiAnalysisService = $aiAnalysisService;
     }
 
     public function importBusinesses($user)
@@ -354,5 +356,66 @@ public function getSearchKeywords($business, $dateRange = '30daysAgo')
         return [];
     }
 }
+
+public function getNearbyCompetitors($params)
+{
+    try {
+        $client = new \Google\Client();
+        $client->setApplicationName("Your App Name");
+        $client->setDeveloperKey(config('services.google.places_api_key'));
+
+        $places = new \Google\Service\Places($client);
+
+        $searchRequest = [
+            'location' => $params['location'],
+            'radius' => $params['radius'],
+            'type' => $params['type'],
+            'keyword' => $params['keyword']
+        ];
+
+        $results = $places->nearbySearch($searchRequest);
+
+        return array_map(function($place) {
+            return [
+                'name' => $place->name,
+                'address' => $place->vicinity,
+                'rating' => $place->rating ?? 0,
+                'reviews' => $place->user_ratings_total ?? 0,
+                'photos' => $this->getPlacePhotos($place->photos ?? []),
+                'distance' => $this->calculateDistance(
+                    $params['location']['lat'],
+                    $params['location']['lng'],
+                    $place->geometry->location->lat,
+                    $place->geometry->location->lng
+                )
+            ];
+        }, $results->results);
+    } catch (\Exception $e) {
+        \Log::error('Error in getNearbyCompetitors: ' . $e->getMessage());
+        return [];
+    }
+}
+
+private function calculateDistance($lat1, $lon1, $lat2, $lon2)
+{
+    $theta = $lon1 - $lon2;
+    $dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  
+            cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
+    $dist = acos($dist);
+    $dist = rad2deg($dist);
+    $miles = $dist * 60 * 1.1515;
+    return round($miles * 1.609344, 1); // Convert to kilometers
+}
+
+private function getPlacePhotos($photos)
+{
+    return array_map(function($photo) {
+        return "https://maps.googleapis.com/maps/api/place/photo?" .
+               "maxwidth=400&photoreference={$photo->photo_reference}&" .
+               "key=" . config('services.google.places_api_key');
+    }, $photos);
+}
+
+
 
 }
