@@ -16,26 +16,35 @@ class GooglePlacesController extends Controller
     }
 
     public function nearbySearch(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'lat' => 'required|numeric',
-            'lng' => 'required|numeric',
-            'radius' => 'nullable|numeric|max:50000',
-            'type' => 'nullable|string',
-            'keyword' => 'nullable|string'
-        ]);
+{
+    $validator = Validator::make($request->all(), [
+        'lat' => 'required|numeric',
+        'lng' => 'required|numeric',
+        'radius' => 'nullable|numeric|max:50000',
+        'type' => 'nullable|string',
+        'keyword' => 'nullable|string'
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        try {
-            $results = $this->placesService->nearbySearch($request->all());
-            return response()->json($results);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Erro ao buscar locais próximos'], 500);
-        }
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
     }
+
+    try {
+        // Change this line to use getNearbyCompetitors instead of nearbySearch
+        $results = $this->placesService->getNearbyCompetitors([
+            'location' => [
+                'lat' => $request->lat,
+                'lng' => $request->lng
+            ],
+            'radius' => $request->radius,
+            'type' => $request->type,
+            'keyword' => $request->keyword
+        ]);
+        return response()->json($results);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Erro ao buscar locais próximos'], 500);
+    }
+}
 
     public function placeDetails(Request $request)
     {

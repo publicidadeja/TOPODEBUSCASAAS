@@ -155,4 +155,57 @@ class GooglePlacesService
         
         return round($earthRadius * $c, 2);
     }
+
+    /**
+ * Get place autocomplete suggestions
+ * 
+ * @param string $input The user's input to search for
+ * @param array|null $location Optional location bias coordinates
+ * @return array Array of autocomplete suggestions
+ */
+public function autocomplete($input, $location = null)
+{
+    try {
+        $params = [
+            'input' => $input,
+            'key' => $this->apiKey,
+            'types' => 'establishment|geocode',
+            'language' => 'pt-BR'
+        ];
+
+        // Add location bias if coordinates are provided
+        if ($location) {
+            $params['location'] = "{$location['lat']},{$location['lng']}";
+            $params['radius'] = 50000; // 50km radius
+        }
+
+        // Generate cache key based on parameters
+        $cacheKey = 'places_autocomplete_' . md5(json_encode($params));
+
+        // Try to get from cache first
+        return Cache::remember($cacheKey, $this->cacheTime, function () use ($params) {
+            $response = Http::get('https://maps.googleapis.com/maps/api/place/autocomplete/json', $params);
+            
+            if ($response->successful()) {
+                $data = $response->json();
+                
+                if ($data['status'] === 'OK') {
+                    return array_map(function ($prediction) {
+                        return [
+                            'place_id' => $prediction['place_id'],
+                            'description' => $prediction['description'],
+                            'structured_formatting' => $prediction['structured_formatting'] ?? null,
+                            'types' => $prediction['types'] ?? []
+                        ];
+                    }, $data['predictions']);
+                }
+            }
+            
+            return [];
+        });
+    } catch (\Exception $e) {
+        Log::error('Error in place autocomplete: ' . $e->getMessage());
+        return [];
+    }
+}
 }
