@@ -15,6 +15,8 @@ use App\Services\GeminiService;
 use Illuminate\Support\Facades\Cache;
 use App\Services\AIAnalysisService;
 use App\Services\KeywordService;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 
 class AnalyticsController extends Controller
@@ -1585,21 +1587,56 @@ public function exportCompetitorAnalysis(Business $business)
 {
     try {
         // Obter dados dos concorrentes
-        $competitors = $business->competitors()->with(['analytics', 'reviews'])->get();
+        $competitors = $business->competitors()
+            ->with(['analytics', 'reviews'])
+            ->get();
         
-        // Obter análise do Gemini
-        $analysis = $this->geminiService->analyzeMarketData($business, $competitors);
+        // Preparar os dados para análise
+        $analyticsData = [];
+        foreach ($competitors as $competitor) {
+            $analytics = $competitor->analytics()
+                ->orderBy('date', 'desc')
+                ->first();
+                
+            if ($analytics) {
+                $analyticsData[] = [
+                    'name' => $competitor->name,
+                    'views' => $analytics->views ?? 0,
+                    'clicks' => $analytics->clicks ?? 0,
+                    'calls' => $analytics->calls ?? 0,
+                    'rating' => $analytics->rating ?? 0
+                ];
+            }
+        }
         
-        // Preparar dados para o PDF
+        // Calcular métricas
+        $metrics = [
+            'average_position' => 0,
+            'rating' => collect($analyticsData)->avg('rating') ?? 0,
+            'engagement_rate' => 0
+        ];
+        
+        if (count($analyticsData) > 0) {
+            $totalViews = collect($analyticsData)->sum('views');
+            $totalClicks = collect($analyticsData)->sum('clicks');
+            $metrics['engagement_rate'] = $totalViews > 0 ? 
+                round(($totalClicks / $totalViews) * 100, 2) : 0;
+        }
+
+        // Estruturar dados para o PDF
         $data = [
             'business' => $business,
+            'competitors' => $competitors,
             'analysis' => [
-                'metrics' => [
-                    'average_position' => $analysis['average_position'] ?? 'N/A',
-                    'rating' => $analysis['rating'] ?? 'N/A',
-                    'engagement_rate' => $analysis['engagement_rate'] ?? 'N/A'
+                'metrics' => $metrics,
+                'content' => 'Análise detalhada do mercado e concorrentes...',
+                'recommendations' => [
+                    [
+                        'title' => 'Melhoria de Engajamento',
+                        'description' => 'Sugestões para aumentar o engajamento...',
+                        'priority' => 'alta'
+                    ]
                 ],
-                'content' => $analysis['content'] ?? '',
                 'lastUpdate' => now()->format('d/m/Y H:i')
             ],
             'period' => [
@@ -1608,21 +1645,18 @@ public function exportCompetitorAnalysis(Business $business)
             ]
         ];
 
-        // Gerar PDF usando o template existente
-        $pdf = PDF::loadView('analytics.exports.competitor-analysis', $data);
+        // Gerar PDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('analytics.exports.competitor-analysis', $data);
         
-        // Configurar opções do PDF
-        $pdf->setPaper('a4');
-        $pdf->setOptions([
-            'isHtml5ParserEnabled' => true,
-            'isRemoteEnabled' => true
-        ]);
+        // Definir nome do arquivo
+        $filename = 'analise-concorrentes-' . \Str::slug($business->name) . '.pdf';
         
-        return $pdf->download('analise-concorrentes-' . $business->name . '.pdf');
+        // Retornar o PDF para download
+        return $pdf->download($filename);
 
     } catch (\Exception $e) {
-        Log::error('Erro ao gerar PDF de análise de concorrentes: ' . $e->getMessage());
-        return response()->json(['error' => 'Erro ao gerar relatório'], 500);
+        \Log::error('Erro ao gerar PDF de análise: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao gerar relatório. Tente novamente.'], 500);
     }
 }
 

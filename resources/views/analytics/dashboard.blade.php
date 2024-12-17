@@ -1192,22 +1192,22 @@ function showNotification(message, type = 'success') {
     
     <div class="space-y-4">
         <!-- Gerar Relatório Button -->
-        <button class="group w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 rounded-xl hover:from-indigo-100 hover:to-blue-100 transition-all duration-300 border border-indigo-100">
-            <div class="flex items-center">
-                <div class="bg-white p-2 rounded-lg shadow-sm group-hover:shadow-md transition-shadow duration-300">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                    </svg>
-                </div>
-                <div class="ml-4 text-left">
-                    <span class="block font-semibold">Gerar Relatório</span>
-                    <span class="text-xs text-indigo-600 opacity-75">Exportar dados em PDF</span>
-                </div>
-            </div>
-            <svg class="w-5 h-5 text-indigo-400 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        <button onclick="exportCompetitorAnalysis()" class="group w-full flex items-center justify-between px-6 py-4 bg-gradient-to-r from-indigo-50 to-blue-50 text-indigo-700 rounded-xl hover:from-indigo-100 hover:to-blue-100 transition-all duration-300 border border-indigo-100">
+    <div class="flex items-center">
+        <div class="bg-white p-2 rounded-lg shadow-sm group-hover:shadow-md transition-shadow duration-300">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
             </svg>
-        </button>
+        </div>
+        <div class="ml-4 text-left">
+            <span class="block font-semibold">Exportar Análise</span>
+            <span class="text-xs text-indigo-600 opacity-75">Exportar dados em PDF</span>
+        </div>
+    </div>
+    <svg class="w-5 h-5 text-indigo-400 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+    </svg>
+</button>
 
         <!-- Análise Detalhada Button -->
         <button 
@@ -1233,16 +1233,18 @@ function showNotification(message, type = 'success') {
     </div>
 </div>
 
-<!-- Modal for Análise Detalhada -->
 <x-modal name="competitor-analysis" :maxWidth="'4xl'">
-    <div class="bg-white p-4 sm:p-6 lg:p-8">
-        <!-- Header -->
+    <div class="bg-white p-4 sm:p-6 lg:p-8 rounded-xl">
+        <!-- Header com gradiente -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-100 pb-4 sm:pb-6 mb-4 sm:mb-6">
             <div>
-                <h3 class="text-xl sm:text-2xl font-semibold text-gray-800 mb-2">
+                <h3 class="text-xl sm:text-2xl font-google-sans font-bold text-gray-800 mb-2">
                     {{ $competitorAnalysis['title'] ?? 'Análise Detalhada' }}
                 </h3>
-                <p class="text-sm text-gray-500">
+                <p class="text-sm text-gray-500 flex items-center">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
                     Última atualização: {{ now()->format('d/m/Y H:i') }}
                 </p>
             </div>
@@ -1255,24 +1257,41 @@ function showNotification(message, type = 'success') {
         </div>
 
         <!-- Content -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div class="grid grid-cols-1 gap-6">
             <!-- Main Analysis -->
-            <div class="lg:col-span-2 space-y-4 sm:space-y-6">
-                <!-- Visão Geral -->
-                <div class="bg-gray-50 rounded-xl p-4 sm:p-6">
-    <h4 class="text-lg font-semibold text-gray-800 mb-4">Visão Geral</h4>
-    <div class="prose max-w-none text-gray-600 text-sm sm:text-base">
-        {!! preg_replace('/\*(.*?)\*/', '<strong>$1</strong>', nl2br(e($competitorAnalysis['content'] ?? ''))) !!}
-    </div>
-</div>
+            <div class="space-y-6">
+                <!-- AI Response Section -->
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center font-google-sans">
+                        <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        Análise da IA
+                    </h4>
+                    <div class="prose max-w-none text-gray-700 text-base leading-relaxed animate-fadeIn">
+                        {!! preg_replace(
+                            ['/\*\*(.*?)\*\*/', '/\*(.*?)\*/', '/- (.*?)(\n|$)/', '/\b(importante|atenção|destaque):/i'],
+                            [
+                                '<span class="font-bold text-blue-800">$1</span>',
+                                '<span class="italic text-gray-800">$1</span>',
+                                '<div class="flex items-start space-x-2 my-2">
+                                    <span class="flex-shrink-0 w-1.5 h-1.5 mt-2 bg-blue-500 rounded-full"></span>
+                                    <span>$1</span>
+                                </div>',
+                                '<span class="font-semibold text-red-600">$1:</span>'
+                            ],
+                            nl2br(e($competitorAnalysis['content'] ?? ''))
+                        ) !!}
+                    </div>
+                </div>
 
-                <!-- Metrics Grid -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                <!-- Métricas Grid com Animação -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fadeIn">
                     <!-- Posição Média -->
-                    <div class="bg-blue-50 rounded-xl p-4 transform hover:scale-105 transition-transform duration-200">
-                        <span class="text-sm text-blue-600 font-medium">Posição Média</span>
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 transform hover:scale-105 transition-all duration-300 hover:shadow-lg">
+                        <span class="text-sm text-blue-600 font-medium font-google-sans">Posição Média</span>
                         <div class="flex items-baseline mt-2">
-                            <p class="text-xl sm:text-2xl font-bold text-blue-700">
+                            <p class="text-2xl font-bold text-blue-700">
                                 {{ number_format($metrics['average_position'] ?? 0, 1) }}
                             </p>
                             @if(isset($metrics['position_trend']))
@@ -1285,10 +1304,10 @@ function showNotification(message, type = 'success') {
                     </div>
                     
                     <!-- Avaliações -->
-                    <div class="bg-green-50 rounded-xl p-4 transform hover:scale-105 transition-transform duration-200">
-                        <span class="text-sm text-green-600 font-medium">Avaliações</span>
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 transform hover:scale-105 transition-all duration-300 hover:shadow-lg">
+                        <span class="text-sm text-green-600 font-medium font-google-sans">Avaliações</span>
                         <div class="flex items-baseline mt-2">
-                            <p class="text-xl sm:text-2xl font-bold text-green-700">
+                            <p class="text-2xl font-bold text-green-700">
                                 {{ number_format($metrics['rating'] ?? 0, 1) }}
                             </p>
                             @if(isset($metrics['rating_trend']))
@@ -1301,10 +1320,10 @@ function showNotification(message, type = 'success') {
                     </div>
                     
                     <!-- Engajamento -->
-                    <div class="bg-purple-50 rounded-xl p-4 transform hover:scale-105 transition-transform duration-200">
-                        <span class="text-sm text-purple-600 font-medium">Engajamento</span>
+                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 transform hover:scale-105 transition-all duration-300 hover:shadow-lg">
+                        <span class="text-sm text-purple-600 font-medium font-google-sans">Engajamento</span>
                         <div class="flex items-baseline mt-2">
-                            <p class="text-xl sm:text-2xl font-bold text-purple-700">
+                            <p class="text-2xl font-bold text-purple-700">
                                 {{ number_format($metrics['engagement_rate'] ?? 0, 0) }}%
                             </p>
                             @if(isset($metrics['engagement_trend']))
@@ -1317,21 +1336,20 @@ function showNotification(message, type = 'success') {
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Sidebar -->
-            <div class="space-y-4 sm:space-y-6">
- <!-- Quick Actions -->
-<div class="bg-gray-50 rounded-xl p-4 sm:p-6">
-    <h4 class="text-lg font-semibold text-gray-800 mb-4">Ações Recomendadas</h4>
-    <div class="space-y-3">
-        <!-- Botão Exportar Relatório -->
-        <button onclick="exportCompetitorAnalysis()" class="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors duration-200">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
-    </svg>
-    <span>Exportar Análise</span>
-</button>
 
+<style>
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .animate-fadeIn {
+        animation: fadeIn 0.5s ease-out;
+    }
+</style>
 
 @push('scripts')
 <script>
@@ -1559,24 +1577,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>
         </div>
-
-        <!-- Footer -->
-        <div class="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-100 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
-            <button @click="show = false" 
-                    class="w-full sm:w-auto px-6 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-500">
-                Fechar
-            </button>
-            <button onclick="exportReport({{ $business->id }})" 
-        class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 hover:shadow-lg transition-all duration-200 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-500">
-    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
-    </svg>
-    Salvar Análise
-</button>
         </div>
     </div>
 </x-modal>
-
 
 
 <!-- Scripts -->

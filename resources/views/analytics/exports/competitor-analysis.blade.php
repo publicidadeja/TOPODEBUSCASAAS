@@ -45,6 +45,8 @@
             padding: 20px;
             border-radius: 8px;
             margin-bottom: 20px;
+            white-space: pre-wrap;
+            font-size: 14px;
         }
         .recommendations {
             margin-top: 20px;
@@ -64,6 +66,16 @@
             border-top: 1px solid #eee;
             padding-top: 20px;
         }
+        .gemini-response {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+            margin: 20px 0;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
@@ -77,24 +89,31 @@
         <h3>Métricas Principais</h3>
         <div class="metrics-grid">
             <div class="metric-card">
-                <div class="metric-value">{{ $analysis['metrics']['average_position'] }}</div>
+                <div class="metric-value">{{ $analysis['metrics']['average_position'] ?? 'N/A' }}</div>
                 <div class="metric-label">Posição Média</div>
             </div>
             <div class="metric-card">
-                <div class="metric-value">{{ $analysis['metrics']['rating'] }}</div>
+                <div class="metric-value">{{ $analysis['metrics']['rating'] ?? 'N/A' }}</div>
                 <div class="metric-label">Avaliação Média</div>
             </div>
             <div class="metric-card">
-                <div class="metric-value">{{ $analysis['metrics']['engagement_rate'] }}%</div>
+                <div class="metric-value">{{ $analysis['metrics']['engagement_rate'] ?? 'N/A' }}%</div>
                 <div class="metric-label">Taxa de Engajamento</div>
             </div>
         </div>
     </div>
 
     <div class="section">
+        <h3>Análise de Mercado (IA)</h3>
+        <div class="gemini-response">
+            {!! nl2br(e($analysis['gemini_response'] ?? 'Análise não disponível')) !!}
+        </div>
+    </div>
+
+    <div class="section">
         <h3>Análise Detalhada</h3>
         <div class="analysis-content">
-            {!! nl2br(e($analysis['content'])) !!}
+            {!! nl2br(e($analysis['content'] ?? 'Conteúdo não disponível')) !!}
         </div>
     </div>
 
@@ -113,7 +132,7 @@
 
     <div class="footer">
         <p>Relatório gerado em {{ now()->format('d/m/Y H:i') }}</p>
-        <p>Última atualização: {{ $analysis['lastUpdate'] }}</p>
+        <p>Última atualização: {{ $analysis['lastUpdate'] ?? now()->format('d/m/Y H:i') }}</p>
     </div>
 </body>
 </html>

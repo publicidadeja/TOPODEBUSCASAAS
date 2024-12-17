@@ -6,6 +6,7 @@ use App\Models\Business;
 use App\Services\GeminiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class MarketAnalysisController extends Controller
 {
@@ -107,6 +108,7 @@ public function exportCompetitorAnalysis(Business $business)
                     'engagement_rate' => $analysis['data']['metrics']['engagement_rate'] ?? 'N/A'
                 ],
                 'content' => $analysis['data']['analysis'] ?? 'Análise não disponível',
+                'gemini_response' => $analysis['data']['gemini_response'] ?? '', // Adicionando a resposta do Gemini
                 'recommendations' => $analysis['data']['recommendations'] ?? [],
                 'lastUpdate' => now()->format('d/m/Y H:i')
             ],
@@ -119,10 +121,13 @@ public function exportCompetitorAnalysis(Business $business)
         // Gerar PDF
         $pdf = PDF::loadView('analytics.exports.competitor-analysis', $data);
         
+        // Configurações adicionais do PDF se necessário
+        $pdf->setPaper('a4');
+        $pdf->setOptions(['isHtml5ParserEnabled' => true]);
+        
         // Definir nome do arquivo
         $filename = 'analise-concorrentes-' . \Str::slug($business->name) . '.pdf';
         
-        // Retornar o PDF para download
         return $pdf->download($filename);
 
     } catch (\Exception $e) {
