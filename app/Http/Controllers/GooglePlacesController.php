@@ -25,6 +25,10 @@ class GooglePlacesController extends Controller
     ]);
 
     if ($validator->fails()) {
+        \Log::error('Validação falhou na busca de lugares:', [
+            'errors' => $validator->errors()->toArray()
+        ]);
+        
         return response()->json([
             'success' => false,
             'message' => 'Dados inválidos',
@@ -50,58 +54,73 @@ class GooglePlacesController extends Controller
             'type' => $request->type
         ]);
 
-        // Log da resposta da API
-        \Log::info('Resposta da API Places:', ['response' => $results]);
+        // Log da resposta completa da API
+        \Log::info('Resposta bruta da API Places:', [
+            'response' => json_encode($results, JSON_PRETTY_PRINT)
+        ]);
 
         // Verifica se a resposta está no formato esperado
-        if (!isset($results['results']) || !is_array($results['results'])) {
+        if (!is_array($results)) {
+            \Log::error('Resposta da API não é um array:', [
+                'response_type' => gettype($results),
+                'response' => $results
+            ]);
+            
             return response()->json([
                 'success' => false,
                 'message' => 'Formato de dados inválido da API',
                 'debug_info' => [
-                    'received_data' => $results
+                    'response_type' => gettype($results)
                 ]
             ], 500);
         }
 
-        // Formata os dados para o padrão esperado
-        $formattedResults = array_map(function($place) {
-            return [
-                'place_id' => $place['place_id'] ?? null,
-                'name' => $place['name'] ?? '',
-                'vicinity' => $place['vicinity'] ?? '',
-                'rating' => $place['rating'] ?? null,
-                'user_ratings_total' => $place['user_ratings_total'] ?? 0,
-                'geometry' => [
-                    'location' => [
-                        'lat' => $place['geometry']['location']['lat'] ?? null,
-                        'lng' => $place['geometry']['location']['lng'] ?? null
-                    ]
-                ],
-                'opening_hours' => [
-                    'open_now' => $place['opening_hours']['open_now'] ?? null
-                ],
-                'photos' => isset($place['photos']) ? array_map(function($photo) {
-                    return $photo['photo_reference'] ?? null;
-                }, $place['photos']) : []
-            ];
-        }, $results['results']);
+        if (!isset($results['results'])) {
+            \Log::error('Resposta da API não contém o campo "results":', [
+                'response_keys' => array_keys($results),
+                'response' => $results
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Formato de dados inválido da API',
+                'debug_info' => [
+                    'available_keys' => array_keys($results)
+                ]
+            ], 500);
+        }
+
+        // Log dos resultados processados
+        \Log::info('Resultados processados:', [
+            'count' => count($results['results']),
+            'first_result' => isset($results['results'][0]) ? $results['results'][0] : null
+        ]);
 
         return response()->json([
             'success' => true,
-            'results' => $formattedResults,
-            'total_results' => count($formattedResults)
+            'results' => $results['results']
         ]);
 
     } catch (\Exception $e) {
         \Log::error('Erro ao buscar concorrentes:', [
             'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
+            'trace' => $e->getTraceAsString(),
+            'request_params' => [
+                'lat' => $request->lat,
+                'lng' => $request->lng,
+                'radius' => $request->radius,
+                'type' => $request->type
+            ]
         ]);
 
         return response()->json([
             'success' => false,
-            'message' => 'Erro ao buscar locais próximos: ' . $e->getMessage()
+            'message' => 'Erro ao buscar locais próximos: ' . $e->getMessage(),
+            'debug_info' => [
+                'error_type' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ]
         ], 500);
     }
 }

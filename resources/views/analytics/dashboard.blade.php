@@ -1430,43 +1430,23 @@ function showNotification(message, type = 'success') {
 
 async function searchCompetitors() {
     const radius = document.getElementById('radius-selector')?.value || 5000;
-    const loadingEl = document.getElementById('competitors-loading');
-    const listEl = document.getElementById('competitors-list');
-
+    const businessType = business.business_type || 'restaurant'; // valor default
+    
     try {
-        if (loadingEl) loadingEl.classList.remove('hidden');
-        if (listEl) listEl.classList.add('hidden');
-
-        const response = await fetch(`/api/places/nearby?lat=${business.latitude}&lng=${business.longitude}&radius=${radius}&type=${business.business_type}`);
+        const response = await fetch(`/api/places/nearby?lat=${business.latitude}&lng=${business.longitude}&radius=${radius}&type=${businessType}`);
         const data = await response.json();
+        
+        console.log('Resposta da API:', data);
 
-        if (!response.ok) {
-            throw new Error(data.message || 'Erro ao buscar concorrentes');
+        if (!data.success) {
+            throw new Error(data.message || 'Erro ao carregar dados');
         }
 
-        if (data.results) {
-            updateMap(data.results);
-            renderCompetitors(data.results);
-        }
+        return data.results;
 
     } catch (error) {
         console.error('Erro ao buscar concorrentes:', error);
-        showNotification('Erro ao buscar concorrentes: ' + error.message, 'error');
-        
-        if (listEl) {
-            listEl.innerHTML = `
-                <div class="p-4 text-center">
-                    <p class="text-red-600">Erro ao carregar concorrentes. Tente novamente.</p>
-                    <button onclick="searchCompetitors()" 
-                            class="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                        Tentar novamente
-                    </button>
-                </div>
-            `;
-        }
-    } finally {
-        if (loadingEl) loadingEl.classList.add('hidden');
-        if (listEl) listEl.classList.remove('hidden');
+        throw error;
     }
 }
 // Inicialização do mapa e variáveis globais
