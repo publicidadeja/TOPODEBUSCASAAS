@@ -90,91 +90,66 @@ class SerperService
     }
     
     private function generateDescription($place)
-    {
-        $parts = [];
-        
-        if (!empty($place['address'])) {
-            $parts[] = "Localizado em {$place['address']}";
-        }
-        
-        if (!empty($place['rating'])) {
-            $parts[] = "Avaliação de {$place['rating']}/5";
-        }
-        
-        if (!empty($place['reviewsCount'])) {
-            $parts[] = "com {$place['reviewsCount']} avaliações";
-        }
-        
-        if (!empty($place['categories'])) {
-            $parts[] = "Categorias: " . implode(', ', $place['categories']);
-        }
-        
-        return implode('. ', $parts);
+{
+    $description = [];
+
+    if (!empty($place['categories'])) {
+        $description[] = implode(', ', $place['categories']);
+    }
+
+    if (!empty($place['address'])) {
+        $description[] = "Localizado em " . $place['address'];
+    }
+
+    if (!empty($place['rating'])) {
+        $description[] = sprintf(
+            "Avaliação média de %.1f estrelas baseada em %d avaliações",
+            $place['rating'],
+            $place['reviewsCount'] ?? 0
+        );
+    }
+
+    return implode('. ', $description);
+}
+    
+private function calculateRatingScore($place)
+{
+    $score = 5; // Base score
+    
+    if (!empty($place['rating'])) {
+        $score += min(($place['rating'] * 2), 5);
     }
     
-    private function calculateRatingScore($place)
-    {
-        $rating = floatval($place['rating'] ?? 0);
-        $reviews = intval($place['reviewsCount'] ?? 0);
-        
-        // Pontuação base pela avaliação (0-50 pontos)
-        $ratingScore = ($rating / 5) * 50;
-        
-        // Bônus por quantidade de reviews (0-50 pontos)
-        $reviewScore = min(($reviews / 100) * 50, 50);
-        
-        return round(($ratingScore + $reviewScore) / 2);
+    if (!empty($place['reviewsCount'])) {
+        $score += min(($place['reviewsCount'] / 100), 5);
     }
     
-    private function calculatePopularityScore($place)
-    {
-        $score = 0;
-        
-        // Pontos por reviews
-        $reviews = intval($place['reviewsCount'] ?? 0);
-        if ($reviews > 0) {
-            $score += min(($reviews / 100) * 60, 60);
-        }
-        
-        // Pontos por presença de fotos
-        if (!empty($place['thumbnailUrl'])) {
-            $score += 20;
-        }
-        
-        // Pontos por categorias definidas
-        if (!empty($place['categories'])) {
-            $score += 20;
-        }
-        
-        return min($score, 100);
+    return min(10, round($score, 1));
+}
+    
+private function calculatePopularityScore($place)
+{
+    $score = 5;
+    
+    if (!empty($place['reviewsCount'])) {
+        $score += min(($place['reviewsCount'] / 50), 5);
     }
     
-    private function calculateOnlinePresenceScore($place)
-    {
-        $score = 0;
-        
-        // Website (40 pontos)
-        if (!empty($place['website'])) {
-            $score += 40;
-        }
-        
-        // Telefone (20 pontos)
-        if (!empty($place['phoneNumber'])) {
-            $score += 20;
-        }
-        
-        // Horários de funcionamento (20 pontos)
-        if (!empty($place['hours'])) {
-            $score += 20;
-        }
-        
-        // Foto do local (20 pontos)
-        if (!empty($place['thumbnailUrl'])) {
-            $score += 20;
-        }
-        
-        return $score;
-    }
+    return min(10, round($score, 1));
+}
+
+    
+private function calculateOnlinePresenceScore($place)
+{
+    $score = 5;
+    
+    if (!empty($place['website'])) $score += 2;
+    if (!empty($place['phoneNumber'])) $score += 1;
+    if (!empty($place['thumbnailUrl'])) $score += 1;
+    if (!empty($place['categories'])) $score += 1;
+    
+    return min(10, round($score, 1));
+}
     
     private function formatPlacesResults($data)
 {
@@ -327,19 +302,29 @@ private function extractKeywords($data)
     return array_slice($keywords, 0, 20, true);
 }
 
-public function searchCompetitors($businessName, $city)
+public function searchCompetitors($businessName, $city, $coordinates = null)
 {
     try {
-        \Log::info("Searching competitors for: {$businessName} in {$city}");
-        
+        \Log::info("Iniciando busca de concorrentes", [
+            'negocio' => $businessName,
+            'cidade' => $city,
+            'coordenadas' => $coordinates
+        ]);
+
+        // Validação dos parâmetros necessários
+        if (empty($this->apiKey)) {
+            throw new \Exception('API Key do Serper não configurada');
+        }
+
+        // Construção da query de busca
         $query = sprintf(
-            '%s %s em %s',
+            '%s %s em %s concorrentes locais',
             $businessName,
-            'concorrentes locais de google meu negocio próximos',
+            'estabelecimentos similares',
             $city
         );
-        
-        // Make the API request with enhanced parameters
+
+        // Faz a requisição para a API do Serper
         $response = Http::withHeaders([
             'X-API-KEY' => $this->apiKey,
             'Content-Type' => 'application/json'
@@ -353,34 +338,25 @@ public function searchCompetitors($businessName, $city)
         ]);
 
         if (!$response->successful()) {
-            \Log::error('Serper API request failed: ' . $response->body());
+            \Log::error('Falha na requisição à API do Serper', [
+                'status' => $response->status(),
+                'erro' => $response->body()
+            ]);
             return [];
         }
 
         $data = $response->json();
-        
-        // Log da resposta completa para debug
-        \Log::debug('Serper API Response:', $data);
-        
         $competitors = [];
+
         if (isset($data['places'])) {
             foreach ($data['places'] as $place) {
-                // Skip if it's the same business
-                if (strtolower($place['title']) === strtolower($businessName)) {
+                // Pula se for o mesmo negócio
+                if ($this->isSameBusiness($place['title'], $businessName)) {
                     continue;
                 }
 
-                // Log dos dados da imagem para debug
-                \Log::debug('Place Image Data:', [
-                    'title' => $place['title'],
-                    'thumbnailUrl' => $place['thumbnailUrl'] ?? null,
-                    'photos' => $place['photos'] ?? null,
-                    'imageUrl' => $place['imageUrl'] ?? null
-                ]);
-
                 // Processa e valida a URL da imagem
                 $imageUrl = $this->processImageUrl($place);
-
 
                 $competitor = [
                     'title' => $place['title'] ?? '',
@@ -410,72 +386,153 @@ public function searchCompetitors($businessName, $city)
                 $competitors[] = $competitor;
             }
 
-            // Ordena por relevância
-            usort($competitors, function($a, $b) {
-                $scoreA = ($a['rating'] * 2) + ($a['reviews'] / 100);
-                $scoreB = ($b['rating'] * 2) + ($b['reviews'] / 100);
-                return $scoreB <=> $scoreA;
-            });
-
-            // Limita aos 10 mais relevantes
-            $competitors = array_slice($competitors, 0, 10);
+            // Ordenação por relevância
+            $competitors = $this->sortCompetitors($competitors);
         }
 
-        \Log::info('Competitor search completed', [
-            'query' => $query,
-            'total_found' => count($competitors)
+        \Log::info('Busca de concorrentes concluída', [
+            'total_encontrados' => count($competitors)
         ]);
 
         return $competitors;
 
     } catch (\Exception $e) {
-        \Log::error('Error searching competitors: ' . $e->getMessage(), [
-            'businessName' => $businessName,
-            'city' => $city
+        \Log::error('Erro na busca de concorrentes', [
+            'mensagem' => $e->getMessage(),
+            'negocio' => $businessName,
+            'cidade' => $city
         ]);
         return [];
+    }
+}
+
+// Funções auxiliares necessárias
+
+private function getPlaceDetails($placeId)
+{
+    try {
+        $response = Http::get('https://maps.googleapis.com/maps/api/place/details/json', [
+            'place_id' => $placeId,
+            'fields' => 'formatted_address,formatted_phone_number,website,opening_hours,price_level',
+            'language' => 'pt-BR',
+            'key' => $this->apiKey
+        ]);
+
+        if ($response->successful()) {
+            return $response->json()['result'] ?? [];
+        }
+        return [];
+    } catch (\Exception $e) {
+        \Log::error('Erro ao obter detalhes do local', ['place_id' => $placeId]);
+        return [];
+    }
+}
+
+private function getPlacePhoto($photoReference, $maxWidth = 400)
+{
+    if (!$photoReference) {
+        return null;
+    }
+
+    return sprintf(
+        'https://maps.googleapis.com/maps/api/place/photo?maxwidth=%d&photo_reference=%s&key=%s',
+        $maxWidth,
+        $photoReference,
+        $this->apiKey
+    );
+}
+
+private function calculateMetrics($place, $details)
+{
+    return [
+        'rating_score' => $this->calculateRatingScore($place),
+        'popularity_score' => $this->calculatePopularityScore($place),
+        'online_presence_score' => $this->calculateOnlinePresenceScore($details),
+        'price_level' => $details['price_level'] ?? 0
+    ];
+}
+
+private function extractCategories($types)
+{
+    $categoryMapping = [
+        'restaurant' => 'Restaurante',
+        'cafe' => 'Café',
+        'store' => 'Loja',
+        // Adicione mais mapeamentos conforme necessário
+    ];
+
+    return array_map(function($type) use ($categoryMapping) {
+        return $categoryMapping[$type] ?? ucfirst($type);
+    }, $types);
+}
+
+private function sortCompetitors($competitors)
+{
+    usort($competitors, function($a, $b) {
+        $scoreA = ($a['metrics']['rating_score'] * 0.4) + 
+                 ($a['metrics']['popularity_score'] * 0.4) + 
+                 ($a['metrics']['online_presence_score'] * 0.2);
+                 
+        $scoreB = ($b['metrics']['rating_score'] * 0.4) + 
+                 ($b['metrics']['popularity_score'] * 0.4) + 
+                 ($b['metrics']['online_presence_score'] * 0.2);
+                 
+        return $scoreB <=> $scoreA;
+    });
+
+    return array_slice($competitors, 0, 10); // Retorna apenas os 10 mais relevantes
+}
+
+private function isSameBusiness($name1, $name2)
+{
+    return similar_text(
+        strtolower(trim($name1)),
+        strtolower(trim($name2))
+    ) > 80;
+}
+
+private function geocodeAddress($address)
+{
+    try {
+        $response = Http::get('https://maps.googleapis.com/maps/api/geocode/json', [
+            'address' => $address,
+            'key' => config('services.google.maps_api_key') // Certifique-se de ter configurado esta chave
+        ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+            if (isset($data['results'][0]['geometry']['location'])) {
+                return $data['results'][0]['geometry']['location'];
+            }
+        }
+
+        \Log::error('Falha ao geocodificar endereço', [
+            'address' => $address,
+            'response' => $response->json()
+        ]);
+
+        return null;
+
+    } catch (\Exception $e) {
+        \Log::error('Erro ao geocodificar endereço: ' . $e->getMessage(), [
+            'address' => $address
+        ]);
+        return null;
     }
 }
 
 // Função auxiliar para processar e validar URLs de imagem
 private function processImageUrl($place)
 {
-    try {
-        // Tenta obter a URL da imagem de diferentes campos possíveis
-        $imageUrl = null;
-
-        // Prioridade 1: thumbnailUrl
-        if (!empty($place['thumbnailUrl'])) {
-            $imageUrl = $place['thumbnailUrl'];
-        }
-        // Prioridade 2: photos array
-        elseif (!empty($place['photos']) && is_array($place['photos'])) {
-            $imageUrl = $place['photos'][0] ?? null;
-        }
-        // Prioridade 3: imageUrl
-        elseif (!empty($place['imageUrl'])) {
-            $imageUrl = $place['imageUrl'];
-        }
-
-        // Se não encontrou nenhuma imagem, retorna uma imagem padrão
-        if (!$imageUrl) {
-            return asset('images/default-business.png'); // Crie uma imagem padrão
-        }
-
-        // Remove possíveis parâmetros de URL que possam invalidar a imagem
-        $imageUrl = strtok($imageUrl, '?');
-
-        // Verifica se a URL começa com http ou https
-        if (!preg_match("~^(?:f|ht)tps?://~i", $imageUrl)) {
-            $imageUrl = 'https://' . ltrim($imageUrl, '/');
-        }
-
-        return $imageUrl;
-
-    } catch (\Exception $e) {
-        \Log::error('Error processing image URL: ' . $e->getMessage());
-        return asset('images/default-business.png');
+    if (!empty($place['thumbnailUrl'])) {
+        return $place['thumbnailUrl'];
     }
+    
+    if (!empty($place['photos'][0]['url'])) {
+        return $place['photos'][0]['url'];
+    }
+
+    return null;
 }
 
 // Função auxiliar para validar URLs de imagem

@@ -1142,48 +1142,101 @@ function showNotification(message, type = 'success') {
                         </div>
                         @endforeach
                     </div>
+<!-- Seção de Análise de Concorrentes -->
+<div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 mb-8">
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 bg-blue-50 rounded-lg">
+                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800">Análise de Concorrentes</h3>
+                <p class="text-sm text-gray-500">Monitoramento dos principais concorrentes</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+            <button onclick="refreshCompetitorAnalysis()" class="flex items-center space-x-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors duration-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span>Atualizar Análise</span>
+            </button>
+            
+            <a href="{{ route('analytics.export.competitor-analysis', $business->id) }}" class="flex items-center space-x-2 px-4 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors duration-200">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+                <span>Exportar</span>
+            </a>
+        </div>
+    </div>
 
-                  <!-- Seção de Concorrentes -->
-<div class="bg-white rounded-lg shadow-sm p-6">
-    <h3 class="text-lg font-semibold mb-4">Principais Concorrentes</h3>
-    
-    @if(empty($competitors))
-        <div class="text-center py-4">
-            <p class="text-gray-500">Nenhum concorrente encontrado na região.</p>
-            <p class="text-sm text-gray-400">Verifique se as configurações de localização do seu negócio estão corretas.</p>
-        </div>
-    @else
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            @foreach($competitors as $competitor)
-                <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <h4 class="font-medium">{{ $competitor['name'] }}</h4>
-                            <div class="flex items-center mt-1">
-                                <div class="flex items-center text-yellow-400">
-                                    @for($i = 1; $i <= 5; $i++)
-                                        <svg class="w-4 h-4 {{ $i <= $competitor['rating'] ? 'text-yellow-400' : 'text-gray-300' }}"
-                                             fill="currentColor" viewBox="0 0 20 20">
-                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                                        </svg>
-                                    @endfor
-                                </div>
-                                <span class="ml-2 text-sm text-gray-600">
-                                    {{ number_format($competitor['rating'], 1) }}
-                                    ({{ $competitor['reviews'] }})
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <p class="text-sm text-gray-500 mt-2">{{ $competitor['address'] }}</p>
-                    <p class="text-sm text-gray-400 mt-1">
-                        {{ number_format($competitor['distance'], 1) }}km de distância
-                    </p>
-                </div>
-            @endforeach
-        </div>
-    @endif
+    <div id="competitors-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Os cards dos concorrentes serão inseridos aqui via JavaScript -->
+    </div>
 </div>
+
+@push('scripts')
+<script>
+function refreshCompetitorAnalysis() {
+    const businessId = '{{ $business->id }}';
+    const container = document.getElementById('competitors-container');
+    
+    // Adiciona estado de carregamento
+    container.innerHTML = '<div class="col-span-full flex justify-center items-center p-12"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>';
+    
+    // Faz a requisição para atualizar a análise
+    fetch(`/analytics/competitors/${businessId}/refresh`, {
+        method: 'POST',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Atualiza o container com os novos dados
+        updateCompetitorsDisplay(data.competitors);
+    })
+    .catch(error => {
+        console.error('Erro ao atualizar análise:', error);
+        container.innerHTML = '<div class="col-span-full text-center text-red-600">Erro ao atualizar análise. Tente novamente.</div>';
+    });
+}
+
+function updateCompetitorsDisplay(competitors) {
+    const container = document.getElementById('competitors-container');
+    container.innerHTML = competitors.map(competitor => `
+        <div class="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-md transition-all duration-300">
+            <div class="flex items-center justify-between mb-4">
+                <h4 class="text-lg font-semibold text-gray-800">${competitor.name}</h4>
+                <span class="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-full">
+                    ${competitor.rating} ★
+                </span>
+            </div>
+            <div class="space-y-3">
+                <p class="text-sm text-gray-600">${competitor.description}</p>
+                <div class="flex items-center text-sm text-gray-500">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    ${competitor.location}
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Carrega a análise inicial
+document.addEventListener('DOMContentLoaded', () => {
+    refreshCompetitorAnalysis();
+});
+</script>
+@endpush
                     <!-- Paginação ou "Ver mais" -->
                     @if(count($competitors ?? []) > 5)
                         <div class="mt-8 text-center">

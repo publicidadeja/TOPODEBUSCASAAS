@@ -43,6 +43,21 @@ Route::get('/analytics/keywords/{business}', [AnalyticsController::class, 'getKe
     ->middleware('auth');
 
 Route::middleware(['auth'])->group(function () {
+
+    // Rotas para análise de concorrentes
+    Route::get('/analytics/competitors/{business}', [AnalyticsController::class, 'competitors'])
+        ->name('analytics.competitors');
+    
+    Route::post('/analytics/competitors/{business}/refresh', [AnalyticsController::class, 'refreshCompetitorAnalysis'])
+        ->name('analytics.competitors.refresh');
+    
+    Route::get('/analytics/export-competitor-analysis/{business}', [AnalyticsController::class, 'exportCompetitorAnalysis'])
+        ->name('analytics.export.competitor-analysis');
+
+    // Rota para atualização da análise Gemini
+    Route::post('/analytics/update-gemini-analysis/{business}', [AnalyticsController::class, 'updateGeminiAnalysis'])
+        ->name('analytics.update-gemini');
+
     Route::post('/market-analysis/{business}', [MarketAnalysisController::class, 'analyze'])
         ->name('market-analysis.analyze');
 });
