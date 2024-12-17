@@ -160,13 +160,7 @@ return [
         Laravel\Sanctum\SanctumServiceProvider::class,
         App\Providers\FakeGoogleServiceProvider::class,
         App\Providers\GoogleBusinessServiceProvider::class,
-        /*
-         * Package Service Providers...
-         */
-
-        /*
-         * Application Service Providers...
-         */
+        App\Providers\GooglePlacesServiceProvider::class,
         App\Providers\AppServiceProvider::class,
         App\Providers\AuthServiceProvider::class,
         App\Providers\GoogleBusinessServiceProvider::class,
