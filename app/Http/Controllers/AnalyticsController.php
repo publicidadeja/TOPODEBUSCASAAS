@@ -1677,4 +1677,46 @@ public function exportCompetitorAnalysis(Business $business)
     }
 }
 
+public function refreshCompetitorAnalysis(Business $business)
+{
+    try {
+        // Verifica permissão
+        if ($business->user_id !== auth()->id()) {
+            return response()->json(['error' => 'Não autorizado'], 403);
+        }
+
+        // Instancia o SerperService
+        $serperService = app(SerperService::class);
+
+        // Busca os concorrentes
+        $competitors = $serperService->searchCompetitors(
+            $business->name,
+            $business->city
+        );
+
+        // Log para debug
+        \Log::info('Análise de concorrentes atualizada', [
+            'business_id' => $business->id,
+            'total_competitors' => count($competitors)
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'competitors' => $competitors,
+            'message' => 'Análise atualizada com sucesso'
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Erro ao atualizar análise de concorrentes', [
+            'error' => $e->getMessage(),
+            'business_id' => $business->id
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'error' => 'Erro ao atualizar análise: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
 }
