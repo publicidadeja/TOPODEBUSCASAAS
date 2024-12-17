@@ -363,60 +363,131 @@ public function getSearchKeywords($business, $dateRange = '30daysAgo')
 public function getNearbyCompetitors($params)
 {
     try {
-        // Verificar se as coordenadas são válidas
+        Log::info('Iniciando getNearbyCompetitors', [
+            'params' => $params,
+            'api_key_exists' => !empty(config('services.google.places_api_key'))
+        ]);
+
+        // Validar parâmetros
         if (empty($params['location']['lat']) || empty($params['location']['lng'])) {
-            \Log::warning('Coordenadas de localização não fornecidas para busca de concorrentes');
+            Log::warning('Coordenadas inválidas para busca de concorrentes', [
+                'latitude' => $params['location']['lat'] ?? null,
+                'longitude' => $params['location']['lng'] ?? null
+            ]);
             return [];
         }
 
-        // Retornar dados de exemplo para garantir que algo seja exibido
-        return [
-            [
-                'name' => 'Concorrente 1',
-                'rating' => 4.5,
-                'reviews' => 120,
-                'address' => 'Rua Exemplo, 123',
-                'distance' => '1.2 km',
-                'photos' => [],
-                'place_id' => 'example_place_id_1'
+        // Configurar parâmetros da busca
+        $searchParams = [
+            'location' => [
+                'lat' => (float)$params['location']['lat'],
+                'lng' => (float)$params['location']['lng']
             ],
-            [
-                'name' => 'Concorrente 2',
-                'rating' => 4.2,
-                'reviews' => 85,
-                'address' => 'Avenida Teste, 456',
-                'distance' => '1.8 km',
-                'photos' => [],
-                'place_id' => 'example_place_id_2'
-            ],
-            // Adicione mais concorrentes de exemplo se desejar
+            'radius' => $params['radius'] ?? 5000,
+            'type' => $params['type'] ?? 'establishment',
+            'keyword' => $params['keyword'] ?? '',
+            'language' => 'pt-BR'
         ];
+
+        Log::info('Parâmetros de busca configurados', [
+            'search_params' => $searchParams
+        ]);
+
+        // Fazer a chamada à API
+        try {
+            $places = $this->service->places->nearbySearch($searchParams);
+            
+            Log::info('Resposta da API Places recebida', [
+                'status' => $places->status ?? 'NO_STATUS',
+                'results_count' => isset($places->results) ? count($places->results) : 0
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erro na chamada à API Places', [
+                'message' => $e->getMessage(),
+                'code' => $e->getCode()
+            ]);
+            return [];
+        }
+
+        // Processar resultados
+        $competitors = [];
+        if (!empty($places->results)) {
+            foreach ($places->results as $place) {
+                $competitors[] = [
+                    'name' => $place->name,
+                    'rating' => $place->rating ?? 0,
+                    'reviews' => $place->user_ratings_total ?? 0,
+                    'address' => $place->vicinity ?? '',
+                    'distance' => $this->calculateDistance(
+                        $params['location']['lat'],
+                        $params['location']['lng'],
+                        $place->geometry->location->lat,
+                        $place->geometry->location->lng
+                    ),
+                    'place_id' => $place->place_id
+                ];
+            }
+        }
+
+        Log::info('Processamento de concorrentes finalizado', [
+            'total_competitors' => count($competitors)
+        ]);
+
+        return $competitors;
+
     } catch (\Exception $e) {
-        \Log::error('Erro ao buscar concorrentes: ' . $e->getMessage());
+        Log::error('Erro geral em getNearbyCompetitors', [
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine()
+        ]);
         return [];
     }
 }
 
 private function calculateDistance($lat1, $lon1, $lat2, $lon2)
 {
-    $theta = $lon1 - $lon2;
-    $dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) +  
-            cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
-    $dist = acos($dist);
-    $dist = rad2deg($dist);
-    $miles = $dist * 60 * 1.1515;
-    return round($miles * 1.609344, 1); // Convert to kilometers
+    try {
+        $theta = $lon1 - $lon2;
+        $dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) + 
+                cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
+        $dist = acos($dist);
+        $dist = rad2deg($dist);
+        $miles = $dist * 60 * 1.1515;
+        return round($miles * 1.609344, 2); // Conversão para quilômetros
+    } catch (\Exception $e) {
+        Log::error('Erro ao calcular distância', [
+            'error' => $e->getMessage(),
+            'coordinates' => [
+                'lat1' => $lat1,
+                'lon1' => $lon1,
+                'lat2' => $lat2,
+                'lon2' => $lon2
+            ]
+        ]);
+        return 0;
+    }
 }
 
-private function getPlacePhotos($photos)
+private function getPlacePhotoUrl($photoReference)
 {
-    return array_map(function($photo) {
-        return "https://maps.googleapis.com/maps/api/place/photo?" .
-               "maxwidth=400&photoreference={$photo->photo_reference}&" .
-               "key=" . config('services.google.places_api_key');
-    }, $photos);
-}
+    try {
+        if (!$photoReference) {
+            return null;
+        }
 
+        $apiKey = config('services.google.places_api_key');
+        return "https://maps.googleapis.com/maps/api/place/photo?"
+            . "maxwidth=400&photoreference={$photoReference}"
+            . "&key={$apiKey}";
+    } catch (\Exception $e) {
+        Log::error('Erro ao gerar URL da foto', [
+            'error' => $e->getMessage()
+        ]);
+        return null;
+    }
+}
 
 
 }

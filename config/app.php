@@ -159,6 +159,7 @@ return [
         App\Providers\GeminiServiceProvider::class,
         Laravel\Sanctum\SanctumServiceProvider::class,
         App\Providers\FakeGoogleServiceProvider::class,
+        App\Providers\GoogleBusinessServiceProvider::class,
         /*
          * Package Service Providers...
          */
