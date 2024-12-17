@@ -97,6 +97,27 @@
                             <x-input-error class="mt-2" :messages="$errors->get('address')" />
                         </div>
 
+                        <!-- Localização -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div>
+        <x-input-label for="latitude" value="Latitude" />
+        <x-text-input id="latitude" name="latitude" type="text" 
+                     class="mt-1 block w-full" 
+                     :value="old('latitude', $business->latitude)" 
+                     required />
+        <x-input-error class="mt-2" :messages="$errors->get('latitude')" />
+    </div>
+
+    <div>
+        <x-input-label for="longitude" value="Longitude" />
+        <x-text-input id="longitude" name="longitude" type="text" 
+                     class="mt-1 block w-full" 
+                     :value="old('longitude', $business->longitude)" 
+                     required />
+        <x-input-error class="mt-2" :messages="$errors->get('longitude')" />
+    </div>
+</div>
+
                         <!-- Descrição -->
                         <div>
                             <x-input-label for="description" value="Descrição" />
