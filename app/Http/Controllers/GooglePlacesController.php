@@ -30,7 +30,6 @@ class GooglePlacesController extends Controller
     }
 
     try {
-        // Change this line to use getNearbyCompetitors instead of nearbySearch
         $results = $this->placesService->getNearbyCompetitors([
             'location' => [
                 'lat' => $request->lat,

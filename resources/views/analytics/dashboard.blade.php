@@ -1,4 +1,6 @@
 <x-app-layout>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAmKsKU9eTtc8zFcSUKhttnBwb7IQqFfjU&libraries=places"></script>
+
 <meta name="csrf-token" content="{{ csrf_token() }}">
     @push('styles')
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
@@ -1155,80 +1157,64 @@ function showNotification(message, type = 'success') {
                         @endforeach
                     </div>
 
-<!-- Competitors Section -->
-<div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 mb-6">
-    <!-- Search Form -->
-    <div class="mb-6">
-        <h3 class="text-lg font-semibold mb-4">Concorrentes Próximos</h3>
-        <form id="competitors-search-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Segmento</label>
-                <input type="text" id="business-type" value="{{ $business->category }}" 
-                       class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200">
+<!-- Seção de Concorrentes -->
+<div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 mb-8">
+    <!-- Cabeçalho da seção -->
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 bg-purple-50 rounded-lg">
+                <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                </svg>
             </div>
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
-                <input type="text" id="business-address" value="{{ $business->address }}"
-                       class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200">
+                <h3 class="text-lg font-semibold text-gray-800">Concorrentes Próximos</h3>
+                <p class="text-sm text-gray-500">Análise da concorrência em sua região</p>
             </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Raio de Busca (km)</label>
-                <input type="number" id="search-radius" value="5" min="1" max="50"
-                       class="w-full rounded-lg border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200">
-            </div>
-        </form>
-    </div>
+        </div>
 
-    <!-- Add this right after the competitors search form -->
-<div id="competitors-loading" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-    <div class="bg-white p-6 rounded-lg shadow-xl">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-        <p class="mt-4 text-gray-600">Buscando concorrentes...</p>
-    </div>
-</div>
-
-    <!-- Controls -->
-    <div class="flex justify-between items-center mb-4">
+        <!-- Controles de visualização -->
         <div class="flex items-center space-x-4">
-            <select id="sort-by" class="rounded-lg border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200">
-                <option value="distance">Ordenar por Distância</option>
-                <option value="rating">Ordenar por Avaliação</option>
-            </select>
-            <button id="view-toggle" class="px-4 py-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
-                <span class="list-view-text">Ver no Mapa</span>
-                <span class="map-view-text hidden">Ver em Lista</span>
-            </button>
+            <div class="relative">
+                <select id="radius-selector" class="pl-3 pr-10 py-2 text-sm bg-white border border-gray-200 rounded-xl">
+                    <option value="1000">1 km</option>
+                    <option value="2000">2 km</option>
+                    <option value="5000" selected>5 km</option>
+                    <option value="10000">10 km</option>
+                </select>
+            </div>
+            
+            <div class="flex space-x-2">
+                <button id="list-view" class="p-2 bg-purple-50 text-purple-600 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                    </svg>
+                </button>
+                <button id="map-view" class="p-2 bg-gray-100 text-gray-600 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                    </svg>
+                </button>
+            </div>
         </div>
-        <div class="flex items-center space-x-2">
-            <span id="results-count" class="text-sm text-gray-600"></span>
-            <button onclick="searchCompetitors()" 
-                    class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                Buscar
-            </button>
+    </div>
+
+    <!-- Container de loading -->
+    <div id="competitors-loading" class="hidden">
+        <div class="flex items-center justify-center py-12">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
         </div>
     </div>
 
-    <!-- Results Container -->
-    <div class="relative">
-        <!-- Loading State -->
-        <div id="competitors-loading" class="hidden absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        </div>
-
-        <!-- List View -->
-        <div id="competitors-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <!-- Results will be populated here -->
-        </div>
-
-        <!-- Map View -->
-        <div id="competitors-map" class="hidden h-[600px] rounded-lg"></div>
-
-        <!-- Pagination -->
-        <div id="pagination" class="mt-4 flex justify-center space-x-2">
-            <!-- Pagination will be populated here -->
-        </div>
+    <!-- Container da listagem -->
+    <div id="competitors-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Cards serão inseridos aqui via JavaScript -->
     </div>
+
+    <!-- Container do mapa -->
+    <div id="competitors-map" class="hidden h-[500px] rounded-lg"></div>
 </div>
+
                     <!-- Paginação ou "Ver mais" -->
                     @if(count($competitors ?? []) > 5)
                         <div class="mt-8 text-center">
@@ -1440,97 +1426,221 @@ function showNotification(message, type = 'success') {
 @push('scripts')
 <script>
 
-    // Initialize map
-let map;
-let markers = [];
-let currentPage = 1;
-const itemsPerPage = 9;
+// Inicialização do mapa e variáveis globais
+let map, markers = [], currentView = 'list';
+const business = @json($business);
 
-// Initialize the map
-function initMap() {
-    map = L.map('competitors-map');
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
-}
-
-// Search competitors
-async function searchCompetitors(page = 1) {
-    const loading = document.getElementById('competitors-loading');
-    loading.classList.remove('hidden');
-
+// Função para carregar concorrentes
+async function loadCompetitors() {
+    const radius = document.getElementById('radius-selector').value;
+    const loadingEl = document.getElementById('competitors-loading');
+    const listEl = document.getElementById('competitors-list');
+    
     try {
-        // Add logging to debug request parameters
-        const params = {
-            type: document.getElementById('business-type').value,
-            radius: document.getElementById('search-radius').value * 1000,
-            lat: '{{ $business->latitude }}',
-            lng: '{{ $business->longitude }}',
-            page: page,
-            sort: document.getElementById('sort-by').value
-        };
-        console.log('Search parameters:', params);
-
-        const response = await fetch('/api/places/nearby?' + new URLSearchParams(params));
+        loadingEl.classList.remove('hidden');
+        listEl.classList.add('hidden');
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        // Adicione logs para debug
+        console.log('Buscando concorrentes com params:', {
+            lat: business.latitude,
+            lng: business.longitude,
+            radius: radius,
+            type: business.business_type
+        });
 
+        const response = await fetch(`/api/places/nearby?lat=${business.latitude}&lng=${business.longitude}&radius=${radius}&type=${business.business_type}`);
         const data = await response.json();
         
-        if (!data.results) {
-            throw new Error('No results found in response');
+        console.log('Resposta da API:', data); // Log para debug
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Erro na requisição');
         }
 
-        displayResults(data.results);
-        updatePagination(data.total);
+        if (!data.results || !Array.isArray(data.results)) {
+            throw new Error('Formato de dados inválido');
+        }
+
+        renderCompetitors(data.results);
         updateMap(data.results);
         
-        document.getElementById('results-count').textContent = 
-            `${data.total} resultados encontrados`;
-
     } catch (error) {
-        console.error('Error fetching competitors:', error);
-        showNotification('Erro ao buscar concorrentes: ' + error.message, 'error');
+        console.error('Erro detalhado:', error);
+        showNotification(`Erro ao carregar concorrentes: ${error.message}`, 'error');
         
-        // Clear results and show error state
-        const container = document.getElementById('competitors-list');
-        container.innerHTML = `
-            <div class="col-span-full text-center py-8">
-                <div class="text-red-500 mb-2">
-                    <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </div>
-                <h3 class="text-lg font-medium text-gray-900">Erro ao carregar concorrentes</h3>
-                <p class="mt-1 text-sm text-gray-500">
-                    Por favor, tente novamente mais tarde ou contate o suporte.
-                </p>
-                <button onclick="searchCompetitors()" 
-                        class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
-                    Tentar Novamente
+        // Mostrar mensagem de erro na interface
+        listEl.innerHTML = `
+            <div class="p-4 text-center">
+                <p class="text-red-600">Erro ao carregar concorrentes. Tente novamente.</p>
+                <button onclick="loadCompetitors()" 
+                        class="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">
+                    Tentar novamente
                 </button>
             </div>
         `;
     } finally {
-        loading.classList.add('hidden');
+        loadingEl.classList.add('hidden');
+        listEl.classList.remove('hidden');
     }
 }
+
+// Função para renderizar cards dos concorrentes
+function renderCompetitors(competitors) {
+    const container = document.getElementById('competitors-list');
+    container.innerHTML = '';
+    
+    competitors.forEach(competitor => {
+        const card = `
+            <div class="competitor-card bg-white p-4 rounded-lg border border-gray-200 hover:shadow-md transition-all duration-300">
+                ${competitor.photos?.[0] ? `
+                    <img src="${competitor.photos[0]}" class="w-full h-48 object-cover rounded-lg mb-4" alt="${competitor.name}">
+                ` : ''}
+                <div class="flex items-center justify-between mb-2">
+                    <h4 class="font-semibold text-lg">${competitor.name}</h4>
+                    ${competitor.rating ? `
+                        <div class="flex items-center bg-yellow-50 px-2 py-1 rounded-full">
+                            <svg class="w-4 h-4 text-yellow-400 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                            <span class="text-sm font-medium">${competitor.rating}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                <p class="text-gray-600 text-sm mb-2">${competitor.vicinity}</p>
+                ${competitor.opening_hours ? `
+                    <p class="text-sm ${competitor.opening_hours.open_now ? 'text-green-600' : 'text-red-600'}">
+                        ${competitor.opening_hours.open_now ? 'Aberto agora' : 'Fechado'}
+                    </p>
+                ` : ''}
+                <div class="mt-4 pt-4 border-t border-gray-100">
+                    <button onclick="showCompetitorDetails('${competitor.place_id}')" 
+                            class="w-full px-4 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition-colors duration-200">
+                        Ver detalhes
+                    </button>
+                </div>
+            </div>
+        `;
+        container.insertAdjacentHTML('beforeend', card);
+    });
+}
+
+// Inicialização do mapa
+function initMap() {
+    try {
+        map = new google.maps.Map(document.getElementById('competitors-map'), {
+            center: { 
+                lat: parseFloat(business.latitude), 
+                lng: parseFloat(business.longitude) 
+            },
+            zoom: 14
+        });
+        
+        // Adiciona marcador do negócio principal
+        new google.maps.Marker({
+            position: { 
+                lat: parseFloat(business.latitude), 
+                lng: parseFloat(business.longitude) 
+            },
+            map: map,
+            icon: {
+                url: '/images/marker-business.png',
+                scaledSize: new google.maps.Size(40, 40)
+            },
+            title: business.name
+        });
+    } catch (error) {
+        console.error('Erro ao inicializar mapa:', error);
+        showNotification('Erro ao carregar mapa', 'error');
+    }
+}
+
+// Atualizar marcadores no mapa
+function updateMap(competitors) {
+    // Limpar marcadores existentes
+    markers.forEach(marker => marker.setMap(null));
+    markers = [];
+    
+    competitors.forEach(competitor => {
+        const marker = new google.maps.Marker({
+            position: { 
+                lat: competitor.geometry.location.lat, 
+                lng: competitor.geometry.location.lng 
+            },
+            map: map,
+            title: competitor.name
+        });
+        
+        markers.push(marker);
+        
+        // Adicionar InfoWindow
+        const infoWindow = new google.maps.InfoWindow({
+            content: `
+                <div class="p-2">
+                    <h3 class="font-semibold">${competitor.name}</h3>
+                    <p class="text-sm">${competitor.vicinity}</p>
+                    ${competitor.rating ? `
+                        <p class="text-sm mt-1">Rating: ${competitor.rating} ⭐</p>
+                    ` : ''}
+                </div>
+            `
+        });
+        
+        marker.addListener('click', () => {
+            infoWindow.open(map, marker);
+        });
+    });
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    // Inicializar mapa
+    initMap();
+    
+    // Carregar concorrentes iniciais
+    loadCompetitors();
+    
+    // Controle de visualização
+    document.getElementById('list-view').addEventListener('click', () => {
+        currentView = 'list';
+        document.getElementById('competitors-list').classList.remove('hidden');
+        document.getElementById('competitors-map').classList.add('hidden');
+        document.getElementById('list-view').classList.add('bg-purple-50', 'text-purple-600');
+        document.getElementById('list-view').classList.remove('bg-gray-100', 'text-gray-600');
+        document.getElementById('map-view').classList.add('bg-gray-100', 'text-gray-600');
+        document.getElementById('map-view').classList.remove('bg-purple-50', 'text-purple-600');
+    });
+    
+    document.getElementById('map-view').addEventListener('click', () => {
+        currentView = 'map';
+        document.getElementById('competitors-map').classList.remove('hidden');
+        document.getElementById('competitors-list').classList.add('hidden');
+        document.getElementById('map-view').classList.add('bg-purple-50', 'text-purple-600');
+        document.getElementById('map-view').classList.remove('bg-gray-100', 'text-gray-600');
+        document.getElementById('list-view').classList.add('bg-gray-100', 'text-gray-600');
+        document.getElementById('list-view').classList.remove('bg-purple-50', 'text-purple-600');
+        
+        // Atualizar mapa quando mudar para visualização de mapa
+        google.maps.event.trigger(map, 'resize');
+    });
+    
+    // Atualizar quando mudar o raio
+    document.getElementById('radius-selector').addEventListener('change', loadCompetitors);
+});
+
+
 
 // Add a notification system if not already present
 function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
     notification.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white ${
-        type === 'error' ? 'bg-red-500' : 'bg-green-500'
-    }`;
+        type === 'success' ? 'bg-green-500' : 'bg-red-500'
+    } shadow-lg z-50`;
     notification.textContent = message;
     document.body.appendChild(notification);
     
     setTimeout(() => {
         notification.remove();
-    }, 5000);
+    }, 3000);
 }
 
 // Add initialization error handling
