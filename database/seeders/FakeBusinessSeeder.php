@@ -8,12 +8,11 @@ use App\Models\BusinessAnalytics;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
-
 class FakeBusinessSeeder extends Seeder
 {
     public function run()
     {
-        // Garante que existe um usuário
+        // Cria usuário de teste
         $user = User::firstOrCreate(
             ['email' => 'teste@exemplo.com'],
             [
@@ -22,16 +21,24 @@ class FakeBusinessSeeder extends Seeder
             ]
         );
 
-        // Cria o negócio fictício
+        // Cria o negócio fictício com todos os campos necessários
         $business = Business::create([
             'user_id' => $user->id,
             'name' => 'Café Aroma Brasileiro',
             'segment' => 'Cafeteria',
             'description' => 'O melhor café artesanal da região, com ambiente acolhedor e wifi grátis para nossos clientes.',
-            'address' => 'Rua das Flores, 123 - Centro, São Paulo - SP',
+            'address' => 'Rua das Flores, 123',
+            'city' => 'São Paulo',
+            'state' => 'SP',
+            'postal_code' => '01234-567',
             'phone' => '(11) 98765-4321',
+            'latitude' => -23.550520,
+            'longitude' => -46.633308,
+            'cover_photo_url' => '/images/fake/cafe-cover.jpg',
             'website' => 'https://cafearomabrasileiro.com.br',
+            'google_business_id' => 'ChIJ12345678901234567',
             'is_verified' => true,
+            'last_sync' => Carbon::now(),
             'status' => 'active',
             'rating' => 4.7,
             'review_count' => 3,
@@ -57,10 +64,6 @@ class FakeBusinessSeeder extends Seeder
                     'instagram' => 'https://instagram.com/cafearomabrasileiro',
                     'twitter' => 'https://twitter.com/cafearomabr'
                 ],
-                'location' => [
-                    'latitude' => -23.550520,
-                    'longitude' => -46.633308,
-                ],
                 'attributes' => [
                     'wifi' => true,
                     'wheelchair_accessible' => true,
@@ -69,21 +72,23 @@ class FakeBusinessSeeder extends Seeder
                     'delivery' => true,
                     'takeout' => true
                 ]
-            ]
+            ],
+            'created_at' => Carbon::now(),
+            'updated_at' => Carbon::now()
         ]);
 
         // Adiciona métricas dos últimos 30 dias
         $startDate = Carbon::now()->subDays(30);
-for ($i = 0; $i <= 30; $i++) {
-    BusinessAnalytics::create([
-        'business_id' => $business->id,
-        'date' => $startDate->copy()->addDays($i),
-        'views' => rand(50, 200),
-        'clicks' => rand(20, 80),
-        'calls' => rand(5, 20),
-        'website_visits' => rand(15, 50),
-        'photo_views' => rand(30, 100)
-    ]);
+        for ($i = 0; $i <= 30; $i++) {
+            BusinessAnalytics::create([
+                'business_id' => $business->id,
+                'date' => $startDate->copy()->addDays($i),
+                'views' => rand(50, 200),
+                'clicks' => rand(20, 80),
+                'calls' => rand(5, 20),
+                'website_visits' => rand(15, 50),
+                'photo_views' => rand(30, 100)
+            ]);
         }
 
         // Adiciona fotos

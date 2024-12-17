@@ -154,10 +154,12 @@ class BusinessController extends Controller
         'website' => 'nullable|url|max:255',
         'description' => 'nullable|string|max:1000',
     ]);
-    Log::info('Negócio criado', ['business_id' => $business->id, 'user_id' => auth()->id()]);
 
-
+    // Primeiro, crie o negócio
     $business = auth()->user()->businesses()->create($validated);
+
+    // Depois, registre o log com o ID do negócio criado
+    Log::info('Negócio criado', ['business_id' => $business->id, 'user_id' => auth()->id()]);
 
     return redirect()->route('business.index')
         ->with('success', 'Negócio cadastrado com sucesso!');

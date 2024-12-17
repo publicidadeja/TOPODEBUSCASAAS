@@ -362,88 +362,50 @@ public function getSearchKeywords($business, $dateRange = '30daysAgo')
 public function getNearbyCompetitors($params)
 {
     try {
-        Log::info('Iniciando getNearbyCompetitors', [
-            'params' => $params,
-            'api_key_exists' => !empty(config('services.google.places_api_key'))
-        ]);
-
-        // Validar parâmetros
-        if (empty($params['location']['lat']) || empty($params['location']['lng'])) {
-            Log::warning('Coordenadas inválidas para busca de concorrentes', [
-                'latitude' => $params['location']['lat'] ?? null,
-                'longitude' => $params['location']['lng'] ?? null
-            ]);
-            return [];
-        }
-
-        // Configurar parâmetros da busca
-        $searchParams = [
-            'location' => [
-                'lat' => (float)$params['location']['lat'],
-                'lng' => (float)$params['location']['lng']
-            ],
-            'radius' => $params['radius'] ?? 5000,
-            'type' => $params['type'] ?? 'establishment',
-            'keyword' => $params['keyword'] ?? '',
-            'language' => 'pt-BR'
-        ];
-
-        Log::info('Parâmetros de busca configurados', [
-            'search_params' => $searchParams
-        ]);
-
-        // Fazer a chamada à API
-        try {
-            $places = $this->service->places->nearbySearch($searchParams);
-            
-            Log::info('Resposta da API Places recebida', [
-                'status' => $places->status ?? 'NO_STATUS',
-                'results_count' => isset($places->results) ? count($places->results) : 0
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Erro na chamada à API Places', [
-                'message' => $e->getMessage(),
-                'code' => $e->getCode()
-            ]);
-            return [];
-        }
-
-        // Processar resultados
         $competitors = [];
-        if (!empty($places->results)) {
-            foreach ($places->results as $place) {
-                $competitors[] = [
-                    'name' => $place->name,
-                    'rating' => $place->rating ?? 0,
-                    'reviews' => $place->user_ratings_total ?? 0,
-                    'address' => $place->vicinity ?? '',
-                    'distance' => $this->calculateDistance(
-                        $params['location']['lat'],
-                        $params['location']['lng'],
-                        $place->geometry->location->lat,
-                        $place->geometry->location->lng
-                    ),
-                    'place_id' => $place->place_id
-                ];
-            }
-        }
+        $places = $this->searchNearbyPlaces($params);
 
-        Log::info('Processamento de concorrentes finalizado', [
-            'total_competitors' => count($competitors)
-        ]);
+        foreach ($places as $place) {
+            $details = $this->getPlaceDetails($place['place_id']);
+            
+            $competitor = [
+                'name' => $place['name'],
+                'place_id' => $place['place_id'],
+                'address' => $details['formatted_address'] ?? null,
+                'phone' => $details['formatted_phone_number'] ?? null,
+                'website' => $details['website'] ?? null,
+                'rating' => $place['rating'] ?? null,
+                'review_count' => $place['user_ratings_total'] ?? 0,
+                'photos' => [],
+                'distance' => $this->calculateDistance(
+                    $params['location']['lat'],
+                    $params['location']['lng'],
+                    $place['geometry']['location']['lat'],
+                    $place['geometry']['location']['lng']
+                )
+            ];
+
+            // Adicionar fotos
+            if (!empty($details['photos'])) {
+                foreach (array_slice($details['photos'], 0, 3) as $photo) {
+                    $photoUrl = $this->getPlacePhotoUrl($photo['photo_reference']);
+                    if ($photoUrl) {
+                        $competitor['photos'][] = $photoUrl;
+                    }
+                }
+            }
+
+            $competitors[] = $competitor;
+        }
 
         return $competitors;
-
     } catch (\Exception $e) {
-        Log::error('Erro geral em getNearbyCompetitors', [
-            'message' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine()
-        ]);
+        \Log::error('Error fetching competitors: ' . $e->getMessage());
         return [];
     }
 }
+
+
 
 private function calculateDistance($lat1, $lon1, $lat2, $lon2)
 {

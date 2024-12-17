@@ -49,17 +49,15 @@ class DashboardController extends Controller
                 'lat' => $selectedBusiness->latitude,
                 'lng' => $selectedBusiness->longitude
             ],
-            'radius' => 5000, // 5km radius
+            'radius' => 5000,
             'type' => $selectedBusiness->business_type ?? 'establishment',
             'keyword' => $selectedBusiness->keywords ?? $selectedBusiness->name,
-            'limit' => 5
+            'limit' => 10 // Aumentado para 10 concorrentes
         ]);
         
     } catch (\Exception $e) {
         \Log::error('Erro ao obter dados do Google: ' . $e->getMessage());
-        $googleInsights = null;
         $competitors = [];
-        session()->flash('google_error', 'Não foi possível obter dados do Google My Business. Verifique sua conexão.');
     }
 
     // Buscar analytics dos últimos 30 dias

@@ -10,101 +10,149 @@ class GooglePlacesService
 {
     protected $apiKey;
     protected $baseUrl = 'https://maps.googleapis.com/maps/api/place';
-    protected $maxRequestsPerMinute = 60;
     protected $cacheTime = 3600; // 1 hora
 
-    public function __construct($apiKey)
+    public function __construct()
     {
-        $this->apiKey = $apiKey;
+        $this->apiKey = config('services.google.places_api_key');
     }
 
-    public function nearbySearch($params)
+    public function getNearbyCompetitors($params)
+    {
+        try {
+            $places = $this->searchNearbyPlaces($params);
+            $competitors = [];
+
+            foreach ($places as $place) {
+                $details = $this->getPlaceDetails($place['place_id']);
+                
+                $competitor = [
+                    'name' => $place['name'],
+                    'rating' => $place['rating'] ?? null,
+                    'address' => $details['formatted_address'] ?? null,
+                    'phone' => $details['formatted_phone_number'] ?? null,
+                    'website' => $details['website'] ?? null,
+                    'review_count' => $details['user_ratings_total'] ?? 0,
+                    'photos' => [],
+                    'distance' => isset($place['geometry']['location']) 
+                        ? $this->calculateDistance(
+                            $params['location']['lat'],
+                            $params['location']['lng'],
+                            $place['geometry']['location']['lat'],
+                            $place['geometry']['location']['lng']
+                        ) 
+                        : null
+                ];
+
+                // Processar fotos
+                if (!empty($details['photos'])) {
+                    foreach ($details['photos'] as $photo) {
+                        $competitor['photos'][] = $this->getPlacePhotoUrl($photo['photo_reference']);
+                        if (count($competitor['photos']) >= 3) break; // Limita a 3 fotos
+                    }
+                }
+
+                $competitors[] = $competitor;
+            }
+
+            return $competitors;
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao buscar concorrentes: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    private function searchNearbyPlaces($params)
     {
         try {
             $cacheKey = 'places_nearby_' . md5(json_encode($params));
             
             return Cache::remember($cacheKey, $this->cacheTime, function () use ($params) {
                 $response = Http::get("{$this->baseUrl}/nearbysearch/json", [
-                    'key' => $this->apiKey,
-                    'location' => "{$params['lat']},{$params['lng']}",
-                    'radius' => $params['radius'] ?? 1000,
-                    'type' => $params['type'] ?? '',
-                    'keyword' => $params['keyword'] ?? ''
+                    'location' => $params['location']['lat'] . ',' . $params['location']['lng'],
+                    'radius' => $params['radius'] ?? 5000,
+                    'type' => $params['type'] ?? 'establishment',
+                    'keyword' => $params['keyword'] ?? '',
+                    'language' => 'pt-BR',
+                    'key' => $this->apiKey
                 ]);
 
-                Log::info('Google Places API Nearby Search', [
-                    'params' => $params,
-                    'status' => $response->status()
-                ]);
+                if ($response->successful()) {
+                    $data = $response->json();
+                    return $data['results'] ?? [];
+                }
 
-                return $response->json();
+                return [];
             });
         } catch (\Exception $e) {
-            Log::error('Erro na busca do Google Places', [
-                'error' => $e->getMessage()
-            ]);
-            throw $e;
+            Log::error('Erro na busca de lugares próximos: ' . $e->getMessage());
+            return [];
         }
     }
 
-    public function getPlaceDetails($placeId)
+    private function getPlaceDetails($placeId)
     {
         try {
             $cacheKey = 'place_details_' . $placeId;
             
             return Cache::remember($cacheKey, $this->cacheTime, function () use ($placeId) {
                 $response = Http::get("{$this->baseUrl}/details/json", [
-                    'key' => $this->apiKey,
                     'place_id' => $placeId,
-                    'fields' => 'name,rating,formatted_address,photos,opening_hours'
+                    'fields' => implode(',', [
+                        'name',
+                        'formatted_address',
+                        'formatted_phone_number',
+                        'website',
+                        'rating',
+                        'user_ratings_total',
+                        'photos',
+                        'opening_hours',
+                        'geometry'
+                    ]),
+                    'language' => 'pt-BR',
+                    'key' => $this->apiKey
                 ]);
 
-                return $response->json();
+                if ($response->successful()) {
+                    $data = $response->json();
+                    return $data['result'] ?? [];
+                }
+
+                return [];
             });
         } catch (\Exception $e) {
-            Log::error('Erro ao buscar detalhes do local', [
-                'place_id' => $placeId,
-                'error' => $e->getMessage()
-            ]);
-            throw $e;
+            Log::error('Erro ao buscar detalhes do lugar: ' . $e->getMessage());
+            return [];
         }
     }
 
-    public function getPlacePhotos($photoReference)
+    private function getPlacePhotoUrl($photoReference, $maxWidth = 400)
     {
-        try {
-            return "{$this->baseUrl}/photo?maxwidth=400&photo_reference={$photoReference}&key={$this->apiKey}";
-        } catch (\Exception $e) {
-            Log::error('Erro ao buscar foto do local', [
-                'error' => $e->getMessage()
-            ]);
-            throw $e;
+        if (empty($photoReference)) {
+            return null;
         }
+
+        return "{$this->baseUrl}/photo?" . http_build_query([
+            'maxwidth' => $maxWidth,
+            'photo_reference' => $photoReference,
+            'key' => $this->apiKey
+        ]);
     }
 
-    public function autocomplete($input, $location = null)
+    private function calculateDistance($lat1, $lon1, $lat2, $lon2)
     {
-        try {
-            $params = [
-                'key' => $this->apiKey,
-                'input' => $input,
-                'language' => 'pt-BR'
-            ];
+        $earthRadius = 6371; // Raio da Terra em km
 
-            if ($location) {
-                $params['location'] = "{$location['lat']},{$location['lng']}";
-                $params['radius'] = $location['radius'] ?? 50000;
-            }
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
 
-            $response = Http::get("{$this->baseUrl}/autocomplete/json", $params);
-
-            return $response->json();
-        } catch (\Exception $e) {
-            Log::error('Erro no autocomplete', [
-                'input' => $input,
-                'error' => $e->getMessage()
-            ]);
-            throw $e;
-        }
+        $a = sin($dLat/2) * sin($dLat/2) +
+             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+             sin($dLon/2) * sin($dLon/2);
+             
+        $c = 2 * atan2(sqrt($a), sqrt(1-$a));
+        
+        return round($earthRadius * $c, 2);
     }
 }
