@@ -24,7 +24,7 @@ class GooglePlacesService
         
         $competitors = [];
         foreach ($places as $place) {
-            // Buscar detalhes adicionais do lugar
+            // Buscar detalhes adicionais do lugar com mais campos
             $details = $this->getPlaceDetails($place['place_id']);
             
             $competitor = [
@@ -39,12 +39,48 @@ class GooglePlacesService
                     $place['geometry']['location']['lat'],
                     $place['geometry']['location']['lng']
                 ),
+                // Novos campos adicionados
                 'phone' => $details['formatted_phone_number'] ?? null,
+                'international_phone' => $details['international_phone_number'] ?? null,
                 'website' => $details['website'] ?? null,
+                'url' => $details['url'] ?? null,
+                'hours' => $details['opening_hours']['weekday_text'] ?? null,
+                'status' => $details['business_status'] ?? null,
+                'price_level' => $details['price_level'] ?? null,
                 'photos' => !empty($place['photos']) ? array_map(function($photo) {
                     return $this->getPlacePhotoUrl($photo['photo_reference']);
-                }, $place['photos']) : [],
-                'segment' => !empty($place['types']) ? $place['types'][0] : null
+                }, array_slice($place['photos'], 0, 5)) : [], // Limitando a 5 fotos
+                'reviews' => array_map(function($review) {
+                    return [
+                        'author_name' => $review['author_name'] ?? null,
+                        'rating' => $review['rating'] ?? null,
+                        'text' => $review['text'] ?? null,
+                        'time' => $review['time'] ?? null,
+                        'profile_photo_url' => $review['profile_photo_url'] ?? null
+                    ];
+                }, $details['reviews'] ?? []),
+                'types' => $place['types'] ?? [],
+                'location' => [
+                    'lat' => $place['geometry']['location']['lat'] ?? null,
+                    'lng' => $place['geometry']['location']['lng'] ?? null
+                ],
+                'plus_code' => $details['plus_code'] ?? null,
+                'utc_offset' => $details['utc_offset'] ?? null,
+                'wheelchair_accessible' => $details['wheelchair_accessible_entrance'] ?? null,
+                'delivery' => $details['delivery'] ?? false,
+                'dine_in' => $details['dine_in'] ?? false,
+                'takeout' => $details['takeout'] ?? false,
+                'serves_breakfast' => $details['serves_breakfast'] ?? false,
+                'serves_lunch' => $details['serves_lunch'] ?? false,
+                'serves_dinner' => $details['serves_dinner'] ?? false,
+                'outdoor_seating' => $details['outdoor_seating'] ?? false,
+                'reservable' => $details['reservable'] ?? false,
+                'social_links' => [
+                    'google_page' => $details['url'] ?? null,
+                    'facebook' => $this->extractSocialLink($details, 'facebook'),
+                    'instagram' => $this->extractSocialLink($details, 'instagram'),
+                    'twitter' => $this->extractSocialLink($details, 'twitter')
+                ]
             ];
             
             $competitors[] = $competitor;
@@ -59,6 +95,20 @@ class GooglePlacesService
         return [];
     }
 }
+
+// Método auxiliar para extrair links sociais
+private function extractSocialLink($details, $platform)
+{
+    if (!empty($details['social_links'])) {
+        foreach ($details['social_links'] as $link) {
+            if (stripos($link, $platform) !== false) {
+                return $link;
+            }
+        }
+    }
+    return null;
+}
+
 
 // Novo método para verificar se o estabelecimento corresponde ao segmento
 private function matchesSegment($placeTypes, $segment)
@@ -139,41 +189,58 @@ private function searchNearbyPlaces($params)
     }
 }
 
-    private function getPlaceDetails($placeId)
-    {
-        try {
-            $cacheKey = 'place_details_' . $placeId;
-            
-            return Cache::remember($cacheKey, $this->cacheTime, function () use ($placeId) {
-                $response = Http::get("{$this->baseUrl}/details/json", [
-                    'place_id' => $placeId,
-                    'fields' => implode(',', [
-                        'name',
-                        'formatted_address',
-                        'formatted_phone_number',
-                        'website',
-                        'rating',
-                        'user_ratings_total',
-                        'photos',
-                        'opening_hours',
-                        'geometry'
-                    ]),
-                    'language' => 'pt-BR',
-                    'key' => $this->apiKey
-                ]);
+private function getPlaceDetails($placeId)
+{
+    try {
+        $cacheKey = 'place_details_' . $placeId;
+        
+        return Cache::remember($cacheKey, $this->cacheTime, function () use ($placeId) {
+            $response = Http::get("{$this->baseUrl}/details/json", [
+                'place_id' => $placeId,
+                'fields' => implode(',', [
+                    'name',
+                    'formatted_address',
+                    'formatted_phone_number',
+                    'international_phone_number',
+                    'website',
+                    'url',
+                    'rating',
+                    'user_ratings_total',
+                    'reviews',
+                    'photos',
+                    'opening_hours',
+                    'business_status',
+                    'price_level',
+                    'geometry',
+                    'types',
+                    'plus_code',
+                    'utc_offset',
+                    'wheelchair_accessible_entrance',
+                    'delivery',
+                    'dine_in',
+                    'takeout',
+                    'serves_breakfast',
+                    'serves_lunch',
+                    'serves_dinner',
+                    'outdoor_seating',
+                    'reservable'
+                ]),
+                'language' => 'pt-BR',
+                'key' => $this->apiKey
+            ]);
 
-                if ($response->successful()) {
-                    $data = $response->json();
-                    return $data['result'] ?? [];
-                }
+            if ($response->successful()) {
+                $data = $response->json();
+                return $data['result'] ?? [];
+            }
 
-                return [];
-            });
-        } catch (\Exception $e) {
-            Log::error('Erro ao buscar detalhes do lugar: ' . $e->getMessage());
             return [];
-        }
+        });
+    } catch (\Exception $e) {
+        Log::error('Erro ao buscar detalhes do lugar: ' . $e->getMessage());
+        return [];
     }
+}
 
     private function getPlacePhotoUrl($photoReference, $maxWidth = 400)
     {
