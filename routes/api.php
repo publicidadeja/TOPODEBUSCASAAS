@@ -6,6 +6,7 @@ use App\Http\Controllers\GooglePlacesController;
 use App\Http\Controllers\BusinessImageController;
 use App\Http\Controllers\GoogleController;
 
+Route::get('/places/nearby', [PlacesController::class, 'getNearbyPlaces']);
 
 // Rotas existentes mantidas
 Route::get('/business/image', [BusinessImageController::class, 'getImage']);

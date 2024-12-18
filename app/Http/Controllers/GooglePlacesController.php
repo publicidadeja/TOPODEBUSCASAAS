@@ -21,6 +21,7 @@ class GooglePlacesController extends Controller
         'lat' => 'required|numeric',
         'lng' => 'required|numeric',
         'radius' => 'nullable|numeric|max:50000',
+        'segment' => 'required|string', // Adicionado segment como obrigatório
         'type' => 'nullable|string'
     ]);
 
@@ -42,8 +43,18 @@ class GooglePlacesController extends Controller
             'lat' => $request->lat,
             'lng' => $request->lng,
             'radius' => $request->radius,
+            'segment' => $request->segment,
             'type' => $request->type
         ]);
+
+        // Validação adicional das coordenadas
+        if ($request->lat < -90 || $request->lat > 90 || 
+            $request->lng < -180 || $request->lng > 180) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Coordenadas geográficas inválidas'
+            ], 422);
+        }
 
         $results = $this->placesService->getNearbyCompetitors([
             'location' => [
@@ -51,54 +62,51 @@ class GooglePlacesController extends Controller
                 'lng' => $request->lng
             ],
             'radius' => $request->radius ?? 5000,
-            'type' => $request->type
+            'type' => $request->type,
+            'segment' => $request->segment, // Adicionado segment aos parâmetros
+            'keyword' => $request->segment // Usando segment como keyword também
         ]);
 
         // Log da resposta completa da API
-        \Log::info('Resposta bruta da API Places:', [
+        \Log::info('Resposta da API Places:', [
             'response' => json_encode($results, JSON_PRETTY_PRINT)
         ]);
 
-        // Verifica se a resposta está no formato esperado
-        if (!is_array($results)) {
-            \Log::error('Resposta da API não é um array:', [
-                'response_type' => gettype($results),
-                'response' => $results
-            ]);
-            
+        // Verifica se há resultados
+        if (empty($results)) {
             return response()->json([
-                'success' => false,
-                'message' => 'Formato de dados inválido da API',
-                'debug_info' => [
-                    'response_type' => gettype($results)
-                ]
-            ], 500);
+                'success' => true,
+                'message' => 'Nenhum concorrente encontrado na região',
+                'results' => []
+            ]);
         }
 
-        if (!isset($results['results'])) {
-            \Log::error('Resposta da API não contém o campo "results":', [
-                'response_keys' => array_keys($results),
-                'response' => $results
-            ]);
-            
-            return response()->json([
-                'success' => false,
-                'message' => 'Formato de dados inválido da API',
-                'debug_info' => [
-                    'available_keys' => array_keys($results)
-                ]
-            ], 500);
-        }
+        // Processa e formata os resultados
+        $formattedResults = array_map(function($result) {
+            return [
+                'place_id' => $result['place_id'] ?? null,
+                'name' => $result['name'] ?? null,
+                'address' => $result['address'] ?? null,
+                'rating' => $result['rating'] ?? null,
+                'total_ratings' => $result['review_count'] ?? 0,
+                'distance' => $result['distance'] ?? null,
+                'phone' => $result['phone'] ?? null,
+                'website' => $result['website'] ?? null,
+                'photos' => $result['photos'] ?? [],
+                'segment' => $result['segment'] ?? null
+            ];
+        }, $results);
 
         // Log dos resultados processados
         \Log::info('Resultados processados:', [
-            'count' => count($results['results']),
-            'first_result' => isset($results['results'][0]) ? $results['results'][0] : null
+            'count' => count($formattedResults),
+            'first_result' => isset($formattedResults[0]) ? $formattedResults[0] : null
         ]);
 
         return response()->json([
             'success' => true,
-            'results' => $results['results']
+            'count' => count($formattedResults),
+            'results' => $formattedResults
         ]);
 
     } catch (\Exception $e) {
@@ -109,15 +117,17 @@ class GooglePlacesController extends Controller
                 'lat' => $request->lat,
                 'lng' => $request->lng,
                 'radius' => $request->radius,
+                'segment' => $request->segment,
                 'type' => $request->type
             ]
         ]);
 
         return response()->json([
             'success' => false,
-            'message' => 'Erro ao buscar locais próximos: ' . $e->getMessage(),
+            'message' => 'Erro ao buscar locais próximos',
             'debug_info' => [
                 'error_type' => get_class($e),
+                'error_message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine()
             ]

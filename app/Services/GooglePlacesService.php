@@ -18,78 +18,126 @@ class GooglePlacesService
     }
 
     public function getNearbyCompetitors($params)
-    {
-        try {
-            $places = $this->searchNearbyPlaces($params);
-            $competitors = [];
+{
+    try {
+        $places = $this->searchNearbyPlaces($params);
+        
+        $competitors = [];
+        foreach ($places as $place) {
+            // Buscar detalhes adicionais do lugar
+            $details = $this->getPlaceDetails($place['place_id']);
+            
+            $competitor = [
+                'place_id' => $place['place_id'],
+                'name' => $place['name'],
+                'address' => $place['vicinity'] ?? $details['formatted_address'] ?? null,
+                'rating' => $place['rating'] ?? null,
+                'total_ratings' => $place['user_ratings_total'] ?? null,
+                'distance' => $this->calculateDistance(
+                    $params['location']['lat'],
+                    $params['location']['lng'],
+                    $place['geometry']['location']['lat'],
+                    $place['geometry']['location']['lng']
+                ),
+                'phone' => $details['formatted_phone_number'] ?? null,
+                'website' => $details['website'] ?? null,
+                'photos' => !empty($place['photos']) ? array_map(function($photo) {
+                    return $this->getPlacePhotoUrl($photo['photo_reference']);
+                }, $place['photos']) : [],
+                'segment' => !empty($place['types']) ? $place['types'][0] : null
+            ];
+            
+            $competitors[] = $competitor;
+        }
 
-            foreach ($places as $place) {
-                $details = $this->getPlaceDetails($place['place_id']);
+        return $competitors;
+    } catch (\Exception $e) {
+        \Log::error('Erro ao buscar competidores:', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return [];
+    }
+}
+
+// Novo método para verificar se o estabelecimento corresponde ao segmento
+private function matchesSegment($placeTypes, $segment)
+{
+    // Mapeamento de segmentos para tipos do Google Places
+    $segmentTypeMapping = [
+        'restaurante' => ['restaurant', 'food'],
+        'bar' => ['bar', 'night_club'],
+        'cafe' => ['cafe', 'bakery'],
+        // Adicione mais mapeamentos conforme necessário
+    ];
+
+    // Normaliza o segmento para minúsculas
+    $segment = strtolower($segment);
+
+    // Verifica se o segmento existe no mapeamento
+    if (isset($segmentTypeMapping[$segment])) {
+        // Verifica se algum dos tipos do lugar corresponde aos tipos mapeados para o segmento
+        return !empty(array_intersect($placeTypes, $segmentTypeMapping[$segment]));
+    }
+
+    // Se não houver mapeamento específico, usa comparação direta
+    return in_array(strtolower($segment), $placeTypes);
+}
+
+
+private function searchNearbyPlaces($params)
+{
+    try {
+        $cacheKey = 'places_nearby_' . md5(json_encode($params));
+        
+        return Cache::remember($cacheKey, $this->cacheTime, function () use ($params) {
+            // Construir os parâmetros da requisição
+            $queryParams = [
+                'location' => $params['location']['lat'] . ',' . $params['location']['lng'],
+                'radius' => $params['radius'] ?? 5000,
+                'type' => 'establishment', // Adiciona um tipo genérico
+                'keyword' => $params['segment'] ?? '',
+                'language' => 'pt-BR',
+                'key' => $this->apiKey
+            ];
+
+            // Log para debug
+            \Log::info('Parâmetros da busca:', [
+                'params' => array_merge($queryParams, ['key' => '***'])
+            ]);
+
+            // Fazer a requisição para a API
+            $response = Http::get("{$this->baseUrl}/nearbysearch/json", $queryParams);
+            
+            // Log da resposta
+            \Log::info('Resposta da API:', [
+                'status' => $response->status(),
+                'body' => $response->json()
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
                 
-                $competitor = [
-                    'name' => $place['name'],
-                    'rating' => $place['rating'] ?? null,
-                    'address' => $details['formatted_address'] ?? null,
-                    'phone' => $details['formatted_phone_number'] ?? null,
-                    'website' => $details['website'] ?? null,
-                    'review_count' => $details['user_ratings_total'] ?? 0,
-                    'photos' => [],
-                    'distance' => isset($place['geometry']['location']) 
-                        ? $this->calculateDistance(
-                            $params['location']['lat'],
-                            $params['location']['lng'],
-                            $place['geometry']['location']['lat'],
-                            $place['geometry']['location']['lng']
-                        ) 
-                        : null
-                ];
-
-                // Processar fotos
-                if (!empty($details['photos'])) {
-                    foreach ($details['photos'] as $photo) {
-                        $competitor['photos'][] = $this->getPlacePhotoUrl($photo['photo_reference']);
-                        if (count($competitor['photos']) >= 3) break; // Limita a 3 fotos
-                    }
+                if ($data['status'] === 'OK' && !empty($data['results'])) {
+                    return $data['results'];
                 }
-
-                $competitors[] = $competitor;
+                
+                \Log::warning('Sem resultados ou status não OK:', [
+                    'status' => $data['status'],
+                    'error_message' => $data['error_message'] ?? 'Sem mensagem de erro'
+                ]);
             }
 
-            return $competitors;
-
-        } catch (\Exception $e) {
-            Log::error('Erro ao buscar concorrentes: ' . $e->getMessage());
             return [];
-        }
+        });
+    } catch (\Exception $e) {
+        \Log::error('Erro na busca de lugares:', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        return [];
     }
-
-    private function searchNearbyPlaces($params)
-    {
-        try {
-            $cacheKey = 'places_nearby_' . md5(json_encode($params));
-            
-            return Cache::remember($cacheKey, $this->cacheTime, function () use ($params) {
-                $response = Http::get("{$this->baseUrl}/nearbysearch/json", [
-                    'location' => $params['location']['lat'] . ',' . $params['location']['lng'],
-                    'radius' => $params['radius'] ?? 5000,
-                    'type' => $params['type'] ?? 'establishment',
-                    'keyword' => $params['keyword'] ?? '',
-                    'language' => 'pt-BR',
-                    'key' => $this->apiKey
-                ]);
-
-                if ($response->successful()) {
-                    $data = $response->json();
-                    return $data['results'] ?? [];
-                }
-
-                return [];
-            });
-        } catch (\Exception $e) {
-            Log::error('Erro na busca de lugares próximos: ' . $e->getMessage());
-            return [];
-        }
-    }
+}
 
     private function getPlaceDetails($placeId)
     {
