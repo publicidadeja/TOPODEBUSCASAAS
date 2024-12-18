@@ -21,7 +21,7 @@ class GooglePlacesController extends Controller
         'lat' => 'required|numeric',
         'lng' => 'required|numeric',
         'radius' => 'nullable|numeric|max:50000',
-        'segment' => 'required|string', // Adicionado segment como obrigatório
+        'segment' => 'required|string',
         'type' => 'nullable|string'
     ]);
 
@@ -38,7 +38,6 @@ class GooglePlacesController extends Controller
     }
 
     try {
-        // Log dos parâmetros recebidos
         \Log::info('Parâmetros da busca:', [
             'lat' => $request->lat,
             'lng' => $request->lng,
@@ -47,7 +46,6 @@ class GooglePlacesController extends Controller
             'type' => $request->type
         ]);
 
-        // Validação adicional das coordenadas
         if ($request->lat < -90 || $request->lat > 90 || 
             $request->lng < -180 || $request->lng > 180) {
             return response()->json([
@@ -63,16 +61,14 @@ class GooglePlacesController extends Controller
             ],
             'radius' => $request->radius ?? 5000,
             'type' => $request->type,
-            'segment' => $request->segment, // Adicionado segment aos parâmetros
-            'keyword' => $request->segment // Usando segment como keyword também
+            'segment' => $request->segment,
+            'keyword' => $request->segment
         ]);
 
-        // Log da resposta completa da API
         \Log::info('Resposta da API Places:', [
             'response' => json_encode($results, JSON_PRETTY_PRINT)
         ]);
 
-        // Verifica se há resultados
         if (empty($results)) {
             return response()->json([
                 'success' => true,
@@ -81,23 +77,54 @@ class GooglePlacesController extends Controller
             ]);
         }
 
-        // Processa e formata os resultados
         $formattedResults = array_map(function($result) {
             return [
+                // Informações básicas
                 'place_id' => $result['place_id'] ?? null,
                 'name' => $result['name'] ?? null,
                 'address' => $result['address'] ?? null,
                 'rating' => $result['rating'] ?? null,
-                'total_ratings' => $result['review_count'] ?? 0,
+                'total_ratings' => $result['total_ratings'] ?? 0,
                 'distance' => $result['distance'] ?? null,
+                
+                // Contato
                 'phone' => $result['phone'] ?? null,
+                'international_phone' => $result['international_phone'] ?? null,
                 'website' => $result['website'] ?? null,
+                'url' => $result['url'] ?? null,
+                
+                // Mídia
                 'photos' => $result['photos'] ?? [],
-                'segment' => $result['segment'] ?? null
+                'reviews' => $result['reviews'] ?? [],
+                
+                // Status e horários
+                'status' => $result['status'] ?? null,
+                'open_now' => $result['open_now'] ?? null,
+                'hours' => $result['hours'] ?? null,
+                'price_level' => $result['price_level'] ?? null,
+                
+                // Localização
+                'location' => [
+                    'lat' => $result['location']['lat'] ?? null,
+                    'lng' => $result['location']['lng'] ?? null
+                ],
+                
+                // Características
+                'delivery' => $result['delivery'] ?? false,
+                'dine_in' => $result['dine_in'] ?? false,
+                'takeout' => $result['takeout'] ?? false,
+                'outdoor_seating' => $result['outdoor_seating'] ?? false,
+                'reservable' => $result['reservable'] ?? false,
+                
+                // Categorização
+                'segment' => $result['segment'] ?? null,
+                'types' => $result['types'] ?? [],
+                
+                // Links sociais
+                'social_links' => $result['social_links'] ?? null
             ];
         }, $results);
 
-        // Log dos resultados processados
         \Log::info('Resultados processados:', [
             'count' => count($formattedResults),
             'first_result' => isset($formattedResults[0]) ? $formattedResults[0] : null

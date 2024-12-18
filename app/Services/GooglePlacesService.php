@@ -18,96 +18,159 @@ class GooglePlacesService
     }
 
     public function getNearbyCompetitors($params)
-{
-    try {
-        $places = $this->searchNearbyPlaces($params);
-        
-        $competitors = [];
-        foreach ($places as $place) {
-            // Buscar detalhes adicionais do lugar com mais campos
-            $details = $this->getPlaceDetails($place['place_id']);
+    {
+        try {
+            $places = $this->searchNearbyPlaces($params);
             
-            $competitor = [
-                'place_id' => $place['place_id'],
-                'name' => $place['name'],
-                'address' => $place['vicinity'] ?? $details['formatted_address'] ?? null,
-                'rating' => $place['rating'] ?? null,
-                'total_ratings' => $place['user_ratings_total'] ?? null,
-                'distance' => $this->calculateDistance(
+            $competitors = [];
+            foreach ($places as $place) {
+                // Buscar detalhes adicionais do lugar
+                $details = $this->getPlaceDetails($place['place_id']);
+                
+                // Calcular distância
+                $distance = $this->calculateDistance(
                     $params['location']['lat'],
                     $params['location']['lng'],
                     $place['geometry']['location']['lat'],
                     $place['geometry']['location']['lng']
-                ),
-                // Novos campos adicionados
-                'phone' => $details['formatted_phone_number'] ?? null,
-                'international_phone' => $details['international_phone_number'] ?? null,
-                'website' => $details['website'] ?? null,
-                'url' => $details['url'] ?? null,
-                'hours' => $details['opening_hours']['weekday_text'] ?? null,
-                'status' => $details['business_status'] ?? null,
-                'price_level' => $details['price_level'] ?? null,
-                'photos' => !empty($place['photos']) ? array_map(function($photo) {
+                );
+    
+                // Processar fotos
+                $photos = !empty($place['photos']) ? array_map(function($photo) {
                     return $this->getPlacePhotoUrl($photo['photo_reference']);
-                }, array_slice($place['photos'], 0, 5)) : [], // Limitando a 5 fotos
-                'reviews' => array_map(function($review) {
+                }, array_slice($place['photos'], 0, 5)) : [];
+    
+                // Processar reviews
+                $reviews = isset($details['reviews']) ? array_map(function($review) {
                     return [
                         'author_name' => $review['author_name'] ?? null,
                         'rating' => $review['rating'] ?? null,
                         'text' => $review['text'] ?? null,
                         'time' => $review['time'] ?? null,
-                        'profile_photo_url' => $review['profile_photo_url'] ?? null
+                        'profile_photo_url' => $review['profile_photo_url'] ?? null,
+                        'relative_time_description' => $review['relative_time_description'] ?? null
                     ];
-                }, $details['reviews'] ?? []),
-                'types' => $place['types'] ?? [],
-                'location' => [
-                    'lat' => $place['geometry']['location']['lat'] ?? null,
-                    'lng' => $place['geometry']['location']['lng'] ?? null
-                ],
-                'plus_code' => $details['plus_code'] ?? null,
-                'utc_offset' => $details['utc_offset'] ?? null,
-                'wheelchair_accessible' => $details['wheelchair_accessible_entrance'] ?? null,
-                'delivery' => $details['delivery'] ?? false,
-                'dine_in' => $details['dine_in'] ?? false,
-                'takeout' => $details['takeout'] ?? false,
-                'serves_breakfast' => $details['serves_breakfast'] ?? false,
-                'serves_lunch' => $details['serves_lunch'] ?? false,
-                'serves_dinner' => $details['serves_dinner'] ?? false,
-                'outdoor_seating' => $details['outdoor_seating'] ?? false,
-                'reservable' => $details['reservable'] ?? false,
-                'social_links' => [
-                    'google_page' => $details['url'] ?? null,
-                    'facebook' => $this->extractSocialLink($details, 'facebook'),
-                    'instagram' => $this->extractSocialLink($details, 'instagram'),
-                    'twitter' => $this->extractSocialLink($details, 'twitter')
-                ]
-            ];
-            
-            $competitors[] = $competitor;
-        }
-
-        return $competitors;
-    } catch (\Exception $e) {
-        \Log::error('Erro ao buscar competidores:', [
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString()
-        ]);
-        return [];
-    }
-}
-
-// Método auxiliar para extrair links sociais
-private function extractSocialLink($details, $platform)
-{
-    if (!empty($details['social_links'])) {
-        foreach ($details['social_links'] as $link) {
-            if (stripos($link, $platform) !== false) {
-                return $link;
+                }, array_slice($details['reviews'], 0, 2)) : [];
+    
+                $competitor = [
+                    // Informações básicas
+                    'place_id' => $place['place_id'],
+                    'name' => $place['name'],
+                    'address' => $place['vicinity'] ?? $details['formatted_address'] ?? null,
+                    'rating' => $place['rating'] ?? null,
+                    'total_ratings' => $place['user_ratings_total'] ?? null,
+                    'distance' => $distance,
+                    'status' => $place['business_status'] ?? 'UNKNOWN',
+                    'price_level' => $place['price_level'] ?? null,
+    
+                    // Contato
+                    'phone' => $details['formatted_phone_number'] ?? null,
+                    'international_phone' => $details['international_phone_number'] ?? null,
+                    'website' => $details['website'] ?? null,
+                    'url' => $details['url'] ?? null,
+    
+                    // Horários e status
+                    'hours' => $details['opening_hours']['weekday_text'] ?? null,
+                    'open_now' => $details['opening_hours']['open_now'] ?? null,
+                    'periods' => $details['opening_hours']['periods'] ?? null,
+    
+                    // Mídia
+                    'photos' => $photos,
+                    'reviews' => $reviews,
+    
+                    // Localização
+                    'location' => [
+                        'lat' => $place['geometry']['location']['lat'],
+                        'lng' => $place['geometry']['location']['lng']
+                    ],
+                    'plus_code' => $details['plus_code'] ?? null,
+                    'utc_offset' => $details['utc_offset'] ?? null,
+    
+                    // Características do estabelecimento
+                    'types' => $place['types'] ?? [],
+                    'wheelchair_accessible' => $details['wheelchair_accessible_entrance'] ?? false,
+                    'delivery' => $details['delivery'] ?? false,
+                    'dine_in' => $details['dine_in'] ?? false,
+                    'takeout' => $details['takeout'] ?? false,
+                    'serves_breakfast' => $details['serves_breakfast'] ?? false,
+                    'serves_lunch' => $details['serves_lunch'] ?? false,
+                    'serves_dinner' => $details['serves_dinner'] ?? false,
+                    'outdoor_seating' => $details['outdoor_seating'] ?? false,
+                    'reservable' => $details['reservable'] ?? false,
+    
+                    // Links sociais
+                    'social_links' => [
+                        'google_page' => $details['url'] ?? null,
+                        'facebook' => $this->extractSocialLink($details, 'facebook'),
+                        'instagram' => $this->extractSocialLink($details, 'instagram'),
+                        'twitter' => $this->extractSocialLink($details, 'twitter')
+                    ],
+    
+                    // Métricas adicionais
+                    'popularity' => $this->calculatePopularityScore([
+                        'rating' => $place['rating'] ?? 0,
+                        'total_ratings' => $place['user_ratings_total'] ?? 0,
+                        'distance' => $distance
+                    ])
+                ];
+                
+                $competitors[] = $competitor;
             }
+    
+            // Ordenar por relevância (opcional)
+            usort($competitors, function($a, $b) {
+                return $b['popularity'] <=> $a['popularity'];
+            });
+    
+            return $competitors;
+        } catch (\Exception $e) {
+            \Log::error('Erro ao buscar competidores:', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'params' => $params
+            ]);
+            return [];
         }
     }
-    return null;
-}
+    
+    // Método auxiliar para calcular score de popularidade
+    private function calculatePopularityScore($metrics)
+    {
+        $rating = $metrics['rating'] ?? 0;
+        $totalRatings = $metrics['total_ratings'] ?? 0;
+        $distance = $metrics['distance'] ?? 5000; // valor padrão de 5km
+    
+        // Normalizar distância (quanto mais próximo, melhor)
+        $distanceScore = max(0, 1 - ($distance / 5000));
+    
+        // Calcular score baseado em rating e número de avaliações
+        $ratingScore = ($rating * log10($totalRatings + 1)) / 5;
+    
+        // Combinar os scores (70% rating/reviews, 30% distância)
+        return ($ratingScore * 0.7) + ($distanceScore * 0.3);
+    }
+    
+    // Método auxiliar para extrair links sociais
+    private function extractSocialLink($details, $platform)
+    {
+        if (empty($details['website'])) {
+            return null;
+        }
+    
+        $socialLinks = [
+            'facebook' => '/facebook.com/',
+            'instagram' => '/instagram.com/',
+            'twitter' => '/twitter.com/'
+        ];
+    
+        $pattern = $socialLinks[$platform] ?? null;
+        if (!$pattern) {
+            return null;
+        }
+    
+        $urls = preg_grep($pattern, (array)$details['website']);
+        return !empty($urls) ? reset($urls) : null;
+    }
 
 
 // Novo método para verificar se o estabelecimento corresponde ao segmento
