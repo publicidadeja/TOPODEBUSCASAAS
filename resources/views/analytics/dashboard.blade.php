@@ -958,32 +958,29 @@ function showNotification(message, type = 'success') {
 </style>
 @endpush
 
- <!-- Análise de Concorrentes -->
-<div class="container mx-auto px-4 py-8">
-    <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100 hover:shadow-xl transition-all duration-300">
-        <!-- Cabeçalho Aprimorado -->
-        <div class="flex flex-col sm:flex-row items-center justify-between gap-6 mb-8">
-            <div class="flex items-center space-x-4">
-                <div class="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg">
-                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                    </svg>
+<!-- Seção de Análise de Concorrentes -->
+<div class="py-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <!-- Cabeçalho da Seção -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                <div class="flex items-center space-x-4">
+                    <div class="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg">
+                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold">
+                            <span class="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                                Análise de Concorrentes
+                            </span>
+                        </h2>
+                        <p class="text-sm text-gray-500">Monitoramento competitivo em tempo real</p>
+                    </div>
                 </div>
-                <div>
-                    <h2 class="text-2xl font-bold">
-                        <span class="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                            Análise de Concorrentes
-                        </span>
-                    </h2>
-                    <p class="text-sm text-gray-500">Monitoramento competitivo em tempo real</p>
-                </div>
-            </div>
-            
-            <div class="flex items-center space-x-4">
-                <span class="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium hidden sm:inline-block">
-                    Última atualização: {{ $lastUpdate ?? 'Hoje' }}
-                </span>
-                <button onclick="refreshCompetitorAnalysis()" 
+
+                <button onclick="refreshCompetitors()" 
                         class="group inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
                     <svg class="w-5 h-5 mr-2 group-hover:animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -991,171 +988,320 @@ function showNotification(message, type = 'success') {
                     Atualizar Análise
                 </button>
             </div>
-        </div>
 
-        <!-- Estado de Carregamento Aprimorado -->
-        <div id="competitor-loading" class="hidden">
-            <div class="flex flex-col items-center justify-center py-12">
-                <div class="relative">
-                    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600">
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <div class="h-10 w-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full animate-pulse"></div>
+            <!-- Estado de Carregamento -->
+            <div id="competitors-loading" class="hidden">
+                <div class="flex flex-col items-center justify-center py-12">
+                    <div class="relative">
+                        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-600">
+                            <div class="absolute inset-0 flex items-center justify-center">
+                                <div class="h-10 w-10 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full animate-pulse"></div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="mt-6 text-center">
-                    <h3 class="text-lg font-semibold text-gray-700">Analisando concorrentes...</h3>
-                    <div class="flex items-center justify-center space-x-2 mt-2">
-                        <span class="text-sm text-gray-500">Coletando dados</span>
-                        <div class="flex space-x-1">
-                            <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"></div>
-                            <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-                            <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                    <div class="mt-6 text-center">
+                        <h3 class="text-lg font-semibold text-gray-700">Analisando concorrentes...</h3>
+                        <div class="flex items-center justify-center space-x-2 mt-2">
+                            <span class="text-sm text-gray-500">Coletando dados</span>
+                            <div class="flex space-x-1">
+                                <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce"></div>
+                                <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                                <div class="w-2 h-2 bg-indigo-600 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Grid de Concorrentes -->
+            <div id="competitors-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Cards serão inseridos aqui via JavaScript -->
+            </div>
         </div>
-        <!-- Conteúdo Principal -->
-        <div id="competitor-content" class="grid grid-cols-1 xl:grid-cols-12 gap-8">
-            <!-- Lista de Concorrentes (9 colunas) -->
-            <div class="xl:col-span-9">
-                <div class="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-xl p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <div class="flex items-center space-x-3">
-                            <div class="p-2 bg-indigo-100 rounded-lg">
-                                <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                                </svg>
-                            </div>
-                            <h3 class="text-xl font-bold text-gray-800">Principais Concorrentes</h3>
+    </div>
+</div>
+
+<style>
+/* Estilos para os cards de concorrentes */
+.competitor-card {
+    @apply bg-white rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 group;
+}
+
+.competitor-image {
+    @apply w-24 h-24 object-cover rounded-xl shadow-md group-hover:shadow-lg transition-all duration-300;
+}
+
+.competitor-status {
+    @apply absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 rounded-full shadow-lg border-2 border-white transform group-hover:scale-110 transition-all duration-300;
+}
+
+.competitor-status.active {
+    @apply bg-gradient-to-r from-green-500 to-emerald-600;
+}
+
+.competitor-status.inactive {
+    @apply bg-gradient-to-r from-gray-400 to-gray-500;
+}
+
+.competitor-title {
+    @apply text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors duration-300;
+}
+
+.competitor-info {
+    @apply text-sm text-gray-600 flex items-center mt-2;
+}
+
+.competitor-rating {
+    @apply flex items-center mt-4;
+}
+
+.competitor-actions {
+    @apply flex flex-wrap gap-3 mt-4;
+}
+
+.action-button {
+    @apply inline-flex items-center px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-md;
+}
+
+.action-button.primary {
+    @apply bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700;
+}
+
+.action-button.secondary {
+    @apply bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700;
+}
+
+.action-button.tertiary {
+    @apply border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900;
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* Notification Styles */
+.notification {
+    @apply fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white shadow-lg z-50 transform transition-all duration-300;
+}
+
+.notification.success {
+    @apply bg-green-500;
+}
+
+.notification.error {
+    @apply bg-red-500;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadCompetitors();
+});
+
+async function loadCompetitors() {
+    const grid = document.getElementById('competitors-grid');
+    const loading = document.getElementById('competitors-loading');
+    
+    try {
+        loading.classList.remove('hidden');
+        grid.innerHTML = '';
+
+        // Obter dados do negócio atual
+        const businessData = {
+            segment: '{{ $business->segment }}',
+            location: {
+                lat: {{ $business->latitude }},
+                lng: {{ $business->longitude }}
+            }
+        };
+
+        const response = await fetch('/api/places/nearby?' + new URLSearchParams({
+            lat: businessData.location.lat,
+            lng: businessData.location.lng,
+            segment: businessData.segment,
+            radius: 5000 // 5km de raio
+        }));
+
+        const data = await response.json();
+
+        if (data.success && data.results.length > 0) {
+            data.results.forEach(competitor => {
+                grid.innerHTML += createCompetitorCard(competitor);
+            });
+        } else {
+            grid.innerHTML = `
+                <div class="col-span-full text-center py-12">
+                    <p class="text-gray-500">Nenhum concorrente encontrado na região.</p>
+                    <button onclick="refreshCompetitors()" 
+                            class="mt-4 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all duration-300">
+                        Tentar Novamente
+                    </button>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Erro ao carregar concorrentes:', error);
+        grid.innerHTML = `
+            <div class="col-span-full text-center py-12">
+                <p class="text-red-500">Erro ao carregar concorrentes. Tente novamente mais tarde.</p>
+                <button onclick="refreshCompetitors()" 
+                        class="mt-4 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:from-indigo-600 hover:to-purple-700 transition-all duration-300">
+                    Tentar Novamente
+                </button>
+            </div>
+        `;
+    } finally {
+        loading.classList.add('hidden');
+    }
+}
+
+function createCompetitorCard(competitor) {
+    return `
+        <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-6">
+            <div class="flex flex-col sm:flex-row gap-6">
+                <!-- Seção da Imagem -->
+                <div class="flex-shrink-0">
+                    <div class="relative w-24 h-24">
+                        <img src="${competitor.photos?.[0] || '/images/default-business.jpg'}"
+                             alt="${competitor.name}"
+                             class="w-24 h-24 rounded-full object-cover shadow-md"
+                             onerror="this.src='/images/default-business.jpg'">
+                        <div class="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                            <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
                         </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-sm text-gray-500">Total encontrado:</span>
-                            <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
-                                {{ count($competitors ?? []) }}
+                    </div>
+                </div>
+
+                <!-- Seção das Informações -->
+                <div class="flex-1">
+                    <!-- Nome e Avaliação -->
+                    <div class="mb-4">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">${competitor.name}</h3>
+                        <div class="flex items-center gap-2">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                                <span class="ml-1 text-sm font-medium text-gray-600">
+                                    ${competitor.rating?.toFixed(1) || 'N/A'}
+                                </span>
+                            </div>
+                            <span class="text-gray-400">•</span>
+                            <span class="text-sm text-gray-500">
+                                ${competitor.total_ratings || 0} avaliações
                             </span>
                         </div>
                     </div>
 
-                    <div class="space-y-6" id="top-competitors">
-    @foreach($competitors ?? [] as $competitor)
-    <div class="bg-white rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 group">
-        <div class="flex flex-col sm:flex-row gap-6">
-            <!-- Imagem e Status -->
-            <div class="relative flex-shrink-0">
-                <img 
-                    src="{{ 
-                        $competitor['thumbnailUrl'] ?? 
-                        $competitor['serper_image'] ?? 
-                        $competitor['image_url'] ?? 
-                        asset('images/default-business.jpg')
-                    }}"
-                    alt="{{ $competitor['title'] ?? 'Concorrente' }}"
-                    class="w-24 h-24 object-cover rounded-xl shadow-md group-hover:shadow-lg transition-all duration-300"
-                    onerror="this.src='{{ asset('images/default-business.jpg') }}';"
-                >
-                <div class="absolute -top-2 -right-2 flex items-center justify-center w-6 h-6 bg-gradient-to-r {{ $competitor['status'] === 'active' ? 'from-green-500 to-emerald-600' : 'from-gray-400 to-gray-500' }} rounded-full shadow-lg border-2 border-white transform group-hover:scale-110 transition-all duration-300"
-                     title="{{ $competitor['status'] === 'active' ? 'Ativo' : 'Inativo' }}">
-                    <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $competitor['status'] === 'active' ? 'M5 13l4 4L19 7' : 'M6 18L18 6M6 6l12 12' }}"/>
-                    </svg>
-                </div>
-            </div>
-                                <!-- Informações do Concorrente -->
-                                <div class="flex-grow">
-                                    <div class="flex flex-wrap justify-between items-start gap-3">
-                                        <div>
-                                            <h4 class="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">
-                                                {{ $competitor['title'] }}
-                                            </h4>
-                                            <p class="text-sm text-gray-600 flex items-center mt-2">
-                                                <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                </svg>
-                                                {{ $competitor['location'] }}
-                                            </p>
-                                        </div>
-                                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium {{ $competitor['status'] === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' }}">
-                                            {{ $competitor['status'] === 'active' ? 'Ativo' : 'Inativo' }}
-                                        </span>
-                                    </div>
-
-                                    <!-- Sistema de Avaliação Aprimorado -->
-                                    <div class="flex items-center mt-4">
-                                        <div class="flex items-center">
-                                            <div class="flex -space-x-1">
-                                                @for($i = 1; $i <= 5; $i++)
-                                                    @if($i <= floor($competitor['rating']))
-                                                        <svg class="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                                                        </svg>
-                                                    @else
-                                                        <svg class="w-5 h-5 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                                                        </svg>
-                                                    @endif
-                                                @endfor
-                                            </div>
-                                            <div class="ml-3">
-                                                <span class="text-sm font-medium text-gray-700">{{ number_format($competitor['rating'], 1) }}/5</span>
-                                                @if($competitor['reviews'])
-                                                    <span class="mx-2 text-gray-400">•</span>
-                                                    <span class="text-sm text-gray-500">{{ number_format($competitor['reviews']) }} avaliações</span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <!-- Ações do Concorrente -->
-                                    <div class="flex flex-wrap gap-3 mt-4">
-                                        @if($competitor['phone'])
-                                            <a href="tel:{{ $competitor['phone'] }}" 
-                                               class="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 transition-all duration-300 transform hover:scale-105 hover:shadow-md">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                                                </svg>
-                                                Contatar
-                                            </a>
-                                        @endif
-                                        
-                                        @if($competitor['website'])
-                                            <a href="{{ $competitor['website'] }}" 
-                                               target="_blank" 
-                                               class="inline-flex items-center px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 hover:shadow-md">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                                                </svg>
-                                                Visitar site
-                                            </a>
-                                        @endif
-
-                                        <button class="inline-flex items-center px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all duration-300">
-                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                            </svg>
-                                            Mais detalhes
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        @endforeach
+                    <!-- Endereço -->
+                    <div class="flex items-start gap-2 mb-4">
+                        <svg class="w-5 h-5 text-gray-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <p class="text-sm text-gray-600 flex-1">
+                            ${competitor.address || 'Endereço não disponível'}
+                        </p>
                     </div>
 
-                    <!-- Paginação ou "Ver mais" -->
-                    @if(count($competitors ?? []) > 5)
-                        <div class="mt-8 text-center">
-                            <button class="inline-flex items-center px-6 py-3 bg-white border border-gray-200 rounded-xl text-indigo-600 hover:bg-indigo-50 transition-all duration-300">
-                                <span>Ver mais concorrentes</span>
-                                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </button>
+                    <!-- Métricas -->
+                    <div class="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg mb-4">
+                        <div class="text-center">
+                            <div class="text-lg font-semibold text-gray-700">
+                                ${competitor.rating?.toFixed(1) || 'N/A'}
+                            </div>
+                            <div class="text-xs text-gray-500">Avaliação</div>
                         </div>
-                    @endif
+                        <div class="text-center">
+                            <div class="text-lg font-semibold text-gray-700">
+                                ${competitor.distance ? (competitor.distance).toFixed(1) : 'N/A'}
+                            </div>
+                            <div class="text-xs text-gray-500">Km</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-lg font-semibold text-gray-700">
+                                ${competitor.total_ratings || 0}
+                            </div>
+                            <div class="text-xs text-gray-500">Avaliações</div>
+                        </div>
+                    </div>
+
+                    <!-- Botões de Ação -->
+                    <div class="flex flex-wrap gap-3">
+                        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(competitor.name)}&query_place_id=${competitor.place_id}"
+                           target="_blank"
+                           class="inline-flex items-center px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            </svg>
+                            Ver no Maps
+                        </a>
+                        
+                        ${competitor.phone ? `
+                            <a href="tel:${competitor.phone}"
+                               class="inline-flex items-center px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                                </svg>
+                                Ligar
+                            </a>
+                        ` : ''}
+                    </div>
                 </div>
             </div>
+        </div>
+    `;
+}
+
+async function trackCompetitor(placeId) {
+    try {
+        const response = await fetch('/api/competitors/track', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ place_id: placeId })
+        });
+
+        const data = await response.json();
+        
+        if (data.success) {
+            showNotification('Concorrente adicionado ao monitoramento', 'success');
+        } else {
+            throw new Error(data.message || 'Erro ao adicionar monitoramento');
+        }
+    } catch (error) {
+        console.error('Erro ao monitorar concorrente:', error);
+        showNotification('Erro ao adicionar monitoramento', 'error');
+    }
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type} translate-y-0`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+function refreshCompetitors() {
+    loadCompetitors();
+}
+</script>
 
             <!-- Resumo e Estatísticas (3 colunas) -->
             <div class="xl:col-span-3 space-y-6">
@@ -1353,58 +1499,7 @@ function showNotification(message, type = 'success') {
 
 @push('scripts')
 <script>
-
-function exportCompetitorAnalysis() {
-    const businessId = document.getElementById('business-selector').value;
     
-    // Mostrar indicador de carregamento
-    Swal.fire({
-        title: 'Gerando relatório...',
-        text: 'Por favor, aguarde...',
-        allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
-
-    // Fazer a requisição para gerar o PDF
-    fetch(`/analytics/export-competitor-analysis/${businessId}`, {
-        method: 'GET',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        }
-    })
-    .then(response => {
-        if (!response.ok) throw new Error('Erro ao gerar relatório');
-        return response.blob();
-    })
-    .then(blob => {
-        // Criar URL do blob e fazer download
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'analise-concorrentes.pdf';
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        
-        Swal.fire({
-            icon: 'success',
-            title: 'Relatório gerado com sucesso!',
-            showConfirmButton: false,
-            timer: 1500
-        });
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Oops...',
-            text: 'Erro ao gerar o relatório. Tente novamente.'
-        });
-    });
-}
-
 function exportAnalysisReport() {
     const businessId = document.getElementById('business-selector').value;
     
@@ -1542,7 +1637,6 @@ function showNotification(message, type = 'success') {
 }
 
 // Inicialização dos listeners do modal
-document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('event-modal');
     if (!modal) return;
 
@@ -1689,37 +1783,11 @@ function hideLoadingIndicator() {
     // Implementar remoção do indicador de carregamento
 }
 
-function fetchCompetitors() {
-    fetch(`/analytics/detailed-analysis/{{ $business->id }}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                this.competitors = data.data;
-            } else {
-                alert('Erro ao carregar dados dos concorrentes');
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            alert('Erro ao carregar dados dos concorrentes');
-        });
-}
 </script>
 
 <!-- Scripts JavaScript necessários -->
 <script>
-    function refreshCompetitorAnalysis() {
-        // Mostrar loading
-        document.getElementById('competitor-loading').classList.remove('hidden');
-        document.getElementById('competitor-content').classList.add('opacity-50');
-
-        // Simular chamada de API
-        setTimeout(() => {
-            // Esconder loading
-            document.getElementById('competitor-loading').classList.add('hidden');
-            document.getElementById('competitor-content').classList.remove('opacity-50');
-        }, 2000);
-    }
+    
 
     function refreshMarketAnalysis() {
         // Mostrar loading
@@ -1741,8 +1809,7 @@ function fetchCompetitors() {
 
      // Função que será executada quando a página carregar
      document.addEventListener('DOMContentLoaded', function() {
-        // Inicia análise de concorrentes automaticamente
-        refreshCompetitorAnalysis();
+
         
         // Inicia análise de mercado automaticamente
         refreshMarketAnalysis();
@@ -1900,129 +1967,7 @@ function refreshCompetitorAnalysis() {
     });
 }
 
-// Funções auxiliares
-function generateStarRating(rating) {
-    let stars = '';
-    for (let i = 1; i <= 5; i++) {
-        if (i <= Math.floor(rating)) {
-            stars += '<svg class="w-4 h-4 fill-current text-yellow-400" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
-        } else if (i - 0.5 <= rating) {
-            stars += '<svg class="w-4 h-4 fill-current text-yellow-400" viewBox="0 0 24 24"><path d="M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4V6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z"/></svg>';
-        } else {
-            stars += '<svg class="w-4 h-4 fill-current text-gray-300" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>';
-        }
-    }
-    return stars;
-}
 
-function getPriorityColor(priority) {
-    return {
-        'high': 'text-red-500',
-        'medium': 'text-yellow-500',
-        'low': 'text-green-500'
-    }[priority] || 'text-blue-500';
-}
-
-function getPriorityClass(priority) {
-    return {
-        'high': 'bg-red-100 text-red-800',
-        'medium': 'bg-yellow-100 text-yellow-800',
-        'low': 'bg-green-100 text-green-800'
-    }[priority] || 'bg-blue-100 text-blue-800';
-}
-
-function updateCompetitorContent(data) {
-    try {
-
-        
-        // Update competitors section
-        const topCompetitorsElement = document.getElementById('top-competitors');
-        if (data.competitors && Array.isArray(data.competitors) && topCompetitorsElement) {
-            topCompetitorsElement.innerHTML = data.competitors
-                .filter(competitor => competitor) // Remove null/undefined entries
-                .map(competitor => {
-                    try {
-                        return createCompetitorCard(competitor);
-                    } catch (error) {
-                        console.error('Error creating competitor card:', error);
-                        return ''; // Return empty string if card creation fails
-                    }
-                })
-                .join('');
-        } else {
-            if (topCompetitorsElement) {
-                topCompetitorsElement.innerHTML = '<div class="p-4 text-gray-500">Nenhum concorrente encontrado.</div>';
-            }
-        }
-
-        // Update market analysis section
-        const marketAnalysisElement = document.getElementById('market-analysis');
-        if (data.marketAnalysis && Array.isArray(data.marketAnalysis) && marketAnalysisElement) {
-            marketAnalysisElement.innerHTML = data.marketAnalysis
-                .filter(analysis => analysis) // Remove null/undefined entries
-                .map(analysis => {
-                    try {
-                        return createMarketAnalysisCard(analysis);
-                    } catch (error) {
-                        console.error('Error creating market analysis card:', error);
-                        return ''; // Return empty string if card creation fails
-                    }
-                })
-                .join('');
-        } else {
-            if (marketAnalysisElement) {
-                marketAnalysisElement.innerHTML = '<div class="p-4 text-gray-500">Nenhuma análise de mercado disponível.</div>';
-            }
-        }
-
-        
-
-        // Update recommendations section
-        const recommendationsElement = document.getElementById('strategic-recommendations');
-        if (data.recommendations && Array.isArray(data.recommendations) && recommendationsElement) {
-            recommendationsElement.innerHTML = data.recommendations
-                .filter(recommendation => recommendation) // Remove null/undefined entries
-                .map(recommendation => {
-                    try {
-                        return createRecommendationCard(recommendation);
-                    } catch (error) {
-                        console.error('Error creating recommendation card:', error);
-                        return ''; // Return empty string if card creation fails
-                    }
-                })
-                .join('');
-        } else {
-            if (recommendationsElement) {
-                recommendationsElement.innerHTML = '<div class="p-4 text-gray-500">Nenhuma recomendação disponível.</div>';
-            }
-        }
-
-        // Add success notification
-        if (typeof showNotification === 'function') {
-            showNotification('Análise atualizada com sucesso!', 'success');
-        }
-
-    } catch (error) {
-        console.error('Error updating competitor content:', error);
-        
-        // Show error notification if available
-        if (typeof showNotification === 'function') {
-            showNotification('Erro ao atualizar análise. Por favor, tente novamente.', 'error');
-        }
-        
-        // Reset loading state if needed
-        const loadingElement = document.getElementById('competitor-loading');
-        if (loadingElement) {
-            loadingElement.classList.add('hidden');
-        }
-        
-        // Reset content opacity if needed
-        const contentElement = document.getElementById('competitor-content');
-        if (contentElement) {
-            contentElement.classList.remove('opacity-50');
-        }
-    }
-}
 
 // Helper function to safely get element by ID
 function getElementByIdSafely(id) {
@@ -2053,54 +1998,7 @@ function showEmptyState(element, message) {
     }
 }
 
-// Helper function to create competitor card
-function createCompetitorCard(competitor) {
-    return `
-        <div class="bg-white rounded-lg p-4 shadow-sm">
-            <div class="flex space-x-4">
-                <div class="flex-shrink-0">
-                    <img src="${competitor.image_url || '/images/default-business.jpg'}"
-                         alt="${competitor.title}"
-                         class="w-20 h-20 object-cover rounded-lg"
-                         onerror="this.src='/images/default-business.jpg'">
-                </div>
-                <div class="flex-grow">
-                    <h4 class="font-medium text-gray-900">${competitor.title}</h4>
-                    <p class="text-sm text-gray-500">${competitor.location || 'Localização não disponível'}</p>
-                    <div class="flex items-center mt-2">
-                        <div class="flex text-yellow-400">
-                            ${generateStarRating(competitor.rating)}
-                            <span class="ml-2 text-sm text-gray-600">
-                                ${competitor.rating.toFixed(1)}/5
-                                ${competitor.reviews ? `(${competitor.reviews} avaliações)` : ''}
-                            </span>
-                        </div>
-                    </div>
-                    <div class="flex items-center space-x-4 mt-2 text-sm text-gray-600">
-                        ${competitor.phone ? `
-                            <span class="flex items-center">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                                </svg>
-                                ${competitor.phone}
-                            </span>
-                        ` : ''}
-                        ${competitor.website ? `
-                            <a href="${competitor.website}" 
-                               target="_blank" 
-                               class="flex items-center text-blue-600 hover:text-blue-800">
-                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
-                                </svg>
-                                Visitar site
-                            </a>
-                        ` : ''}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
+
 
 // Helper function to create market analysis card
 function createMarketAnalysisCard(analysis) {
