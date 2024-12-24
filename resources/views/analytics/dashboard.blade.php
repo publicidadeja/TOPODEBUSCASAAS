@@ -1450,6 +1450,28 @@ function showNotification(message, type = 'success') {
 
 async function analyzeCompetitor(placeId, competitorName) {
     try {
+        // Obter o business_id de forma mais robusta
+        let businessId;
+        
+        // Tenta primeiro pelo select padrão
+        const businessSelector = document.getElementById('business-selector');
+        if (businessSelector) {
+            businessId = businessSelector.value;
+        } else {
+            // Tenta pelo input hidden se existir
+            const hiddenInput = document.querySelector('[name="business_id"]');
+            if (hiddenInput) {
+                businessId = hiddenInput.value;
+            } else {
+                // Se não encontrar, tenta pelo data attribute na página
+                businessId = document.body.dataset.businessId;
+            }
+        }
+
+        if (!businessId) {
+            throw new Error('Business ID não encontrado');
+        }
+
         // Mostrar loading
         Swal.fire({
             title: `Analisando ${decodeURIComponent(competitorName)}...`,
@@ -1460,7 +1482,6 @@ async function analyzeCompetitor(placeId, competitorName) {
             }
         });
 
-        // CORREÇÃO DA URL AQUI - Usando a rota correta definida em routes/api.php
         const response = await fetch('/api/competitors/analyze', {
             method: 'POST',
             headers: {
@@ -1470,7 +1491,7 @@ async function analyzeCompetitor(placeId, competitorName) {
             body: JSON.stringify({ 
                 place_id: placeId,
                 competitor_name: decodeURIComponent(competitorName),
-                business_id: document.querySelector('[name="business_id"]').value
+                business_id: businessId
             })
         });
 
@@ -1479,14 +1500,18 @@ async function analyzeCompetitor(placeId, competitorName) {
         }
 
         const data = await response.json();
-        
-        // Resto do código permanece igual...
+
+        if (data.success) {
+            // ... resto do código para mostrar os resultados ...
+        } else {
+            throw new Error(data.message || 'Erro ao realizar análise');
+        }
     } catch (error) {
         console.error('Erro ao analisar concorrente:', error);
         Swal.fire({
             icon: 'error',
             title: 'Erro',
-            text: 'Não foi possível realizar a análise do concorrente. Tente novamente mais tarde.',
+            text: error.message || 'Não foi possível realizar a análise do concorrente. Tente novamente mais tarde.',
             confirmButtonColor: '#4F46E5'
         });
     }
