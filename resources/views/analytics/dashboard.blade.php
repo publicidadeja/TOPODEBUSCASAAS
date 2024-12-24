@@ -1460,7 +1460,7 @@ async function analyzeCompetitor(placeId, competitorName) {
             }
         });
 
-        // Fazer a requisição para análise
+        // Fazer a requisição para análise - CORREÇÃO DA URL AQUI
         const response = await fetch('/api/competitors/analyze', {
             method: 'POST',
             headers: {
@@ -1469,9 +1469,14 @@ async function analyzeCompetitor(placeId, competitorName) {
             },
             body: JSON.stringify({ 
                 place_id: placeId,
-                competitor_name: decodeURIComponent(competitorName)
+                competitor_name: decodeURIComponent(competitorName),
+                business_id: document.querySelector('[name="business_id"]').value // Pega o ID do negócio do input hidden
             })
         });
+
+        if (!response.ok) {
+            throw new Error('Erro na requisição');
+        }
 
         const data = await response.json();
 
@@ -1482,24 +1487,19 @@ async function analyzeCompetitor(placeId, competitorName) {
                 html: `
                     <div class="text-left">
                         <h3 class="text-lg font-semibold mb-2">Análise de ${decodeURIComponent(competitorName)}</h3>
-                        <div class="bg-gray-50 p-4 rounded-lg mb-4">
-                            ${data.analysis}
-                        </div>
-                        <div class="space-y-2">
-                            ${data.recommendations ? `
-                                <h4 class="font-semibold">Recomendações:</h4>
-                                <ul class="list-disc pl-4">
-                                    ${data.recommendations.map(rec => `
-                                        <li>${rec}</li>
-                                    `).join('')}
-                                </ul>
-                            ` : ''}
+                        <div class="space-y-4">
+                            ${data.marketAnalysis.map(analysis => `
+                                <div class="bg-gray-50 p-4 rounded">
+                                    <h4 class="font-semibold">${analysis.title}</h4>
+                                    <p>${analysis.description}</p>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
                 `,
-                width: '800px',
                 confirmButtonText: 'Fechar',
-                confirmButtonColor: '#4F46E5'
+                confirmButtonColor: '#4F46E5',
+                width: '600px'
             });
         } else {
             throw new Error(data.message || 'Erro ao realizar análise');
