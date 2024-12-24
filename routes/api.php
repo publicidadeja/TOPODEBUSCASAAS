@@ -5,6 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GooglePlacesController;
 use App\Http\Controllers\BusinessImageController;
 use App\Http\Controllers\GoogleController;
+use App\Http\Controllers\CompetitorAnalysisController;
+
+Route::post('/competitors/analyze', [CompetitorAnalysisController::class, 'analyze']);
 
 Route::get('/api/competitors/nearby/{business}', 'CompetitorController@nearby');
 

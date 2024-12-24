@@ -1015,6 +1015,7 @@ function showNotification(message, type = 'success') {
 
             <!-- Grid de Concorrentes -->
             <div id="competitors-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
                 <!-- Cards serão inseridos aqui via JavaScript -->
             </div>
         </div>
@@ -1374,6 +1375,14 @@ function createCompetitorCard(competitor) {
                             </svg>
                             Ver no Maps
                         </a>
+                        <button
+    onclick="analyzeCompetitor('${competitor.place_id}', '${encodeURIComponent(competitor.name)}')"
+    class="inline-flex items-center px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors">
+    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+    </svg>
+    Analisar Concorrente
+</button>
                         
                         ${competitor.phone ? `
                             <a href="tel:${competitor.phone}"
@@ -1437,6 +1446,73 @@ function showNotification(message, type = 'success') {
         notification.classList.add('translate-y-2', 'opacity-0');
         setTimeout(() => notification.remove(), 300);
     }, 3000);
+}
+
+async function analyzeCompetitor(placeId, competitorName) {
+    try {
+        // Mostrar loading
+        Swal.fire({
+            title: `Analisando ${decodeURIComponent(competitorName)}...`,
+            text: 'Isso pode levar alguns segundos',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading()
+            }
+        });
+
+        // Fazer a requisição para análise
+        const response = await fetch('/api/competitors/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({ 
+                place_id: placeId,
+                competitor_name: decodeURIComponent(competitorName)
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Mostrar resultado da análise
+            Swal.fire({
+                title: 'Análise Concluída',
+                html: `
+                    <div class="text-left">
+                        <h3 class="text-lg font-semibold mb-2">Análise de ${decodeURIComponent(competitorName)}</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg mb-4">
+                            ${data.analysis}
+                        </div>
+                        <div class="space-y-2">
+                            ${data.recommendations ? `
+                                <h4 class="font-semibold">Recomendações:</h4>
+                                <ul class="list-disc pl-4">
+                                    ${data.recommendations.map(rec => `
+                                        <li>${rec}</li>
+                                    `).join('')}
+                                </ul>
+                            ` : ''}
+                        </div>
+                    </div>
+                `,
+                width: '800px',
+                confirmButtonText: 'Fechar',
+                confirmButtonColor: '#4F46E5'
+            });
+        } else {
+            throw new Error(data.message || 'Erro ao realizar análise');
+        }
+    } catch (error) {
+        console.error('Erro ao analisar concorrente:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: 'Não foi possível realizar a análise do concorrente. Tente novamente mais tarde.',
+            confirmButtonColor: '#4F46E5'
+        });
+    }
 }
 
 function refreshCompetitors() {
@@ -2810,6 +2886,46 @@ function updateLastUpdate() {
     if (lastUpdate) {
         lastUpdate.textContent = `Última atualização: ${new Date().toLocaleTimeString()}`;
     }
+}
+</script>
+
+<script>
+function analyzeCompetitor(competitorId) {
+    // Mostrar loading
+    Swal.fire({
+        title: 'Analisando concorrente...',
+        text: 'Isso pode levar alguns segundos',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading()
+        }
+    });
+
+    // Fazer a requisição para o controller
+    fetch(`/competitor-analysis/${competitorId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Mostrar resultado
+        Swal.fire({
+            title: 'Análise Concluída',
+            html: data.analysis,
+            width: '80%',
+            confirmButtonText: 'Fechar'
+        });
+    })
+    .catch(error => {
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: 'Ocorreu um erro ao analisar o concorrente'
+        });
+    });
 }
 </script>
 </x-app-layout>
