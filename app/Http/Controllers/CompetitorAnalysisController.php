@@ -23,55 +23,56 @@ class CompetitorAnalysisController extends Controller
     }
 
     public function analyze(Request $request)
-    {
-        try {
-            $business = Business::findOrFail($request->business_id);
-            
-            // Busca os concorrentes
-            $competitors = $this->searchCompetitors($business);
-            
-            // Formata os dados dos concorrentes
-            $formattedCompetitors = array_map(function($competitor) {
-                // Calcula um score baseado nos dados disponíveis
-                $score = $this->calculateCompetitorScore($competitor);
-                
-                return [
-                    'title' => $competitor['title'] ?? 'Nome não disponível',
-                    'name' => $competitor['title'] ?? 'Nome não disponível',
-                    'location' => $competitor['location'] ?? $competitor['address'] ?? 'Localização não disponível',
-                    'address' => $competitor['location'] ?? $competitor['address'] ?? 'Localização não disponível',
-                    'rating' => floatval($competitor['rating'] ?? 0),
-                    'reviews' => intval($competitor['reviews'] ?? 0),
-                    'phone' => $competitor['phone'] ?? null,
-                    'website' => $competitor['website'] ?? null,
-                    'image_url' => $competitor['thumbnailUrl'] ?? $competitor['image_url'] ?? null,
-                    'score' => $score,
-                    'summary' => $competitor['snippet'] ?? 'Resumo não disponível',
-                ];
-            }, $competitors);
-    
-            // Gera análise de mercado
-            $marketAnalysis = $this->generateMarketAnalysis($formattedCompetitors);
-    
-            // Gera recomendações estratégicas
-            $recommendations = $this->generateRecommendations($formattedCompetitors);
-    
-            // Retorna os dados formatados
-            return response()->json([
-                'success' => true,
-                'competitors' => $formattedCompetitors,
-                'marketAnalysis' => $marketAnalysis,
-                'recommendations' => $recommendations
-            ]);
-    
-        } catch (\Exception $e) {
-            \Log::error('Erro na análise de concorrentes: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Erro ao atualizar análise: ' . $e->getMessage()
-            ], 500);
-        }
+{
+    try {
+        // Validação dos dados
+        $request->validate([
+            'business_id' => 'required|exists:businesses,id'
+        ]);
+
+        $business = Business::findOrFail($request->business_id);
+        
+        // Busca os concorrentes usando o serviço Serper
+        $competitors = $this->searchCompetitors($business);
+        
+        // Formata os dados dos concorrentes
+        $formattedCompetitors = array_map(function($competitor) {
+            return [
+                'title' => $competitor['title'] ?? 'Nome não disponível',
+                'name' => $competitor['title'] ?? 'Nome não disponível',
+                'location' => $competitor['location'] ?? $competitor['address'] ?? 'Localização não disponível',
+                'address' => $competitor['location'] ?? $competitor['address'] ?? 'Localização não disponível',
+                'rating' => floatval($competitor['rating'] ?? 0),
+                'reviews' => intval($competitor['reviews'] ?? 0),
+                'phone' => $competitor['phone'] ?? null,
+                'website' => $competitor['website'] ?? null,
+                'image_url' => $competitor['thumbnailUrl'] ?? $competitor['image_url'] ?? null,
+                'score' => $this->calculateCompetitorScore($competitor),
+                'summary' => $competitor['snippet'] ?? 'Resumo não disponível',
+            ];
+        }, $competitors);
+
+        // Gera análise de mercado
+        $marketAnalysis = $this->generateMarketAnalysis($formattedCompetitors);
+        
+        // Gera recomendações usando o Gemini
+        $recommendations = $this->generateRecommendations($formattedCompetitors);
+
+        return response()->json([
+            'success' => true,
+            'competitors' => $formattedCompetitors,
+            'marketAnalysis' => $marketAnalysis,
+            'recommendations' => $recommendations
+        ]);
+
+    } catch (\Exception $e) {
+        \Log::error('Erro na análise de concorrentes: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao realizar análise: ' . $e->getMessage()
+        ], 500);
     }
+}
     
     private function calculateCompetitorScore($competitor)
     {

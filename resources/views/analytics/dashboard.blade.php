@@ -1450,7 +1450,7 @@ function showNotification(message, type = 'success') {
 
 async function analyzeCompetitor(placeId, competitorName) {
     try {
-        // Obter o business_id de forma mais robusta
+        // Obter o business_id de forma robusta
         let businessId;
         
         // Tenta primeiro pelo select padrão
@@ -1489,8 +1489,6 @@ async function analyzeCompetitor(placeId, competitorName) {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             },
             body: JSON.stringify({ 
-                place_id: placeId,
-                competitor_name: decodeURIComponent(competitorName),
                 business_id: businessId
             })
         });
@@ -1502,7 +1500,71 @@ async function analyzeCompetitor(placeId, competitorName) {
         const data = await response.json();
 
         if (data.success) {
-            // ... resto do código para mostrar os resultados ...
+            // Fecha o loading
+            Swal.close();
+
+            // Mostra os resultados em um modal mais elaborado
+            Swal.fire({
+                title: 'Análise de Concorrente',
+                html: `
+                    <div class="space-y-4">
+                        <!-- Informações do Concorrente -->
+                        <div class="text-left p-4 bg-gray-50 rounded-lg">
+                            <h3 class="font-bold text-lg mb-2">Informações Gerais</h3>
+                            ${data.competitors.map(competitor => `
+                                <div class="mb-4 p-3 bg-white rounded shadow-sm">
+                                    <h4 class="font-semibold">${competitor.name}</h4>
+                                    <p class="text-sm text-gray-600">Localização: ${competitor.location}</p>
+                                    <div class="mt-2">
+                                        <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                            Score: ${competitor.score}/10
+                                        </span>
+                                        ${competitor.rating ? `
+                                            <span class="text-sm bg-green-100 text-green-800 px-2 py-1 rounded ml-2">
+                                                Rating: ${competitor.rating}/5
+                                            </span>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Análise de Mercado -->
+                        <div class="text-left p-4 bg-gray-50 rounded-lg">
+                            <h3 class="font-bold text-lg mb-2">Análise de Mercado</h3>
+                            ${data.marketAnalysis.map(analysis => `
+                                <div class="mb-2">
+                                    <p class="text-gray-700">${analysis.description}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Recomendações -->
+                        <div class="text-left p-4 bg-gray-50 rounded-lg">
+                            <h3 class="font-bold text-lg mb-2">Recomendações</h3>
+                            ${data.recommendations.map(rec => `
+                                <div class="mb-3 p-3 bg-white rounded shadow-sm">
+                                    <h4 class="font-semibold text-blue-600">${rec.title}</h4>
+                                    <p class="text-sm text-gray-600 mt-1">${rec.description}</p>
+                                    <span class="text-xs mt-2 inline-block px-2 py-1 rounded ${
+                                        rec.priority === 'high' ? 'bg-red-100 text-red-800' :
+                                        rec.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-green-100 text-green-800'
+                                    }">
+                                        Prioridade: ${rec.priority}
+                                    </span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `,
+                width: '800px',
+                confirmButtonText: 'Fechar',
+                confirmButtonColor: '#4F46E5',
+                customClass: {
+                    container: 'competitor-analysis-modal'
+                }
+            });
         } else {
             throw new Error(data.message || 'Erro ao realizar análise');
         }
