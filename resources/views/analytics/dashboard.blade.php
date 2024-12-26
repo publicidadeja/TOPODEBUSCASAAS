@@ -2958,34 +2958,36 @@ function updateLastUpdate() {
 
 <script>
 function analyzeSingleCompetitor(name, address, competitorData) {
-    // Mostrar loading
+    // Mostrar loading com estilo melhorado
     Swal.fire({
         title: `Analisando ${name}...`,
-        html: 'Isso pode levar alguns segundos',
+        html: `
+            <div class="text-center">
+                <div class="mb-3">
+                    <i class="fas fa-chart-line text-3xl text-blue-500"></i>
+                </div>
+                <p class="text-gray-600">Processando dados do concorrente</p>
+                <div class="mt-2 text-sm text-gray-500">${address}</div>
+            </div>
+        `,
         allowOutsideClick: false,
         didOpen: () => {
             Swal.showLoading();
         }
     });
 
-    // Garantir que competitorData seja um objeto/array
+    // Processar dados do competidor
     let processedData = competitorData;
     if (typeof competitorData === 'string') {
         try {
             processedData = JSON.parse(competitorData);
         } catch (e) {
-            console.error('Erro ao parsear dados do competidor:', e);
+            console.error('Erro ao processar dados:', e);
             processedData = {};
         }
     }
 
-    // Log para debug
-    console.log('Dados sendo enviados:', {
-        name,
-        address,
-        competitor_data: processedData
-    });
-
+    // Requisição para análise
     fetch('/api/competitors/analyze-single', {
         method: 'POST',
         headers: {
@@ -2996,7 +2998,7 @@ function analyzeSingleCompetitor(name, address, competitorData) {
         body: JSON.stringify({
             name: name,
             address: address,
-            competitor_data: processedData // Usando os dados processados
+            competitor_data: processedData
         })
     })
     .then(response => {
@@ -3006,41 +3008,88 @@ function analyzeSingleCompetitor(name, address, competitorData) {
         return response.json();
     })
     .then(data => {
-        console.log('Resposta recebida:', data); // Log para debug
-        
         if (data.success) {
+            // Fechar loading
+            Swal.close();
+            
+            // Mostrar resultado com layout melhorado
             Swal.fire({
-                title: 'Análise do Concorrente',
+                title: `Análise de ${name}`,
                 html: `
-                    <div class="text-left">
-                        <div class="mb-4">
-                            <h3 class="font-bold">Visão Geral</h3>
-                            <p>${data.analysis.overview}</p>
+                    <div class="text-left max-h-[70vh] overflow-y-auto">
+                        <!-- Visão Geral -->
+                        <div class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
+                            <h3 class="font-bold text-lg text-blue-800 mb-2">
+                                <i class="fas fa-eye mr-2"></i>Visão Geral
+                            </h3>
+                            <p class="text-gray-700">${data.analysis.overview}</p>
                         </div>
                         
-                        <div class="mb-4">
-                            <h3 class="font-bold">Pontos Fortes</h3>
-                            <ul class="list-disc pl-4">
-                                ${data.analysis.strengths.map(s => `<li>${s}</li>`).join('')}
+                        <!-- Métricas -->
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <div class="p-4 bg-green-50 rounded-lg text-center">
+                                <div class="text-2xl font-bold text-green-600">
+                                    ${data.analysis.metrics?.rating || 'N/A'}
+                                </div>
+                                <div class="text-sm text-green-700">Avaliação Média</div>
+                            </div>
+                            <div class="p-4 bg-purple-50 rounded-lg text-center">
+                                <div class="text-2xl font-bold text-purple-600">
+                                    ${data.analysis.metrics?.reviews || 'N/A'}
+                                </div>
+                                <div class="text-sm text-purple-700">Total de Avaliações</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Pontos Fortes -->
+                        <div class="mb-6 p-4 bg-green-50 rounded-lg">
+                            <h3 class="font-bold text-lg text-green-800 mb-2">
+                                <i class="fas fa-star mr-2"></i>Pontos Fortes
+                            </h3>
+                            <ul class="list-disc pl-4 space-y-2">
+                                ${data.analysis.strengths.map(s => `
+                                    <li class="text-gray-700">${s}</li>
+                                `).join('')}
                             </ul>
                         </div>
                         
-                        <div class="mb-4">
-                            <h3 class="font-bold">Oportunidades</h3>
-                            <ul class="list-disc pl-4">
-                                ${data.analysis.opportunities.map(o => `<li>${o}</li>`).join('')}
+                        <!-- Oportunidades -->
+                        <div class="mb-6 p-4 bg-yellow-50 rounded-lg">
+                            <h3 class="font-bold text-lg text-yellow-800 mb-2">
+                                <i class="fas fa-lightbulb mr-2"></i>Oportunidades
+                            </h3>
+                            <ul class="list-disc pl-4 space-y-2">
+                                ${data.analysis.opportunities.map(o => `
+                                    <li class="text-gray-700">${o}</li>
+                                `).join('')}
                             </ul>
                         </div>
                         
-                        <div>
-                            <h3 class="font-bold">Recomendações</h3>
-                            <ul class="list-disc pl-4">
-                                ${data.analysis.recommendations.map(r => `<li>${r}</li>`).join('')}
+                        <!-- Recomendações -->
+                        <div class="p-4 bg-indigo-50 rounded-lg">
+                            <h3 class="font-bold text-lg text-indigo-800 mb-2">
+                                <i class="fas fa-clipboard-check mr-2"></i>Recomendações
+                            </h3>
+                            <ul class="list-disc pl-4 space-y-2">
+                                ${data.analysis.recommendations.map(r => `
+                                    <li class="text-gray-700">${r}</li>
+                                `).join('')}
                             </ul>
                         </div>
                     </div>
                 `,
-                width: '600px'
+                width: '800px',
+                padding: '2rem',
+                confirmButtonText: 'Fechar',
+                confirmButtonColor: '#3085d6',
+                showCloseButton: true,
+                showDenyButton: true,
+                denyButtonText: 'Exportar PDF',
+                denyButtonColor: '#10B981'
+            }).then((result) => {
+                if (result.isDenied) {
+                    exportAnalysisPDF(name, data.analysis);
+                }
             });
         } else {
             throw new Error(data.message || 'Erro ao analisar concorrente');
@@ -3050,8 +3099,44 @@ function analyzeSingleCompetitor(name, address, competitorData) {
         console.error('Erro na análise:', error);
         Swal.fire({
             icon: 'error',
-            title: 'Erro',
-            text: error.message || 'Não foi possível realizar a análise do concorrente'
+            title: 'Erro na Análise',
+            text: error.message || 'Não foi possível realizar a análise do concorrente',
+            confirmButtonColor: '#EF4444'
+        });
+    });
+}
+
+// Função auxiliar para exportar PDF
+function exportAnalysisPDF(competitorName, analysis) {
+    fetch('/api/competitors/export-analysis', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+            competitor_name: competitorName,
+            analysis: analysis
+        })
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `analise-${competitorName.toLowerCase().replace(/\s+/g, '-')}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+    })
+    .catch(error => {
+        console.error('Erro ao exportar PDF:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro na Exportação',
+            text: 'Não foi possível exportar o PDF da análise',
+            confirmButtonColor: '#EF4444'
         });
     });
 }
