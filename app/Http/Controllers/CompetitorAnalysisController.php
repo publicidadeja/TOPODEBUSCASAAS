@@ -323,14 +323,17 @@ private function isRelevantCompetitor($result, $business)
 public function analyzeSingle(Request $request)
 {
     try {
+        // Log dos dados recebidos
+        \Log::info('Dados recebidos na requisição:', $request->all());
+
         $validated = $request->validate([
             'name' => 'required|string',
             'address' => 'required|string',
             'competitor_data' => 'required|array'
         ]);
 
-        // Log para debug
-        \Log::info('Dados recebidos:', $validated);
+        // Log dos dados validados
+        \Log::info('Dados validados:', $validated);
 
         $analysis = [
             'overview' => $this->generateOverview($validated['competitor_data']),
@@ -339,6 +342,9 @@ public function analyzeSingle(Request $request)
             'recommendations' => $this->generateRecommendations($validated['competitor_data'])
         ];
 
+        // Log da análise gerada
+        \Log::info('Análise gerada:', $analysis);
+
         return response()->json([
             'success' => true,
             'analysis' => $analysis
@@ -346,11 +352,12 @@ public function analyzeSingle(Request $request)
 
     } catch (\Exception $e) {
         \Log::error('Erro na análise do concorrente: ' . $e->getMessage());
+        \Log::error('Stack trace: ' . $e->getTraceAsString());
         
         return response()->json([
             'success' => false,
             'message' => 'Erro ao analisar concorrente: ' . $e->getMessage()
-        ], 500);
+        ], 422);
     }
 }
 

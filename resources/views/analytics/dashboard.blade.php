@@ -2968,16 +2968,24 @@ function analyzeSingleCompetitor(name, address, competitorData) {
         }
     });
 
-    // Parse competitorData se for uma string
+    // Garantir que competitorData seja um objeto/array
+    let processedData = competitorData;
     if (typeof competitorData === 'string') {
         try {
-            competitorData = JSON.parse(competitorData);
+            processedData = JSON.parse(competitorData);
         } catch (e) {
             console.error('Erro ao parsear dados do competidor:', e);
+            processedData = {};
         }
     }
 
-    // Fazer a requisição para o backend
+    // Log para debug
+    console.log('Dados sendo enviados:', {
+        name,
+        address,
+        competitor_data: processedData
+    });
+
     fetch('/api/competitors/analyze-single', {
         method: 'POST',
         headers: {
@@ -2988,30 +2996,62 @@ function analyzeSingleCompetitor(name, address, competitorData) {
         body: JSON.stringify({
             name: name,
             address: address,
-            competitor_data: competitorData
+            competitor_data: processedData // Usando os dados processados
         })
     })
     .then(response => {
-        // Verificar se a resposta é JSON
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('A resposta não é um JSON válido');
+        if (!response.ok) {
+            return response.json().then(err => Promise.reject(err));
         }
         return response.json();
     })
     .then(data => {
+        console.log('Resposta recebida:', data); // Log para debug
+        
         if (data.success) {
-            // ... resto do código do modal de sucesso ...
+            Swal.fire({
+                title: 'Análise do Concorrente',
+                html: `
+                    <div class="text-left">
+                        <div class="mb-4">
+                            <h3 class="font-bold">Visão Geral</h3>
+                            <p>${data.analysis.overview}</p>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h3 class="font-bold">Pontos Fortes</h3>
+                            <ul class="list-disc pl-4">
+                                ${data.analysis.strengths.map(s => `<li>${s}</li>`).join('')}
+                            </ul>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h3 class="font-bold">Oportunidades</h3>
+                            <ul class="list-disc pl-4">
+                                ${data.analysis.opportunities.map(o => `<li>${o}</li>`).join('')}
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h3 class="font-bold">Recomendações</h3>
+                            <ul class="list-disc pl-4">
+                                ${data.analysis.recommendations.map(r => `<li>${r}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `,
+                width: '600px'
+            });
         } else {
             throw new Error(data.message || 'Erro ao analisar concorrente');
         }
     })
     .catch(error => {
-        console.error('Erro:', error);
+        console.error('Erro na análise:', error);
         Swal.fire({
             icon: 'error',
             title: 'Erro',
-            text: 'Não foi possível realizar a análise do concorrente. Por favor, tente novamente.'
+            text: error.message || 'Não foi possível realizar a análise do concorrente'
         });
     });
 }
