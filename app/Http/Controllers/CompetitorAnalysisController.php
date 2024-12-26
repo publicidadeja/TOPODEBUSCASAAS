@@ -320,6 +320,7 @@ private function isRelevantCompetitor($result, $business)
     return true;
 }
 
+// CompetitorAnalysisController.php
 public function analyzeSingle(Request $request)
 {
     try {
@@ -332,29 +333,44 @@ public function analyzeSingle(Request $request)
             $competitorData = json_decode($competitorData, true);
         }
 
-        // Verificar se a decodificação foi bem sucedida
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            throw new \Exception('Erro ao decodificar dados do competidor');
-        }
+        // Definir valores padrão para os dados do competidor
+        $competitorData = array_merge([
+            'name' => $name,
+            'address' => $address,
+            'rating' => 0,
+            'reviews' => 0,
+            'website' => '',
+            'status' => 'OPERATIONAL'
+        ], $competitorData ?? []);
 
-        // Busca informações adicionais usando o SerperService
-        $additionalInfo = $this->serper->searchSpecificCompetitor($name, $address);
-        
-        // Agora ambos são arrays e podem ser mesclados
-        $analysisData = array_merge($competitorData, $additionalInfo);
-        
-        // Usa o GeminiService para análise
-        $analysis = $this->gemini->analyzeBusinessData($analysisData, null);
+        // Construir a prompt para a análise
+        $prompt = "Analise o seguinte estabelecimento comercial:\n" .
+                 "Nome: {$competitorData['name']}\n" .
+                 "Endereço: {$competitorData['address']}\n" .
+                 "Avaliação: {$competitorData['rating']}\n" .
+                 "Total de Avaliações: {$competitorData['reviews']}\n" .
+                 "Forneça uma análise detalhada incluindo:\n" .
+                 "1. Visão geral do negócio\n" .
+                 "2. Pontos fortes\n" .
+                 "3. Oportunidades de melhoria\n" .
+                 "4. Recomendações estratégicas";
 
-        // Formata a resposta
+        // Usar o GeminiService para gerar a análise
+        $analysis = $this->gemini->generateContent($prompt);
+
+        // Processar a resposta do Gemini
+        $processedAnalysis = $this->processGeminiResponse($analysis);
+
+        // Formatar a resposta
         $formattedAnalysis = [
-            'overview' => $analysis['overview'] ?? 'Análise não disponível',
-            'strengths' => $analysis['strengths'] ?? [],
-            'opportunities' => $analysis['opportunities'] ?? [],
-            'recommendations' => $analysis['recommendations'] ?? [],
+            'overview' => $processedAnalysis['overview'] ?? 'Análise não disponível',
+            'strengths' => $processedAnalysis['strengths'] ?? [],
+            'opportunities' => $processedAnalysis['opportunities'] ?? [],
+            'recommendations' => $processedAnalysis['recommendations'] ?? [],
             'metrics' => [
                 'rating' => $competitorData['rating'] ?? 0,
-                'reviews' => $competitorData['total_ratings'] ?? 0
+                'reviews' => $competitorData['reviews'] ?? 0,
+                'engagement_rate' => $this->calculateEngagementRate($competitorData)
             ]
         ];
 
@@ -371,30 +387,66 @@ public function analyzeSingle(Request $request)
     }
 }
 
-private function generateOverview($competitorData)
+private function processGeminiResponse($analysis)
 {
-    $overview = "Análise do estabelecimento {$competitorData['name']}:\n\n";
+    $content = is_array($analysis) ? ($analysis['content'] ?? '') : $analysis;
     
-    if (isset($competitorData['rating'])) {
-        $overview .= "Avaliação média de {$competitorData['rating']}/5 ";
-        $overview .= isset($competitorData['total_ratings']) ? 
-            "baseada em {$competitorData['total_ratings']} avaliações. " : ". ";
+    // Inicializar array de retorno
+    $processed = [
+        'overview' => '',
+        'strengths' => [],
+        'opportunities' => [],
+        'recommendations' => []
+    ];
+
+    // Dividir o conteúdo em seções
+    $sections = explode("\n", $content);
+    $currentSection = null;
+
+    foreach ($sections as $line) {
+        $line = trim($line);
+        if (empty($line)) continue;
+
+        // Identificar seções
+        if (strpos($line, "Visão geral") !== false || strpos($line, "1.") !== false) {
+            $currentSection = 'overview';
+            continue;
+        } elseif (strpos($line, "Pontos fortes") !== false || strpos($line, "2.") !== false) {
+            $currentSection = 'strengths';
+            continue;
+        } elseif (strpos($line, "Oportunidades") !== false || strpos($line, "3.") !== false) {
+            $currentSection = 'opportunities';
+            continue;
+        } elseif (strpos($line, "Recomendações") !== false || strpos($line, "4.") !== false) {
+            $currentSection = 'recommendations';
+            continue;
+        }
+
+        // Adicionar conteúdo à seção apropriada
+        if ($currentSection === 'overview') {
+            $processed['overview'] .= $line . "\n";
+        } elseif (in_array($currentSection, ['strengths', 'opportunities', 'recommendations'])) {
+            if (strpos($line, "- ") === 0 || strpos($line, "• ") === 0) {
+                $processed[$currentSection][] = trim(substr($line, 2));
+            } else {
+                $processed[$currentSection][] = $line;
+            }
+        }
     }
 
-    if (isset($competitorData['status'])) {
-        $overview .= "O estabelecimento está " . 
-            ($competitorData['status'] === 'OPERATIONAL' ? 'ativo' : 'inativo') . ". ";
-    }
+    return $processed;
+}
 
-    if (!empty($competitorData['photos'])) {
-        $overview .= "Possui " . count($competitorData['photos']) . " fotos disponíveis. ";
+private function calculateEngagementRate($competitorData)
+{
+    $reviews = $competitorData['reviews'] ?? 0;
+    $rating = $competitorData['rating'] ?? 0;
+    
+    if ($reviews > 0 && $rating > 0) {
+        return round(($reviews * $rating) / 100, 2);
     }
-
-    if (!empty($competitorData['website'])) {
-        $overview .= "Mantém presença online através de website próprio. ";
-    }
-
-    return $overview;
+    
+    return 0;
 }
 
 private function analyzeStrengths($competitorData)

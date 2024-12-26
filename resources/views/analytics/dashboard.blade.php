@@ -3,6 +3,16 @@
     @push('styles')
     <style>
 
+@media (max-width: 768px) {
+    .metric-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .chart-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 .keyword-card {
     transition: all 0.3s ease;
 }
@@ -2958,14 +2968,25 @@ function updateLastUpdate() {
 
 <script>
 async function analyzeSingleCompetitor(name, address, competitorData) {
-    // Mostrar loading
+    // Mostrar loading com animação mais elaborada
     Swal.fire({
         title: `Analisando ${name}...`,
         html: `
             <div class="flex flex-col items-center">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-                <p class="mt-4 text-gray-600">Analisando dados do concorrente...</p>
-                <p class="text-sm text-gray-500">${address}</p>
+                <div class="relative">
+                    <div class="animate-spin rounded-full h-16 w-16 border-4 border-gray-200">
+                        <div class="absolute top-0 left-0 w-full h-full border-4 border-blue-500 rounded-full border-t-transparent animate-ping"></div>
+                    </div>
+                </div>
+                <div class="mt-6 space-y-2 text-center">
+                    <p class="text-gray-700 font-semibold">Analisando dados do concorrente</p>
+                    <p class="text-sm text-gray-500">${address}</p>
+                    <div class="flex justify-center space-x-1">
+                        <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                        <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                        <div class="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                    </div>
+                </div>
             </div>
         `,
         allowOutsideClick: false,
@@ -2973,95 +2994,163 @@ async function analyzeSingleCompetitor(name, address, competitorData) {
     });
 
     try {
-        // Fazer requisição para a API
+        // Preparar dados para envio incluindo mais informações relevantes
+        const analysisData = {
+            name: name,
+            address: address,
+            competitor_data: {
+                ...competitorData,
+                name: name,
+                address: address,
+                rating: competitorData.rating || 0,
+                total_reviews: competitorData.reviews || 0,
+                business_type: competitorData.business_type || 'restaurant',
+                // Adicione outros dados relevantes que você tenha
+            }
+        };
+
+        // Fazer requisição para o endpoint correto
         const response = await fetch('/api/competitors/analyze-single', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json'
             },
-            body: JSON.stringify({
-                name: name,
-                address: address,
-                competitor_data: competitorData
-            })
+            body: JSON.stringify(analysisData)
         });
 
         const data = await response.json();
 
-        if (!data.success) {
+        if (!response.ok) {
             throw new Error(data.message || 'Erro ao analisar concorrente');
         }
 
-        // Fechar loading e mostrar resultados
+        // Processar e estruturar os dados recebidos
+        const analysisResult = {
+            overview: data.analysis?.overview || 'Análise não disponível',
+            metrics: {
+                rating: competitorData.rating || 'N/A',
+                reviews: competitorData.reviews || 'N/A',
+                engagement_rate: data.analysis?.metrics?.engagement_rate || 'N/A'
+            },
+            strengths: data.analysis?.strengths || [],
+            opportunities: data.analysis?.opportunities || [],
+            recommendations: data.analysis?.recommendations || []
+        };
+
+        // Modal com análise detalhada
         Swal.fire({
-            title: `Análise de ${name}`,
+            title: `<div class="text-xl font-bold text-gray-800 border-b pb-3">Análise de ${name}</div>`,
             html: `
-                <div class="text-left max-h-[70vh] overflow-y-auto space-y-6">
-                    <!-- Visão Geral -->
-                    <div class="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
-                        <h3 class="font-bold text-lg text-blue-800 mb-2">Visão Geral</h3>
-                        <p class="text-gray-700">${data.analysis.overview}</p>
+                <div class="text-left max-h-[70vh] overflow-y-auto space-y-6 py-4">
+                    <!-- Resumo Executivo -->
+                    <div class="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                        <h3 class="text-lg font-bold text-blue-800 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            Resumo Executivo
+                        </h3>
+                        <p class="text-gray-700 leading-relaxed">${analysisResult.overview}</p>
                     </div>
 
-                    <!-- Métricas -->
+                    <!-- Dashboard de Métricas -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <div class="p-4 bg-white rounded-xl border border-gray-200 text-center">
+                            <div class="text-2xl font-bold text-blue-600">${analysisResult.metrics.rating}</div>
+                            <div class="text-sm text-gray-600">Avaliação Média</div>
+                        </div>
+                        <div class="p-4 bg-white rounded-xl border border-gray-200 text-center">
+                            <div class="text-2xl font-bold text-purple-600">${analysisResult.metrics.reviews}</div>
+                            <div class="text-sm text-gray-600">Total de Avaliações</div>
+                        </div>
+                        <div class="p-4 bg-white rounded-xl border border-gray-200 text-center">
+                            <div class="text-2xl font-bold text-green-600">${analysisResult.metrics.engagement_rate}%</div>
+                            <div class="text-sm text-gray-600">Taxa de Engajamento</div>
+                        </div>
+                    </div>
+
+                    <!-- Análise SWOT -->
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="p-4 bg-green-50 rounded-lg text-center">
-                            <div class="text-2xl font-bold text-green-600">
-                                ${data.analysis.metrics?.rating || 'N/A'}
-                            </div>
-                            <div class="text-sm text-green-700">Avaliação</div>
+                        <!-- Pontos Fortes -->
+                        <div class="p-5 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                            <h3 class="font-bold text-green-800 mb-3 flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                Pontos Fortes
+                            </h3>
+                            <ul class="space-y-2">
+                                ${analysisResult.strengths.map(s => `
+                                    <li class="flex items-start">
+                                        <span class="flex-shrink-0 w-1.5 h-1.5 mt-2 bg-green-500 rounded-full"></span>
+                                        <span class="ml-2 text-gray-700">${s}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
                         </div>
-                        <div class="p-4 bg-purple-50 rounded-lg text-center">
-                            <div class="text-2xl font-bold text-purple-600">
-                                ${data.analysis.metrics?.reviews || 'N/A'}
-                            </div>
-                            <div class="text-sm text-purple-700">Avaliações</div>
+
+                        <!-- Oportunidades -->
+                        <div class="p-5 bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl border border-yellow-100">
+                            <h3 class="font-bold text-yellow-800 mb-3 flex items-center">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                                Oportunidades
+                            </h3>
+                            <ul class="space-y-2">
+                                ${analysisResult.opportunities.map(o => `
+                                    <li class="flex items-start">
+                                        <span class="flex-shrink-0 w-1.5 h-1.5 mt-2 bg-yellow-500 rounded-full"></span>
+                                        <span class="ml-2 text-gray-700">${o}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
                         </div>
                     </div>
 
-                    <!-- Pontos Fortes -->
-                    <div class="p-4 bg-green-50 rounded-lg">
-                        <h3 class="font-bold text-lg text-green-800 mb-2">Pontos Fortes</h3>
-                        <ul class="list-disc pl-4 space-y-2">
-                            ${data.analysis.strengths.map(s => `
-                                <li class="text-gray-700">${s}</li>
+                    <!-- Recomendações Estratégicas -->
+                    <div class="p-6 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl border border-indigo-100">
+                        <h3 class="font-bold text-indigo-800 mb-4 flex items-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                            </svg>
+                            Recomendações Estratégicas
+                        </h3>
+                        <div class="space-y-3">
+                            ${analysisResult.recommendations.map((r, index) => `
+                                <div class="p-4 bg-white/50 rounded-lg hover:bg-white/80 transition-colors duration-200">
+                                    <div class="flex items-start">
+                                        <span class="flex-shrink-0 w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-sm font-bold">
+                                            ${index + 1}
+                                        </span>
+                                        <p class="ml-3 text-gray-700">${r}</p>
+                                    </div>
+                                </div>
                             `).join('')}
-                        </ul>
-                    </div>
-
-                    <!-- Oportunidades -->
-                    <div class="p-4 bg-yellow-50 rounded-lg">
-                        <h3 class="font-bold text-lg text-yellow-800 mb-2">Oportunidades</h3>
-                        <ul class="list-disc pl-4 space-y-2">
-                            ${data.analysis.opportunities.map(o => `
-                                <li class="text-gray-700">${o}</li>
-                            `).join('')}
-                        </ul>
-                    </div>
-
-                    <!-- Recomendações -->
-                    <div class="p-4 bg-indigo-50 rounded-lg">
-                        <h3 class="font-bold text-lg text-indigo-800 mb-2">Recomendações</h3>
-                        <ul class="list-disc pl-4 space-y-2">
-                            ${data.analysis.recommendations.map(r => `
-                                <li class="text-gray-700">${r}</li>
-                            `).join('')}
-                        </ul>
+                        </div>
                     </div>
                 </div>
             `,
-            width: '800px',
+            width: '900px',
             padding: '2rem',
             confirmButtonText: 'Fechar',
-            confirmButtonColor: '#3085d6',
+            confirmButtonColor: '#4F46E5',
             showCloseButton: true,
             showDenyButton: true,
             denyButtonText: 'Exportar PDF',
-            denyButtonColor: '#10B981'
+            denyButtonColor: '#059669',
+            customClass: {
+                container: 'competitor-analysis-modal',
+                popup: 'rounded-xl',
+                content: 'rounded-lg',
+                confirmButton: 'rounded-lg',
+                denyButton: 'rounded-lg'
+            }
         }).then((result) => {
             if (result.isDenied) {
-                exportAnalysisPDF(name, data.analysis);
+                exportAnalysisPDF(name, analysisResult);
             }
         });
 
@@ -3074,6 +3163,21 @@ async function analyzeSingleCompetitor(name, address, competitorData) {
             confirmButtonColor: '#EF4444'
         });
     }
+}
+
+function validateAnalysisData(analysis) {
+    if (!analysis || typeof analysis !== 'object') {
+        throw new Error('Dados de análise inválidos');
+    }
+
+    const requiredSections = ['overview', 'strengths', 'opportunities', 'recommendations'];
+    for (const section of requiredSections) {
+        if (!analysis[section]) {
+            console.warn(`Seção '${section}' não encontrada na análise`);
+        }
+    }
+
+    return true;
 }
 
 // Função auxiliar para exportar PDF
@@ -3110,6 +3214,84 @@ function exportAnalysisPDF(competitorName, analysis) {
         });
     });
 }
+
+// Adicionar função para atualização em tempo real
+function refreshData() {
+    const businessId = document.getElementById('business-selector').value;
+    const period = document.getElementById('period-selector').value;
+
+    fetch(`/analytics/refresh/${businessId}?period=${period}`, {
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        }
+    })
+    .then(response => response.json())
+    .then(data => updateDashboard(data))
+    .catch(error => showError(error));
+}
+
+function exportAnalysis(format) {
+    const businessId = document.getElementById('business-selector').value;
+    window.location.href = `/analytics/export/${format}/${businessId}`;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Atualização automática a cada 5 minutos
+    setInterval(refreshData, 300000);
+    
+    // Event listeners para seletores
+    document.getElementById('business-selector').addEventListener('change', refreshData);
+    document.getElementById('period-selector').addEventListener('change', refreshData);
+});
+
+function updateDashboard(data) {
+    // Atualizar métricas
+    updateMetrics(data.metrics);
+    
+    // Atualizar gráficos
+    updateCharts(data.charts);
+    
+    // Atualizar análise de concorrentes
+    updateCompetitorAnalysis(data.competitors);
+    
+    // Atualizar insights
+    updateInsights(data.insights);
+}
+
+function showLoading() {
+    document.querySelectorAll('.loading-indicator').forEach(el => {
+        el.classList.remove('hidden');
+    });
+}
+
+function hideLoading() {
+    document.querySelectorAll('.loading-indicator').forEach(el => {
+        el.classList.add('hidden');
+    });
+}
+
+function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => notification.remove(), 3000);
+}
+
+function validateData(data) {
+    if (!data || typeof data !== 'object') {
+        throw new Error('Dados inválidos recebidos do servidor');
+    }
+    return true;
+}
+
+function handleError(error) {
+    console.error('Erro:', error);
+    showNotification(error.message, 'error');
+}
+
+
 </script>
 
 </x-app-layout>

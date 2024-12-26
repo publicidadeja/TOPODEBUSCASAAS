@@ -14,6 +14,12 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\CompetitorAnalysisController;
 use App\Http\Controllers\MarketAnalysisController;
 
+
+Route::prefix('analytics')->group(function () {
+    Route::get('/refresh/{business}', 'AnalyticsController@refresh');
+    Route::get('/export/{format}/{business}', 'AnalyticsController@export');
+});
+
 Route::post('/analyze-single-competitor', [CompetitorAnalysisController::class, 'analyzeSingleCompetitor'])
     ->name('analyze.single.competitor');
 

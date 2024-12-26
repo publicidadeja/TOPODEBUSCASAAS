@@ -473,26 +473,11 @@ private function extractAlertInsight($analysis)
 /**
  * Extrai uma seção específica da análise
  */
-private function extractSection($analysis, $sectionName)
+private function extractSection($text, $sectionName)
 {
-    // Verifica se a análise é uma string
-    if (!is_string($analysis)) {
-        $analysis = json_encode($analysis, JSON_UNESCAPED_UNICODE);
-    }
-    
-    // Tenta encontrar a seção no formato atual
-    $pattern = "/#$sectionName#\s*(.*?)\s*(?=#|$)/s";
-    if (preg_match($pattern, $analysis, $matches)) {
-        return trim($matches[1]);
-    }
-    
-    // Tenta encontrar a seção em formato alternativo
-    $pattern = "\"$sectionName\":\s*\"(.*?)\"";
-    if (preg_match($pattern, $analysis, $matches)) {
-        return trim($matches[1]);
-    }
-    
-    return null;
+    // Implementar lógica para extrair seções específicas do texto
+    preg_match("/$sectionName:(.*?)(?=\n\n|$)/s", $text, $matches);
+    return trim($matches[1] ?? '');
 }
 
 // Em GeminiService.php
@@ -698,6 +683,38 @@ private function formatAnalysisText($text) {
     $text = preg_replace('/\.\s+(?=[A-Z])/', ".\n\n", $text);
     
     return trim($text);
+}
+
+// GeminiService.php
+public function generateAnalysis($prompt)
+{
+    try {
+        // Chama a API do Gemini
+        $response = $this->gemini->generateContent($prompt);
+        
+        // Processa a resposta em um formato estruturado
+        return [
+            'overview' => $this->extractSection($response, 'Visão geral'),
+            'strengths' => $this->extractBulletPoints($response, 'Pontos fortes'),
+            'opportunities' => $this->extractBulletPoints($response, 'Oportunidades'),
+            'recommendations' => $this->extractBulletPoints($response, 'Recomendações'),
+            'engagement_rate' => $this->calculateEngagementRate($response)
+        ];
+    } catch (\Exception $e) {
+        throw new \Exception('Erro na análise da IA: ' . $e->getMessage());
+    }
+}
+
+
+
+private function extractBulletPoints($text, $sectionName)
+{
+    // Implementar lógica para extrair pontos em formato de lista
+    preg_match_all("/$sectionName:\n((?:- .*\n?)*)/", $text, $matches);
+    if (!empty($matches[1])) {
+        return array_map('trim', explode("\n-", trim($matches[1][0])));
+    }
+    return [];
 }
     
 }
