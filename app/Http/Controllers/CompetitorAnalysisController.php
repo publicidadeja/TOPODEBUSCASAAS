@@ -333,27 +333,56 @@ public function analyzeSingle(Request $request)
             $competitorData = json_decode($competitorData, true);
         }
 
-        // Definir valores padrão para os dados do competidor
-        $competitorData = array_merge([
+        // Buscar informações adicionais usando o SerperService
+        $serperData = $this->serper->searchSpecificCompetitor($name, $address);
+
+        // Mesclar dados do Places com dados do Serper
+        $enrichedData = array_merge([
             'name' => $name,
             'address' => $address,
-            'rating' => 0,
-            'reviews' => 0,
-            'website' => '',
-            'status' => 'OPERATIONAL'
-        ], $competitorData ?? []);
+            'rating' => $competitorData['rating'] ?? 0,
+            'reviews' => $competitorData['reviews'] ?? 0,
+            'website' => $competitorData['website'] ?? '',
+            'status' => $competitorData['status'] ?? 'OPERATIONAL'
+        ], $serperData);
 
-        // Construir a prompt para a análise
-        $prompt = "Analise o seguinte estabelecimento comercial:\n" .
-                 "Nome: {$competitorData['name']}\n" .
-                 "Endereço: {$competitorData['address']}\n" .
-                 "Avaliação: {$competitorData['rating']}\n" .
-                 "Total de Avaliações: {$competitorData['reviews']}\n" .
-                 "Forneça uma análise detalhada incluindo:\n" .
-                 "1. Visão geral do negócio\n" .
-                 "2. Pontos fortes\n" .
-                 "3. Oportunidades de melhoria\n" .
-                 "4. Recomendações estratégicas";
+        // Construir uma prompt mais detalhada para análise
+        $prompt = "Analise detalhadamente o seguinte estabelecimento comercial:\n\n";
+        $prompt .= "Nome: {$enrichedData['name']}\n";
+        $prompt .= "Endereço: {$enrichedData['address']}\n";
+        $prompt .= "Avaliação: " . ($enrichedData['rating'] > 0 ? number_format($enrichedData['rating'], 1) : 'Não disponível') . "\n";
+        $prompt .= "Total de Avaliações: " . ($enrichedData['reviews'] > 0 ? $enrichedData['reviews'] : 'Não disponível') . "\n";
+        
+        // Adicionar informações de presença online
+        $prompt .= "\nPresença Online:\n";
+        if (!empty($enrichedData['website'])) {
+            $prompt .= "- Website: {$enrichedData['website']}\n";
+        }
+        if (!empty($serperData['social_profiles'])) {
+            foreach ($serperData['social_profiles'] as $platform => $url) {
+                $prompt .= "- $platform: $url\n";
+            }
+        }
+
+        // Adicionar descrição se disponível
+        if (!empty($serperData['description'])) {
+            $prompt .= "\nDescrição do Negócio:\n{$serperData['description']}\n";
+        }
+
+        // Adicionar horário de funcionamento se disponível
+        if (!empty($serperData['business_hours'])) {
+            $prompt .= "\nHorário de Funcionamento:\n";
+            foreach ($serperData['business_hours'] as $day => $hours) {
+                $prompt .= "- $day: $hours\n";
+            }
+        }
+
+        $prompt .= "\nForneça uma análise completa incluindo:\n";
+        $prompt .= "1. Resumo executivo detalhado do negócio\n";
+        $prompt .= "2. Pontos fortes identificados (baseado em dados reais)\n";
+        $prompt .= "3. Oportunidades de melhoria\n";
+        $prompt .= "4. Recomendações estratégicas específicas\n";
+        $prompt .= "\nImportante: Baseie a análise apenas em dados confirmados e evite suposições.";
 
         // Usar o GeminiService para gerar a análise
         $analysis = $this->gemini->generateContent($prompt);
@@ -361,16 +390,27 @@ public function analyzeSingle(Request $request)
         // Processar a resposta do Gemini
         $processedAnalysis = $this->processGeminiResponse($analysis);
 
-        // Formatar a resposta
+        // Calcular métricas adicionais
+        $engagementRate = $this->calculateEngagementRate($enrichedData);
+        $onlinePresenceScore = $this->calculateOnlinePresenceScore($enrichedData);
+
+        // Formatar a resposta final
         $formattedAnalysis = [
             'overview' => $processedAnalysis['overview'] ?? 'Análise não disponível',
             'strengths' => $processedAnalysis['strengths'] ?? [],
             'opportunities' => $processedAnalysis['opportunities'] ?? [],
             'recommendations' => $processedAnalysis['recommendations'] ?? [],
             'metrics' => [
-                'rating' => $competitorData['rating'] ?? 0,
-                'reviews' => $competitorData['reviews'] ?? 0,
-                'engagement_rate' => $this->calculateEngagementRate($competitorData)
+                'rating' => $enrichedData['rating'] ?? 0,
+                'reviews' => $enrichedData['reviews'] ?? 0,
+                'engagement_rate' => $engagementRate,
+                'online_presence_score' => $onlinePresenceScore
+            ],
+            'presence' => [
+                'has_website' => !empty($enrichedData['website']),
+                'has_social_media' => !empty($serperData['social_profiles']),
+                'has_business_hours' => !empty($serperData['business_hours']),
+                'has_photos' => !empty($serperData['photos'])
             ]
         ];
 
@@ -378,6 +418,7 @@ public function analyzeSingle(Request $request)
             'success' => true,
             'analysis' => $formattedAnalysis
         ]);
+
     } catch (\Exception $e) {
         Log::error('Erro na análise do concorrente: ' . $e->getMessage());
         return response()->json([
@@ -385,6 +426,16 @@ public function analyzeSingle(Request $request)
             'message' => 'Erro ao analisar concorrente: ' . $e->getMessage()
         ], 500);
     }
+}
+
+private function calculateOnlinePresenceScore($data)
+{
+    $score = 0;
+    if (!empty($data['website'])) $score += 30;
+    if (!empty($data['social_profiles'])) $score += min(count($data['social_profiles']) * 10, 30);
+    if (!empty($data['business_hours'])) $score += 20;
+    if (!empty($data['photos'])) $score += 20;
+    return $score;
 }
 
 private function processGeminiResponse($analysis)
