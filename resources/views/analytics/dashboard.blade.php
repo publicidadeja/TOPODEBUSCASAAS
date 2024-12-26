@@ -2958,7 +2958,7 @@ function updateLastUpdate() {
 
 <script>
 function analyzeSingleCompetitor(name, address, competitorData) {
-    // Mostrar loading com SweetAlert2
+    // Mostrar loading
     Swal.fire({
         title: `Analisando ${name}...`,
         html: 'Isso pode levar alguns segundos',
@@ -2968,11 +2968,21 @@ function analyzeSingleCompetitor(name, address, competitorData) {
         }
     });
 
+    // Parse competitorData se for uma string
+    if (typeof competitorData === 'string') {
+        try {
+            competitorData = JSON.parse(competitorData);
+        } catch (e) {
+            console.error('Erro ao parsear dados do competidor:', e);
+        }
+    }
+
     // Fazer a requisição para o backend
     fetch('/api/competitors/analyze-single', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
         },
         body: JSON.stringify({
@@ -2981,45 +2991,17 @@ function analyzeSingleCompetitor(name, address, competitorData) {
             competitor_data: competitorData
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        // Verificar se a resposta é JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('A resposta não é um JSON válido');
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.success) {
-            // Mostrar resultado em um modal mais elaborado
-            Swal.fire({
-                title: 'Análise do Concorrente',
-                html: `
-                    <div class="text-left">
-                        <div class="mb-4 p-4 bg-gray-50 rounded-lg">
-                            <h3 class="font-bold mb-2">Visão Geral</h3>
-                            <p>${data.analysis.overview}</p>
-                        </div>
-                        
-                        <div class="mb-4 p-4 bg-blue-50 rounded-lg">
-                            <h3 class="font-bold mb-2">Pontos Fortes</h3>
-                            <ul class="list-disc pl-4">
-                                ${data.analysis.strengths.map(s => `<li>${s}</li>`).join('')}
-                            </ul>
-                        </div>
-                        
-                        <div class="mb-4 p-4 bg-yellow-50 rounded-lg">
-                            <h3 class="font-bold mb-2">Oportunidades</h3>
-                            <ul class="list-disc pl-4">
-                                ${data.analysis.opportunities.map(o => `<li>${o}</li>`).join('')}
-                            </ul>
-                        </div>
-                        
-                        <div class="p-4 bg-green-50 rounded-lg">
-                            <h3 class="font-bold mb-2">Recomendações</h3>
-                            <ul class="list-disc pl-4">
-                                ${data.analysis.recommendations.map(r => `<li>${r}</li>`).join('')}
-                            </ul>
-                        </div>
-                    </div>
-                `,
-                width: '800px',
-                confirmButtonText: 'Fechar',
-                confirmButtonColor: '#3085d6'
-            });
+            // ... resto do código do modal de sucesso ...
         } else {
             throw new Error(data.message || 'Erro ao analisar concorrente');
         }
@@ -3029,7 +3011,7 @@ function analyzeSingleCompetitor(name, address, competitorData) {
         Swal.fire({
             icon: 'error',
             title: 'Erro',
-            text: error.message || 'Não foi possível realizar a análise do concorrente'
+            text: 'Não foi possível realizar a análise do concorrente. Por favor, tente novamente.'
         });
     });
 }

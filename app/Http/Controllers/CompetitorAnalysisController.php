@@ -127,57 +127,7 @@ class CompetitorAnalysisController extends Controller
         ];
     }
     
-    private function generateRecommendations($competitors)
-{
-    try {
-        $prompt = "Analise os seguintes dados de concorrentes e forneça exatamente 3 recomendações estratégicas.\n\n";
-        $prompt .= "Dados dos concorrentes:\n";
-        foreach ($competitors as $data) { // Changed from $competitorsData to $competitors
-            $prompt .= "- Empresa: {$data['name']}\n";
-            $prompt .= "  Avaliação: {$data['rating']}/5\n";
-            $prompt .= "  Número de reviews: {$data['reviews']}\n";
-            $prompt .= "  Possui website: " . (!empty($data['website']) ? 'Sim' : 'Não') . "\n";
-            $prompt .= "  Localização: {$data['location']}\n\n";
-        }
-        
-        $prompt .= "\nForneça suas recomendações no seguinte formato JSON:\n";
-        $prompt .= "{\n";
-        $prompt .= "  \"recommendations\": [\n";
-        $prompt .= "    {\n";
-        $prompt .= "      \"title\": \"título da recomendação\",\n";
-        $prompt .= "      \"description\": \"descrição detalhada\",\n";
-        $prompt .= "      \"priority\": \"high/medium/low\"\n";
-        $prompt .= "    }\n";
-        $prompt .= "  ]\n";
-        $prompt .= "}";
-
-        // Obter resposta do Gemini
-        $geminiAnalysis = $this->gemini->generateResponse($prompt);
-        
-        // Tentar decodificar o JSON
-        $decodedResponse = json_decode($geminiAnalysis, true);
-        
-        // Validar a resposta
-        if (json_last_error() === JSON_ERROR_NONE && 
-            isset($decodedResponse['recommendations']) && 
-            !empty($decodedResponse['recommendations'])) {
-            
-            return $decodedResponse['recommendations'];
-        }
-
-        // Log do erro se a resposta não for válida
-        \Log::warning('Resposta do Gemini não está no formato esperado', [
-            'response' => $geminiAnalysis
-        ]);
-        
-        return $this->generateDefaultRecommendations($competitors);
-
-    } catch (\Exception $e) {
-        \Log::error('Erro ao gerar recomendações com Gemini: ' . $e->getMessage());
-        return $this->generateDefaultRecommendations($competitors);
-    }
-}
-
+    
     private function parseGeminiRecommendations($analysis)
     {
         $recommendations = [];
@@ -379,7 +329,9 @@ public function analyzeSingle(Request $request)
             'competitor_data' => 'required|array'
         ]);
 
-        // Análise básica do concorrente
+        // Log para debug
+        \Log::info('Dados recebidos:', $validated);
+
         $analysis = [
             'overview' => $this->generateOverview($validated['competitor_data']),
             'strengths' => $this->analyzeStrengths($validated['competitor_data']),
@@ -393,6 +345,8 @@ public function analyzeSingle(Request $request)
         ]);
 
     } catch (\Exception $e) {
+        \Log::error('Erro na análise do concorrente: ' . $e->getMessage());
+        
         return response()->json([
             'success' => false,
             'message' => 'Erro ao analisar concorrente: ' . $e->getMessage()
