@@ -336,14 +336,22 @@ public function analyzeSingle(Request $request)
         // Buscar informações adicionais usando o SerperService
         $serperData = $this->serper->searchSpecificCompetitor($name, $address);
 
+        // Processar avaliações do Serper
+        $reviews = $this->processReviews($serperData['reviews'] ?? []);
+        
+        // Análise de sentimento das avaliações
+        $reviewAnalysis = $this->analyzeReviews($reviews);
+
         // Mesclar dados do Places com dados do Serper
         $enrichedData = array_merge([
             'name' => $name,
             'address' => $address,
             'rating' => $competitorData['rating'] ?? 0,
-            'reviews' => $competitorData['reviews'] ?? 0,
+            'reviews_count' => $competitorData['reviews'] ?? 0,
             'website' => $competitorData['website'] ?? '',
-            'status' => $competitorData['status'] ?? 'OPERATIONAL'
+            'status' => $competitorData['status'] ?? 'OPERATIONAL',
+            'reviews' => $reviews,
+            'review_analysis' => $reviewAnalysis
         ], $serperData);
 
         // Construir uma prompt mais detalhada para análise
@@ -351,8 +359,22 @@ public function analyzeSingle(Request $request)
         $prompt .= "Nome: {$enrichedData['name']}\n";
         $prompt .= "Endereço: {$enrichedData['address']}\n";
         $prompt .= "Avaliação: " . ($enrichedData['rating'] > 0 ? number_format($enrichedData['rating'], 1) : 'Não disponível') . "\n";
-        $prompt .= "Total de Avaliações: " . ($enrichedData['reviews'] > 0 ? $enrichedData['reviews'] : 'Não disponível') . "\n";
+        $prompt .= "Total de Avaliações: " . ($enrichedData['reviews_count'] > 0 ? $enrichedData['reviews_count'] : 'Não disponível') . "\n";
         
+        // Adicionar análise das avaliações
+        if (!empty($enrichedData['review_analysis'])) {
+            $prompt .= "\nAnálise das Avaliações dos Clientes:\n";
+            $prompt .= "- Sentimento Geral: {$enrichedData['review_analysis']['sentiment']}\n";
+            $prompt .= "- Principais Elogios: " . implode(", ", $enrichedData['review_analysis']['top_praises']) . "\n";
+            $prompt .= "- Principais Críticas: " . implode(", ", $enrichedData['review_analysis']['top_complaints']) . "\n";
+            
+            // Adicionar exemplos de avaliações relevantes
+            $prompt .= "\nAvaliações Relevantes:\n";
+            foreach ($enrichedData['review_analysis']['highlighted_reviews'] as $review) {
+                $prompt .= "- \"{$review['text']}\" (Avaliação: {$review['rating']})\n";
+            }
+        }
+
         // Adicionar informações de presença online
         $prompt .= "\nPresença Online:\n";
         if (!empty($enrichedData['website'])) {
@@ -378,11 +400,11 @@ public function analyzeSingle(Request $request)
         }
 
         $prompt .= "\nForneça uma análise completa incluindo:\n";
-        $prompt .= "1. Resumo executivo detalhado do negócio\n";
-        $prompt .= "2. Pontos fortes identificados (baseado em dados reais)\n";
-        $prompt .= "3. Oportunidades de melhoria\n";
+        $prompt .= "1. Resumo executivo detalhado do negócio (incluindo percepção dos clientes)\n";
+        $prompt .= "2. Pontos fortes identificados (baseado em dados reais e feedback dos clientes)\n";
+        $prompt .= "3. Oportunidades de melhoria (considerando as críticas dos clientes)\n";
         $prompt .= "4. Recomendações estratégicas específicas\n";
-        $prompt .= "\nImportante: Baseie a análise apenas em dados confirmados e evite suposições.";
+        $prompt .= "\nImportante: Baseie a análise nos dados confirmados e no feedback real dos clientes.";
 
         // Usar o GeminiService para gerar a análise
         $analysis = $this->gemini->generateContent($prompt);
@@ -393,6 +415,7 @@ public function analyzeSingle(Request $request)
         // Calcular métricas adicionais
         $engagementRate = $this->calculateEngagementRate($enrichedData);
         $onlinePresenceScore = $this->calculateOnlinePresenceScore($enrichedData);
+        $customerSatisfactionScore = $this->calculateCustomerSatisfactionScore($enrichedData);
 
         // Formatar a resposta final
         $formattedAnalysis = [
@@ -402,15 +425,23 @@ public function analyzeSingle(Request $request)
             'recommendations' => $processedAnalysis['recommendations'] ?? [],
             'metrics' => [
                 'rating' => $enrichedData['rating'] ?? 0,
-                'reviews' => $enrichedData['reviews'] ?? 0,
+                'reviews' => $enrichedData['reviews_count'] ?? 0,
                 'engagement_rate' => $engagementRate,
-                'online_presence_score' => $onlinePresenceScore
+                'online_presence_score' => $onlinePresenceScore,
+                'customer_satisfaction_score' => $customerSatisfactionScore
             ],
+            'review_analysis' => $enrichedData['review_analysis'] ?? null,
             'presence' => [
                 'has_website' => !empty($enrichedData['website']),
                 'has_social_media' => !empty($serperData['social_profiles']),
                 'has_business_hours' => !empty($serperData['business_hours']),
                 'has_photos' => !empty($serperData['photos'])
+            ],
+            'raw_data' => [
+                'reviews' => $reviews,
+                'business_hours' => $serperData['business_hours'] ?? [],
+                'social_profiles' => $serperData['social_profiles'] ?? [],
+                'photos' => $serperData['photos'] ?? []
             ]
         ];
 
@@ -426,6 +457,130 @@ public function analyzeSingle(Request $request)
             'message' => 'Erro ao analisar concorrente: ' . $e->getMessage()
         ], 500);
     }
+}
+
+private function processReviews($reviews)
+{
+    if (empty($reviews)) {
+        return [];
+    }
+
+    return array_map(function($review) {
+        return [
+            'rating' => $review['rating'] ?? 0,
+            'text' => $review['text'] ?? '',
+            'date' => $review['date'] ?? '',
+            'author' => $review['author'] ?? '',
+            'language' => $review['language'] ?? 'pt-BR'
+        ];
+    }, array_slice($reviews, 0, 10)); // Limita a 10 avaliações mais recentes
+}
+
+private function analyzeReviews($reviews)
+{
+    $sentiment = ['positive' => 0, 'negative' => 0, 'neutral' => 0];
+    $praises = [];
+    $complaints = [];
+    $highlighted_reviews = [];
+
+    foreach ($reviews as $review) {
+        // Análise de sentimento baseada na avaliação
+        if ($review['rating'] >= 4) {
+            $sentiment['positive']++;
+            if (!empty($review['text'])) {
+                $praises[] = $review['text'];
+            }
+        } elseif ($review['rating'] <= 2) {
+            $sentiment['negative']++;
+            if (!empty($review['text'])) {
+                $complaints[] = $review['text'];
+            }
+        } else {
+            $sentiment['neutral']++;
+        }
+
+        // Seleciona avaliações relevantes (com texto substancial)
+        if (!empty($review['text']) && strlen($review['text']) > 50) {
+            $highlighted_reviews[] = [
+                'text' => $review['text'],
+                'rating' => $review['rating'],
+                'date' => $review['date'],
+                'author' => $review['author']
+            ];
+        }
+    }
+
+    return [
+        'sentiment' => $this->determineSentiment($sentiment),
+        'top_praises' => array_slice($praises, 0, 3),
+        'top_complaints' => array_slice($complaints, 0, 3),
+        'highlighted_reviews' => array_slice($highlighted_reviews, 0, 3),
+        'stats' => $sentiment
+    ];
+}
+
+private function determineSentiment($sentiment)
+{
+    $total = array_sum($sentiment);
+    if ($total == 0) {
+        return 'Não disponível';
+    }
+
+    $positivePercentage = ($sentiment['positive'] / $total) * 100;
+    $negativePercentage = ($sentiment['negative'] / $total) * 100;
+
+    if ($positivePercentage >= 70) return 'Muito Positivo';
+    if ($positivePercentage >= 50) return 'Positivo';
+    if ($negativePercentage >= 70) return 'Muito Negativo';
+    if ($negativePercentage >= 50) return 'Negativo';
+    return 'Neutro';
+}
+
+private function calculateCustomerSatisfactionScore($data)
+{
+    $score = 0;
+    
+    // Pontuação baseada na avaliação média
+    if (!empty($data['rating']) && is_numeric($data['rating'])) {
+        $score += (float)($data['rating'] * 10); // Convertendo explicitamente para float
+    }
+    
+    // Pontuação baseada no volume de avaliações
+    if (!empty($data['reviews_count']) && is_numeric($data['reviews_count'])) {
+        $reviewScore = min((float)($data['reviews_count'] / 10), 20);
+        $score += $reviewScore;
+    }
+    
+    // Pontuação baseada no sentimento das avaliações
+    if (!empty($data['review_analysis']['sentiment'])) {
+        switch ($data['review_analysis']['sentiment']) {
+            case 'Muito Positivo':
+                $score += 30;
+                break;
+            case 'Positivo':
+                $score += 20;
+                break;
+            case 'Neutro':
+                $score += 10;
+                break;
+            case 'Negativo':
+                $score -= 10;
+                break;
+            case 'Muito Negativo':
+                $score -= 20;
+                break;
+        }
+    }
+    
+    // Bônus por ter avaliações detalhadas
+    if (!empty($data['review_analysis']['highlighted_reviews']) && is_array($data['review_analysis']['highlighted_reviews'])) {
+        $score += min(count($data['review_analysis']['highlighted_reviews']) * 3, 10);
+    }
+    
+    // Garante que o score fique entre 0 e 100
+    return max(0, min(100, (float)$score));
+
+    Log::debug('Rating data:', ['rating' => $data['rating'], 'type' => gettype($data['rating'])]);
 }
 
 private function calculateOnlinePresenceScore($data)
@@ -488,16 +643,34 @@ private function processGeminiResponse($analysis)
     return $processed;
 }
 
-private function calculateEngagementRate($competitorData)
+private function calculateEngagementRate($data)
 {
-    $reviews = $competitorData['reviews'] ?? 0;
-    $rating = $competitorData['rating'] ?? 0;
-    
-    if ($reviews > 0 && $rating > 0) {
-        return round(($reviews * $rating) / 100, 2);
+    try {
+        // Verificar se temos os dados necessários
+        if (!isset($data['reviews_count']) || !isset($data['rating'])) {
+            return 0;
+        }
+
+        // Garantir que estamos trabalhando com números
+        $reviewsCount = is_numeric($data['reviews_count']) ? (float)$data['reviews_count'] : 0;
+        $rating = is_numeric($data['rating']) ? (float)$data['rating'] : 0;
+
+        // Cálculo básico da taxa de engajamento
+        // (número de avaliações * média de avaliação) / 100
+        $engagementRate = ($reviewsCount * $rating) / 100;
+
+        // Normalizar para uma escala de 0 a 100
+        $normalizedRate = min(100, max(0, $engagementRate));
+
+        return round($normalizedRate, 2);
+
+    } catch (\Exception $e) {
+        \Log::error('Erro no cálculo da taxa de engajamento: ' . $e->getMessage(), [
+            'data' => $data,
+            'trace' => $e->getTraceAsString()
+        ]);
+        return 0;
     }
-    
-    return 0;
 }
 
 private function analyzeStrengths($competitorData)
