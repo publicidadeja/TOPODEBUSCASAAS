@@ -1674,110 +1674,108 @@ function refreshCompetitors() {
 </div>
 
 <x-modal name="competitor-analysis" :maxWidth="'4xl'">
-    <div class="bg-white p-4 sm:p-6 lg:p-8 rounded-xl">
-        <!-- Header com gradiente -->
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-100 pb-4 sm:pb-6 mb-4 sm:mb-6">
-            <div>
-                <h3 class="text-xl sm:text-2xl font-google-sans font-bold text-gray-800 mb-2">
-                    {{ $competitorAnalysis['title'] ?? 'Análise Detalhada' }}
-                </h3>
-                <p class="text-sm text-gray-500 flex items-center">
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                    Última atualização: {{ now()->format('d/m/Y H:i') }}
-                </p>
-            </div>
-            <button @click="show = false" 
-                    class="mt-4 sm:mt-0 p-2 hover:bg-gray-100 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="bg-white p-6 rounded-xl">
+        <!-- Cabeçalho -->
+        <div class="flex justify-between items-center mb-6 border-b pb-4">
+            <h3 class="text-2xl font-bold text-gray-800">
+                Análise Detalhada do Concorrente
+            </h3>
+            <button @click="show = false" class="text-gray-400 hover:text-gray-500">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
             </button>
         </div>
 
-        <!-- Content -->
-        <div class="grid grid-cols-1 gap-6">
-            <!-- Main Analysis -->
-            <div class="space-y-6">
-                <!-- AI Response Section -->
-                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
-                    <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center font-google-sans">
-                        <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                        </svg>
-                        Análise da IA
-                    </h4>
-                    <div class="prose max-w-none text-gray-700 text-base leading-relaxed animate-fadeIn">
-                        {!! preg_replace(
-                            ['/\*\*(.*?)\*\*/', '/\*(.*?)\*/', '/- (.*?)(\n|$)/', '/\b(importante|atenção|destaque):/i'],
-                            [
-                                '<span class="font-bold text-blue-800">$1</span>',
-                                '<span class="italic text-gray-800">$1</span>',
-                                '<div class="flex items-start space-x-2 my-2">
-                                    <span class="flex-shrink-0 w-1.5 h-1.5 mt-2 bg-blue-500 rounded-full"></span>
-                                    <span>$1</span>
-                                </div>',
-                                '<span class="font-semibold text-red-600">$1:</span>'
-                            ],
-                            nl2br(e($competitorAnalysis['content'] ?? ''))
-                        ) !!}
+        <!-- Conteúdo Principal -->
+        <div class="space-y-6">
+            <!-- Visão Geral -->
+            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl">
+                <h4 class="text-lg font-semibold text-gray-800 mb-4">Visão Geral</h4>
+                <p class="text-gray-700" id="overview-content">
+                    {{ $analysis['overview'] ?? 'Análise não disponível' }}
+                </p>
+            </div>
+
+            <!-- Métricas -->
+            <div class="grid grid-cols-3 gap-4">
+                <!-- Rating -->
+                <div class="bg-white p-4 rounded-xl border border-gray-200">
+                    <div class="text-sm text-gray-500 mb-1">Avaliação Média</div>
+                    <div class="text-2xl font-bold text-blue-600" id="rating-metric">
+                        {{ number_format($analysis['metrics']['rating'] ?? 0, 1) }}
                     </div>
                 </div>
 
-                <!-- Métricas Grid com Animação -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fadeIn">
-                    <!-- Posição Média -->
-                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5 transform hover:scale-105 transition-all duration-300 hover:shadow-lg">
-                        <span class="text-sm text-blue-600 font-medium font-google-sans">Posição Média</span>
-                        <div class="flex items-baseline mt-2">
-                            <p class="text-2xl font-bold text-blue-700">
-                                {{ number_format($metrics['average_position'] ?? 0, 1) }}
-                            </p>
-                            @if(isset($metrics['position_trend']))
-                                <span class="ml-2 text-sm {{ $metrics['position_trend'] > 0 ? 'text-green-500' : 'text-red-500' }}">
-                                    {{ $metrics['position_trend'] > 0 ? '↑' : '↓' }} 
-                                    {{ abs($metrics['position_trend']) }}%
-                                </span>
-                            @endif
-                        </div>
+                <!-- Engagement Rate -->
+                <div class="bg-white p-4 rounded-xl border border-gray-200">
+                    <div class="text-sm text-gray-500 mb-1">Taxa de Engajamento</div>
+                    <div class="text-2xl font-bold text-green-600" id="engagement-metric">
+                        {{ number_format($analysis['metrics']['engagement_rate'] ?? 0, 1) }}%
                     </div>
-                    
-                    <!-- Avaliações -->
-                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-5 transform hover:scale-105 transition-all duration-300 hover:shadow-lg">
-                        <span class="text-sm text-green-600 font-medium font-google-sans">Avaliações</span>
-                        <div class="flex items-baseline mt-2">
-                            <p class="text-2xl font-bold text-green-700">
-                                {{ number_format($metrics['rating'] ?? 0, 1) }}
-                            </p>
-                            @if(isset($metrics['rating_trend']))
-                                <span class="ml-2 text-sm {{ $metrics['rating_trend'] > 0 ? 'text-green-500' : 'text-red-500' }}">
-                                    {{ $metrics['rating_trend'] > 0 ? '↑' : '↓' }} 
-                                    {{ abs($metrics['rating_trend']) }}%
-                                </span>
-                            @endif
-                        </div>
-                    </div>
-                    
-                    <!-- Engajamento -->
-                    <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-5 transform hover:scale-105 transition-all duration-300 hover:shadow-lg">
-                        <span class="text-sm text-purple-600 font-medium font-google-sans">Engajamento</span>
-                        <div class="flex items-baseline mt-2">
-                            <p class="text-2xl font-bold text-purple-700">
-                                {{ number_format($metrics['engagement_rate'] ?? 0, 0) }}%
-                            </p>
-                            @if(isset($metrics['engagement_trend']))
-                                <span class="ml-2 text-sm {{ $metrics['engagement_trend'] > 0 ? 'text-green-500' : 'text-red-500' }}">
-                                    {{ $metrics['engagement_trend'] > 0 ? '↑' : '↓' }} 
-                                    {{ abs($metrics['engagement_trend']) }}%
-                                </span>
-                            @endif
-                        </div>
+                </div>
+
+                <!-- Online Presence -->
+                <div class="bg-white p-4 rounded-xl border border-gray-200">
+                    <div class="text-sm text-gray-500 mb-1">Presença Online</div>
+                    <div class="text-2xl font-bold text-purple-600" id="presence-metric">
+                        {{ number_format($analysis['metrics']['online_presence_score'] ?? 0, 0) }}%
                     </div>
                 </div>
             </div>
+
+            <!-- Pontos Fortes e Oportunidades -->
+            <div class="grid grid-cols-2 gap-6">
+                <!-- Pontos Fortes -->
+                <div class="bg-green-50 p-6 rounded-xl">
+                    <h4 class="text-lg font-semibold text-green-800 mb-4">Pontos Fortes</h4>
+                    <ul class="space-y-2" id="strengths-list">
+                        @foreach($analysis['strengths'] ?? [] as $strength)
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span>{{ $strength }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+
+                <!-- Oportunidades -->
+                <div class="bg-yellow-50 p-6 rounded-xl">
+                    <h4 class="text-lg font-semibold text-yellow-800 mb-4">Oportunidades</h4>
+                    <ul class="space-y-2" id="opportunities-list">
+                        @foreach($analysis['opportunities'] ?? [] as $opportunity)
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 text-yellow-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span>{{ $opportunity }}</span>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Recomendações -->
+            <div class="bg-indigo-50 p-6 rounded-xl">
+                <h4 class="text-lg font-semibold text-indigo-800 mb-4">Recomendações</h4>
+                <ul class="space-y-4" id="recommendations-list">
+                    @foreach($analysis['recommendations'] ?? [] as $recommendation)
+                        <li class="bg-white p-4 rounded-lg shadow-sm">
+                            <div class="flex items-start">
+                                <svg class="w-5 h-5 text-indigo-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                </svg>
+                                <span>{{ $recommendation }}</span>
+                            </div>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
         </div>
     </div>
+
 
 
 <style>

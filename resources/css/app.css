@@ -257,4 +257,53 @@ input:checked + .slider:before {
       opacity: 1;
   }
 }
+
+/* Estilos para cards de análise */
+.analysis-card {
+  @apply bg-white rounded-lg shadow-sm p-6 transition-all duration-200;
+}
+
+.analysis-card:hover {
+  @apply shadow-md transform -translate-y-1;
+}
+
+/* Estilos para métricas */
+.metric-item {
+  @apply flex items-center justify-between p-4 border-b border-gray-100;
+}
+
+.metric-value {
+  @apply text-2xl font-bold text-blue-600;
+}
+
+/* Estilos para gráficos */
+.chart-container {
+  @apply bg-white p-4 rounded-lg shadow-sm;
+  height: 300px;
+}
+
+/* Estilos para tags de palavras-chave */
+.keyword-tag {
+  @apply inline-block px-3 py-1 rounded-full text-sm mr-2 mb-2;
+  @apply bg-blue-100 text-blue-800;
+}
+
+/* Estilos para indicadores sociais */
+.social-indicator {
+  @apply flex items-center space-x-2 p-2;
+}
+
+.social-indicator-icon {
+  @apply w-6 h-6 text-gray-600;
+}
+
+/* Estilos para scores */
+.score-indicator {
+  @apply relative w-full h-2 bg-gray-200 rounded-full overflow-hidden;
+}
+
+.score-bar {
+  @apply absolute left-0 top-0 h-full transition-all duration-300;
+  @apply bg-blue-600;
+}
 }

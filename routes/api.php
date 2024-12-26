@@ -7,6 +7,15 @@ use App\Http\Controllers\BusinessImageController;
 use App\Http\Controllers\GoogleController;
 use App\Http\Controllers\CompetitorAnalysisController;
 
+Route::prefix('competitors')->group(function () {
+    Route::get('/keywords/{name}', [CompetitorAnalysisController::class, 'getKeywords']);
+    Route::get('/social-presence/{name}', [CompetitorAnalysisController::class, 'getSocialPresence']);
+    Route::get('/search-volume/{name}', [CompetitorAnalysisController::class, 'getSearchVolume']);
+    Route::get('/full-analysis/{name}', [CompetitorAnalysisController::class, 'getFullAnalysis']);
+});
+
+Route::post('/competitors/analyze-single', [CompetitorAnalysisController::class, 'analyzeSingle']);
+
 
 Route::post('/competitors/analyze-single', [CompetitorAnalysisController::class, 'analyzeSingle'])
     ->name('api.competitors.analyze-single');
