@@ -716,47 +716,5 @@ private function extractBulletPoints($text, $sectionName)
     }
     return [];
 }
-
-
-public function generateCompetitorAnalysis($prompt)
-{
-    try {
-        $response = Http::withHeaders([
-            'Content-Type' => 'application/json',
-        ])->post($this->apiEndpoint . '?key=' . $this->apiKey, [
-            'contents' => [
-                [
-                    'parts' => [
-                        ['text' => $prompt]
-                    ]
-                ]
-            ],
-            'generationConfig' => [
-                'temperature' => 0.7,
-                'topK' => 40,
-                'topP' => 0.95,
-                'maxOutputTokens' => 2048,
-            ]
-        ]);
-
-        if ($response->successful()) {
-            $data = $response->json();
-            if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
-                return $data['candidates'][0]['content']['parts'][0]['text'];
-            }
-        }
-
-        Log::error('Erro na resposta da API Gemini', [
-            'response' => $response->json(),
-            'status' => $response->status()
-        ]);
-
-        return 'Não foi possível gerar a análise. Tente novamente.';
-
-    } catch (\Exception $e) {
-        Log::error('Erro ao gerar análise com Gemini: ' . $e->getMessage());
-        return 'Ocorreu um erro ao processar sua solicitação.';
-    }
-}
     
 }

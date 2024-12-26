@@ -8,7 +8,6 @@ use App\Services\SerperService;
 use App\Models\Business;
 use Illuminate\Http\Request;
 use App\Services\GeminiService;
-use Illuminate\Support\Facades\Log; 
 
 class CompetitorAnalysisController extends Controller
 {
@@ -325,66 +324,53 @@ private function isRelevantCompetitor($result, $business)
 public function analyzeSingle(Request $request)
 {
     try {
-        $competitor = $request->all();
-        
-        // Fix the competitor_data if it's malformed
-        if (!empty($competitor['competitor_data'])) {
-            if (is_array($competitor['competitor_data']) && isset($competitor['competitor_data'][0])) {
-                // If the data is split into characters, join them back
-                $jsonString = implode('', $competitor['competitor_data']);
-                // Decode the JSON string
-                $decodedData = json_decode($jsonString, true);
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    $competitor['competitor_data'] = $decodedData;
-                }
-            }
+        $name = $request->input('name');
+        $address = $request->input('address');
+        $competitorData = $request->input('competitor_data');
+
+        // Verificar se competitorData é uma string JSON e converter para array
+        if (is_string($competitorData)) {
+            $competitorData = json_decode($competitorData, true);
         }
 
-        // Extract rating and total_reviews from competitor_data if available
-        if (!empty($competitor['competitor_data'])) {
-            $competitor['rating'] = $competitor['competitor_data']['rating'] ?? 0;
-            $competitor['total_reviews'] = $competitor['competitor_data']['total_ratings'] ?? 0;
-        }
+        // Definir valores padrão para os dados do competidor
+        $competitorData = array_merge([
+            'name' => $name,
+            'address' => $address,
+            'rating' => 0,
+            'reviews' => 0,
+            'website' => '',
+            'status' => 'OPERATIONAL'
+        ], $competitorData ?? []);
 
-        // Busca informações adicionais
-        $keywords = $this->serper->getRankingKeywords($competitor);
-        $socialMedia = $this->getSocialMediaPresence($competitor);
-        
-        // Adiciona as informações ao competitor
-        $competitor['keywords'] = $keywords;
-        $competitor['social_media'] = $socialMedia;
+        // Construir a prompt para a análise
+        $prompt = "Analise o seguinte estabelecimento comercial:\n" .
+                 "Nome: {$competitorData['name']}\n" .
+                 "Endereço: {$competitorData['address']}\n" .
+                 "Avaliação: {$competitorData['rating']}\n" .
+                 "Total de Avaliações: {$competitorData['reviews']}\n" .
+                 "Forneça uma análise detalhada incluindo:\n" .
+                 "1. Visão geral do negócio\n" .
+                 "2. Pontos fortes\n" .
+                 "3. Oportunidades de melhoria\n" .
+                 "4. Recomendações estratégicas";
 
-        // Construir prompt para análise
-        $prompt = $this->buildAnalysisPrompt($competitor);
-        
         // Usar o GeminiService para gerar a análise
         $analysis = $this->gemini->generateContent($prompt);
 
         // Processar a resposta do Gemini
         $processedAnalysis = $this->processGeminiResponse($analysis);
 
-        // Calcular métricas
-        $engagementRate = $this->calculateEngagementRate($competitor);
-        $onlinePresenceScore = $this->calculateOnlinePresenceScore($competitor);
-        $customerSatisfactionScore = $this->calculateCustomerSatisfactionScore($competitor);
-
-        // Formatar a análise final
+        // Formatar a resposta
         $formattedAnalysis = [
             'overview' => $processedAnalysis['overview'] ?? 'Análise não disponível',
             'strengths' => $processedAnalysis['strengths'] ?? [],
             'opportunities' => $processedAnalysis['opportunities'] ?? [],
             'recommendations' => $processedAnalysis['recommendations'] ?? [],
             'metrics' => [
-                'rating' => floatval($competitor['rating'] ?? 0),
-                'reviews' => intval($competitor['total_reviews'] ?? 0),
-                'engagement_rate' => $engagementRate,
-                'online_presence_score' => $onlinePresenceScore,
-                'customer_satisfaction_score' => $customerSatisfactionScore
-            ],
-            'presence' => [
-                'has_website' => !empty($competitor['website']),
-                'has_social_media' => !empty($socialMedia),
-                'has_keywords' => !empty($keywords)
+                'rating' => $competitorData['rating'] ?? 0,
+                'reviews' => $competitorData['reviews'] ?? 0,
+                'engagement_rate' => $this->calculateEngagementRate($competitorData)
             ]
         ];
 
@@ -392,294 +378,13 @@ public function analyzeSingle(Request $request)
             'success' => true,
             'analysis' => $formattedAnalysis
         ]);
-
     } catch (\Exception $e) {
         Log::error('Erro na análise do concorrente: ' . $e->getMessage());
-        Log::error('Stack trace: ' . $e->getTraceAsString());
         return response()->json([
             'success' => false,
             'message' => 'Erro ao analisar concorrente: ' . $e->getMessage()
         ], 500);
     }
-}
-
-private function buildAnalysisPrompt($competitor)
-{
-    $prompt = "Analise detalhadamente o seguinte estabelecimento comercial:\n\n";
-    $prompt .= "Nome: " . ($competitor['name'] ?? 'Não disponível') . "\n";
-    $prompt .= "Endereço: " . ($competitor['address'] ?? 'Não disponível') . "\n";
-    $prompt .= "Avaliação: " . number_format(floatval($competitor['rating'] ?? 0), 1) . "\n";
-    $prompt .= "Total de Avaliações: " . intval($competitor['total_reviews'] ?? 0) . "\n";
-
-    if (!empty($competitor['keywords'])) {
-        $prompt .= "\nPalavras-chave principais:\n";
-        foreach ($competitor['keywords'] as $keyword => $data) {
-            if (is_array($data)) {
-                $prompt .= "- $keyword\n";
-            } else {
-                $prompt .= "- $data\n";
-            }
-        }
-    }
-
-    if (!empty($competitor['social_media'])) {
-        $prompt .= "\nPresença em Redes Sociais:\n";
-        foreach ($competitor['social_media'] as $platform => $url) {
-            if (is_string($url)) {
-                $prompt .= "- $platform: $url\n";
-            }
-        }
-    }
-
-    $prompt .= "\nForneça uma análise completa incluindo:\n";
-    $prompt .= "1. Resumo executivo do negócio\n";
-    $prompt .= "2. Pontos fortes identificados\n";
-    $prompt .= "3. Oportunidades de melhoria\n";
-    $prompt .= "4. Recomendações estratégicas específicas\n";
-
-    return $prompt;
-}
-
-private function generateComprehensiveAnalysisPrompt($data)
-{
-    return "Analise detalhadamente o seguinte concorrente:
-
-Nome: {$data['basic_info']['name']}
-Endereço: {$data['basic_info']['address']}
-
-POSICIONAMENTO:
-- Palavras-chave principais: " . implode(", ", $data['keywords']['main_keywords']) . "
-- Proposta de valor: {$data['content']['value_proposition']}
-
-PERFORMANCE:
-- Avaliação média: {$data['basic_info']['rating']}
-- Total de avaliações: {$data['basic_info']['reviews_count']}
-- Desempenho em redes sociais: {$data['social_media']['summary']}
-
-ANÁLISE DE PÚBLICO:
-- Demografia principal: {$data['demographics']['primary_audience']}
-- Interesses identificados: " . implode(", ", $data['demographics']['interests']) . "
-
-Por favor, forneça:
-1. Resumo executivo do posicionamento do concorrente
-2. Análise detalhada dos pontos fortes e fracos
-3. Oportunidades identificadas no mercado
-4. Recomendações estratégicas para competir
-5. Análise comparativa de mercado";
-}
-
-private function analyzeKeywords($competitor)
-{
-    return [
-        'main_keywords' => $this->serper->extractKeywords($competitor),
-        'search_volume' => $this->serper->getSearchVolume($competitor),
-        'ranking_keywords' => $this->serper->getRankingKeywords($competitor)
-    ];
-}
-
-private function analyzeSocialMedia($competitor)
-{
-    return [
-        'platforms' => $this->getSocialMediaPresence($competitor),
-        'engagement_metrics' => $this->getSocialMediaEngagement($competitor),
-        'content_analysis' => $this->analyzeSocialContent($competitor),
-        'summary' => $this->generateSocialMediaSummary($competitor)
-    ];
-}
-
-private function getSocialMediaPresence($competitor)
-{
-    try {
-        $socialMedia = [];
-        
-        // Verifica redes sociais já presentes nos dados
-        if (isset($competitor['social_media'])) {
-            return $competitor['social_media'];
-        }
-
-        // Extrai do website se disponível
-        if (!empty($competitor['website'])) {
-            $domain = parse_url($competitor['website'], PHP_URL_HOST);
-            
-            // Busca por links de redes sociais no website
-            try {
-                $response = Http::get($competitor['website']);
-                $content = $response->body();
-                
-                // Procura por links de redes sociais
-                $patterns = [
-                    'facebook' => '/facebook\.com\/[a-zA-Z0-9\.]+/',
-                    'instagram' => '/instagram\.com\/[a-zA-Z0-9\.]+/',
-                    'linkedin' => '/linkedin\.com\/[a-zA-Z0-9\/\-]+/',
-                    'twitter' => '/twitter\.com\/[a-zA-Z0-9_]+/'
-                ];
-
-                foreach ($patterns as $platform => $pattern) {
-                    if (preg_match($pattern, $content, $matches)) {
-                        $socialMedia[$platform] = 'https://' . $matches[0];
-                    }
-                }
-            } catch (\Exception $e) {
-                Log::warning('Erro ao buscar redes sociais no website: ' . $e->getMessage());
-            }
-        }
-
-        // Usa o serviço Serper para buscar redes sociais
-        if (empty($socialMedia)) {
-            $socialMedia = $this->serper->getSocialMediaPresence([
-                'name' => $competitor['name'] ?? parse_url($competitor['website'], PHP_URL_HOST) ?? '',
-                'website' => $competitor['website'] ?? ''
-            ]);
-        }
-
-        return $socialMedia;
-    } catch (\Exception $e) {
-        Log::error('Erro ao obter presença em redes sociais: ' . $e->getMessage());
-        return [];
-    }
-}
-
-private function analyzeReputation($competitor)
-{
-    return [
-        'rating_analysis' => $this->processReviews($competitor['reviews'] ?? []),
-        'sentiment_analysis' => $this->analyzeSentiment($competitor['reviews'] ?? []),
-        'review_trends' => $this->analyzeReviewTrends($competitor['reviews'] ?? [])
-    ];
-}
-
-private function analyzeContent($competitor)
-{
-    return [
-        'value_proposition' => $this->extractValueProposition($competitor),
-        'content_quality' => $this->assessContentQuality($competitor),
-        'publication_frequency' => $this->analyzePublicationFrequency($competitor),
-        'content_topics' => $this->extractContentTopics($competitor)
-    ];
-}
-
-private function analyzeDemographics($competitor)
-{
-    return [
-        'primary_audience' => $this->identifyPrimaryAudience($competitor),
-        'interests' => $this->extractAudienceInterests($competitor),
-        'behavior_patterns' => $this->analyzeBehaviorPatterns($competitor)
-    ];
-}
-
-private function processReviews($reviews)
-{
-    if (empty($reviews)) {
-        return [];
-    }
-
-    return array_map(function($review) {
-        return [
-            'rating' => $review['rating'] ?? 0,
-            'text' => $review['text'] ?? '',
-            'date' => $review['date'] ?? '',
-            'author' => $review['author'] ?? '',
-            'language' => $review['language'] ?? 'pt-BR'
-        ];
-    }, array_slice($reviews, 0, 10)); // Limita a 10 avaliações mais recentes
-}
-
-private function analyzeReviews($reviews)
-{
-    $sentiment = ['positive' => 0, 'negative' => 0, 'neutral' => 0];
-    $praises = [];
-    $complaints = [];
-    $highlighted_reviews = [];
-
-    foreach ($reviews as $review) {
-        // Análise de sentimento baseada na avaliação
-        if ($review['rating'] >= 4) {
-            $sentiment['positive']++;
-            if (!empty($review['text'])) {
-                $praises[] = $review['text'];
-            }
-        } elseif ($review['rating'] <= 2) {
-            $sentiment['negative']++;
-            if (!empty($review['text'])) {
-                $complaints[] = $review['text'];
-            }
-        } else {
-            $sentiment['neutral']++;
-        }
-
-        // Seleciona avaliações relevantes (com texto substancial)
-        if (!empty($review['text']) && strlen($review['text']) > 50) {
-            $highlighted_reviews[] = [
-                'text' => $review['text'],
-                'rating' => $review['rating'],
-                'date' => $review['date'],
-                'author' => $review['author']
-            ];
-        }
-    }
-
-    return [
-        'sentiment' => $this->determineSentiment($sentiment),
-        'top_praises' => array_slice($praises, 0, 3),
-        'top_complaints' => array_slice($complaints, 0, 3),
-        'highlighted_reviews' => array_slice($highlighted_reviews, 0, 3),
-        'stats' => $sentiment
-    ];
-}
-
-private function determineSentiment($sentiment)
-{
-    $total = array_sum($sentiment);
-    if ($total == 0) {
-        return 'Não disponível';
-    }
-
-    $positivePercentage = ($sentiment['positive'] / $total) * 100;
-    $negativePercentage = ($sentiment['negative'] / $total) * 100;
-
-    if ($positivePercentage >= 70) return 'Muito Positivo';
-    if ($positivePercentage >= 50) return 'Positivo';
-    if ($negativePercentage >= 70) return 'Muito Negativo';
-    if ($negativePercentage >= 50) return 'Negativo';
-    return 'Neutro';
-}
-
-private function calculateCustomerSatisfactionScore($competitor)
-{
-    // Ensure we have valid rating and review values
-    $rating = floatval($competitor['rating'] ?? 0);
-    $totalReviews = intval($competitor['total_reviews'] ?? 0);
-
-    // Calculate base score from rating (0-100)
-    $baseScore = ($rating / 5) * 100;
-
-    // Weight based on number of reviews
-    $reviewWeight = min(1, $totalReviews / 100); // Max weight at 100 reviews
-
-    // Final weighted score
-    return round($baseScore * $reviewWeight);
-}
-
-private function calculateOnlinePresenceScore($competitor)
-{
-    $score = 0;
-    
-    // Website presence
-    if (!empty($competitor['website'])) {
-        $score += 30;
-    }
-
-    // Social media presence
-    if (!empty($competitor['social_media'])) {
-        $score += count($competitor['social_media']) * 10; // 10 points per social media platform
-    }
-
-    // Reviews presence
-    if (($competitor['total_reviews'] ?? 0) > 0) {
-        $score += min(30, ($competitor['total_reviews'] / 10) * 3); // Max 30 points for reviews
-    }
-
-    return min(100, $score); // Cap at 100
 }
 
 private function processGeminiResponse($analysis)
@@ -732,19 +437,16 @@ private function processGeminiResponse($analysis)
     return $processed;
 }
 
-private function calculateEngagementRate($competitor)
+private function calculateEngagementRate($competitorData)
 {
-    $totalReviews = intval($competitor['total_reviews'] ?? 0);
-    $rating = floatval($competitor['rating'] ?? 0);
-
-    if ($totalReviews === 0) {
-        return 0;
-    }
-
-    // Calculate engagement rate based on reviews and rating
-    $engagementRate = ($totalReviews * ($rating / 5)) / 100;
+    $reviews = $competitorData['reviews'] ?? 0;
+    $rating = $competitorData['rating'] ?? 0;
     
-    return round($engagementRate * 100, 2); // Convert to percentage with 2 decimal places
+    if ($reviews > 0 && $rating > 0) {
+        return round(($reviews * $rating) / 100, 2);
+    }
+    
+    return 0;
 }
 
 private function analyzeStrengths($competitorData)
@@ -826,90 +528,6 @@ private function getRatingAnalysis($rating)
     } else {
         return "desafios significativos na satisfação do cliente.";
     }
-}
-
-private function analyzeCompetitorData($competitor)
-{
-    // Usar cache para otimizar performance
-    $cacheKey = 'competitor_analysis_' . md5(json_encode($competitor));
-    
-    return Cache::remember($cacheKey, now()->addHours(24), function () use ($competitor) {
-        $keywords = $this->serper->extractKeywords($competitor['name']);
-        $socialPresence = $this->serper->getSocialMediaPresence($competitor);
-        $searchVolume = $this->serper->getSearchVolume($competitor['name']);
-        
-        return [
-            'keywords' => $keywords,
-            'social_presence' => $socialPresence,
-            'search_volume' => $searchVolume,
-            'metrics' => [
-                'keyword_strength' => $this->calculateKeywordStrength($keywords),
-                'social_engagement' => $this->calculateSocialEngagement($socialPresence),
-                'market_presence' => $this->calculateMarketPresence($searchVolume)
-            ]
-        ];
-    });
-}
-
-private function calculateKeywordStrength($keywords)
-{
-    $totalMentions = array_sum($keywords);
-    $uniqueKeywords = count($keywords);
-    
-    return min(10, ($totalMentions / 100) + ($uniqueKeywords / 10));
-}
-
-private function calculateSocialEngagement($socialPresence)
-{
-    $score = 0;
-    foreach ($socialPresence as $platform => $data) {
-        if ($data !== null) {
-            $score += 2.5; // 2.5 pontos por plataforma ativa
-        }
-    }
-    return min(10, $score);
-}
-
-private function calculateMarketPresence($searchVolume)
-{
-    return min(10, ($searchVolume['monthly_searches'] / 1000));
-}
-
-
-private function getCachedAnalysis($competitor)
-{
-    $cacheKey = 'competitor_analysis_' . md5(json_encode($competitor));
-    
-    return Cache::remember($cacheKey, now()->addHours(24), function () use ($competitor) {
-        return $this->performFullAnalysis($competitor);
-    });
-}
-
-private function performFullAnalysis($competitor)
-{
-    $basicInfo = $this->serper->searchSpecificCompetitor($competitor['name'], $competitor['address']);
-    $keywords = $this->serper->extractKeywords($competitor['name']);
-    $socialPresence = $this->serper->getSocialMediaPresence($competitor);
-    $searchVolume = $this->serper->getSearchVolume($competitor['name']);
-
-    return [
-        'basic_info' => $basicInfo,
-        'keywords' => $keywords,
-        'social_presence' => $socialPresence,
-        'search_volume' => $searchVolume,
-        'metrics' => [
-            'keyword_strength' => $this->calculateKeywordStrength($keywords),
-            'social_engagement' => $this->calculateSocialEngagement($socialPresence),
-            'market_presence' => $this->calculateMarketPresence($searchVolume)
-        ],
-        'updated_at' => now()
-    ];
-}
-
-public function invalidateCache($competitor)
-{
-    $cacheKey = 'competitor_analysis_' . md5(json_encode($competitor));
-    Cache::forget($cacheKey);
 }
     
 }
