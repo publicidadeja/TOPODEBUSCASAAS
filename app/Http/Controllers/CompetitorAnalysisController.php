@@ -369,5 +369,122 @@ private function isRelevantCompetitor($result, $business)
 
     return true;
 }
+
+public function analyzeSingle(Request $request)
+{
+    try {
+        $validated = $request->validate([
+            'name' => 'required|string',
+            'address' => 'required|string',
+            'competitor_data' => 'required|array'
+        ]);
+
+        // Análise básica do concorrente
+        $analysis = [
+            'overview' => $this->generateOverview($validated['competitor_data']),
+            'strengths' => $this->analyzeStrengths($validated['competitor_data']),
+            'opportunities' => $this->analyzeOpportunities($validated['competitor_data']),
+            'recommendations' => $this->generateRecommendations($validated['competitor_data'])
+        ];
+
+        return response()->json([
+            'success' => true,
+            'analysis' => $analysis
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao analisar concorrente: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+private function generateOverview($competitorData)
+{
+    $rating = $competitorData['rating'] ?? 'N/A';
+    $reviews = $competitorData['total_ratings'] ?? 0;
+    
+    return "Este estabelecimento possui uma avaliação média de {$rating} estrelas baseada em {$reviews} avaliações. " .
+           "Localizado em {$competitorData['address']}, o negócio demonstra " .
+           $this->getRatingAnalysis($rating);
+}
+
+private function analyzeStrengths($competitorData)
+{
+    $strengths = [];
+    
+    if (isset($competitorData['rating']) && $competitorData['rating'] >= 4.5) {
+        $strengths[] = "Excelente reputação com clientes (Rating {$competitorData['rating']}/5)";
+    }
+    
+    if (isset($competitorData['total_ratings']) && $competitorData['total_ratings'] > 100) {
+        $strengths[] = "Base sólida de avaliações ({$competitorData['total_ratings']} reviews)";
+    }
+    
+    if (!empty($competitorData['photos'])) {
+        $strengths[] = "Forte presença visual com " . count($competitorData['photos']) . " fotos";
+    }
+    
+    return $strengths;
+}
+
+private function analyzeOpportunities($competitorData)
+{
+    $opportunities = [];
+    
+    if (isset($competitorData['rating']) && $competitorData['rating'] < 4.5) {
+        $opportunities[] = "Potencial para superar a avaliação média do concorrente";
+    }
+    
+    if (empty($competitorData['website'])) {
+        $opportunities[] = "Concorrente sem presença web - oportunidade para diferenciação digital";
+    }
+    
+    if (empty($competitorData['photos']) || count($competitorData['photos']) < 5) {
+        $opportunities[] = "Oportunidade para melhor apresentação visual do negócio";
+    }
+    
+    return $opportunities;
+}
+
+private function generateRecommendations($competitorData)
+{
+    $recommendations = [];
+    
+    // Recomendações baseadas na avaliação
+    if (isset($competitorData['rating'])) {
+        if ($competitorData['rating'] >= 4.5) {
+            $recommendations[] = "Focar em manter o alto padrão de qualidade e buscar diferenciais adicionais";
+        } else {
+            $recommendations[] = "Identificar pontos de melhoria para superar a avaliação do concorrente";
+        }
+    }
+    
+    // Recomendações baseadas na presença digital
+    if (empty($competitorData['website'])) {
+        $recommendations[] = "Investir em presença digital forte para se destacar da concorrência";
+    }
+    
+    // Recomendações baseadas no conteúdo visual
+    if (empty($competitorData['photos']) || count($competitorData['photos']) < 5) {
+        $recommendations[] = "Desenvolver um portfólio visual mais robusto que o concorrente";
+    }
+    
+    return $recommendations;
+}
+
+private function getRatingAnalysis($rating)
+{
+    if ($rating >= 4.5) {
+        return "uma performance excepcional no mercado.";
+    } elseif ($rating >= 4.0) {
+        return "uma boa performance, com espaço para melhorias.";
+    } elseif ($rating >= 3.5) {
+        return "uma performance mediana, indicando oportunidades significativas.";
+    } else {
+        return "desafios significativos na satisfação do cliente.";
+    }
+}
     
 }

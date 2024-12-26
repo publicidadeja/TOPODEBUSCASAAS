@@ -555,5 +555,34 @@ private function isValidImageUrl($url)
     return in_array($extension, $imageExtensions);
 }
 
+public function searchSpecificCompetitor($name, $address)
+{
+    try {
+        $query = sprintf('"%s" "%s"', $name, $address);
+        
+        $response = Http::withHeaders([
+            'X-API-KEY' => $this->apiKey,
+            'Content-Type' => 'application/json'
+        ])->post($this->apiEndpoint, [
+            'q' => $query,
+            'gl' => 'br',
+            'hl' => 'pt-br',
+            'type' => 'places'
+        ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+            $places = $data['places'] ?? [];
+            
+            // Retorna apenas o primeiro resultado mais relevante
+            return !empty($places) ? $places[0] : [];
+        }
+
+        return [];
+    } catch (\Exception $e) {
+        \Log::error('Erro na busca específica do Serper: ' . $e->getMessage());
+        throw $e;
+    }
+}
 
 }

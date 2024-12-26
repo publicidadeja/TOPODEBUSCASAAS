@@ -14,6 +14,9 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\CompetitorAnalysisController;
 use App\Http\Controllers\MarketAnalysisController;
 
+Route::post('/analyze-single-competitor', [CompetitorAnalysisController::class, 'analyzeSingleCompetitor'])
+    ->name('analyze.single.competitor');
+
 Route::get('/analytics/export-competitor-analysis/{business}', [MarketAnalysisController::class, 'exportCompetitorAnalysis'])
     ->name('analytics.export.competitor-analysis');
 

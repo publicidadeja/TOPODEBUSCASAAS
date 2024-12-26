@@ -1375,11 +1375,14 @@ function createCompetitorCard(competitor) {
                             </svg>
                             Ver no Maps
                         </a>
-                        <button
-    onclick="analyzeCompetitor('${competitor.place_id}', '${encodeURIComponent(competitor.name)}')"
-    class="inline-flex items-center px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors">
+<button 
+    onclick="analyzeSingleCompetitor(this.dataset.name, this.dataset.address, this.dataset.competitor)"
+    data-name="${competitor.name}"
+    data-address="${competitor.address}"
+    data-competitor='${JSON.stringify(competitor)}'
+    class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
     </svg>
     Analisar Concorrente
 </button>
@@ -2950,6 +2953,85 @@ function updateLastUpdate() {
     if (lastUpdate) {
         lastUpdate.textContent = `Última atualização: ${new Date().toLocaleTimeString()}`;
     }
+}
+</script>
+
+<script>
+function analyzeSingleCompetitor(name, address, competitorData) {
+    // Mostrar loading com SweetAlert2
+    Swal.fire({
+        title: `Analisando ${name}...`,
+        html: 'Isso pode levar alguns segundos',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // Fazer a requisição para o backend
+    fetch('/api/competitors/analyze-single', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+            name: name,
+            address: address,
+            competitor_data: competitorData
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mostrar resultado em um modal mais elaborado
+            Swal.fire({
+                title: 'Análise do Concorrente',
+                html: `
+                    <div class="text-left">
+                        <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+                            <h3 class="font-bold mb-2">Visão Geral</h3>
+                            <p>${data.analysis.overview}</p>
+                        </div>
+                        
+                        <div class="mb-4 p-4 bg-blue-50 rounded-lg">
+                            <h3 class="font-bold mb-2">Pontos Fortes</h3>
+                            <ul class="list-disc pl-4">
+                                ${data.analysis.strengths.map(s => `<li>${s}</li>`).join('')}
+                            </ul>
+                        </div>
+                        
+                        <div class="mb-4 p-4 bg-yellow-50 rounded-lg">
+                            <h3 class="font-bold mb-2">Oportunidades</h3>
+                            <ul class="list-disc pl-4">
+                                ${data.analysis.opportunities.map(o => `<li>${o}</li>`).join('')}
+                            </ul>
+                        </div>
+                        
+                        <div class="p-4 bg-green-50 rounded-lg">
+                            <h3 class="font-bold mb-2">Recomendações</h3>
+                            <ul class="list-disc pl-4">
+                                ${data.analysis.recommendations.map(r => `<li>${r}</li>`).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                `,
+                width: '800px',
+                confirmButtonText: 'Fechar',
+                confirmButtonColor: '#3085d6'
+            });
+        } else {
+            throw new Error(data.message || 'Erro ao analisar concorrente');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: error.message || 'Não foi possível realizar a análise do concorrente'
+        });
+    });
 }
 </script>
 </x-app-layout>
