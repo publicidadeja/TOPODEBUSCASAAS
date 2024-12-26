@@ -323,37 +323,53 @@ private function isRelevantCompetitor($result, $business)
 public function analyzeSingle(Request $request)
 {
     try {
-        // Log dos dados recebidos
-        \Log::info('Dados recebidos na requisição:', $request->all());
-
+        // Validação dos dados recebidos
         $validated = $request->validate([
             'name' => 'required|string',
             'address' => 'required|string',
             'competitor_data' => 'required|array'
         ]);
 
-        // Log dos dados validados
-        \Log::info('Dados validados:', $validated);
-
-        $analysis = [
-            'overview' => $this->generateOverview($validated['competitor_data']),
-            'strengths' => $this->analyzeStrengths($validated['competitor_data']),
-            'opportunities' => $this->analyzeOpportunities($validated['competitor_data']),
-            'recommendations' => $this->generateRecommendations($validated['competitor_data'])
+        // Processa os dados do competidor
+        $competitorData = $validated['competitor_data'];
+        
+        // Gera a visão geral
+        $overview = $this->generateOverview($competitorData);
+        
+        // Prepara as métricas
+        $metrics = [
+            'rating' => $competitorData['rating'] ?? 'N/A',
+            'reviews' => $competitorData['total_ratings'] ?? $competitorData['reviews'] ?? 'N/A',
+            'photos' => count($competitorData['photos'] ?? []),
+            'has_website' => !empty($competitorData['website']),
+            'has_phone' => !empty($competitorData['phone'])
         ];
 
-        // Log da análise gerada
-        \Log::info('Análise gerada:', $analysis);
+        // Analisa os pontos fortes
+        $strengths = $this->analyzeStrengths($competitorData);
 
-        return response()->json([
+        // Analisa as oportunidades
+        $opportunities = $this->analyzeOpportunities($competitorData);
+
+        // Gera recomendações
+        $recommendations = $this->generateRecommendations($competitorData);
+
+        // Monta a resposta
+        $analysis = [
             'success' => true,
-            'analysis' => $analysis
-        ]);
+            'analysis' => [
+                'overview' => $overview,
+                'metrics' => $metrics,
+                'strengths' => $strengths,
+                'opportunities' => $opportunities,
+                'recommendations' => $recommendations
+            ]
+        ];
+
+        return response()->json($analysis);
 
     } catch (\Exception $e) {
         \Log::error('Erro na análise do concorrente: ' . $e->getMessage());
-        \Log::error('Stack trace: ' . $e->getTraceAsString());
-        
         return response()->json([
             'success' => false,
             'message' => 'Erro ao analisar concorrente: ' . $e->getMessage()
@@ -363,75 +379,95 @@ public function analyzeSingle(Request $request)
 
 private function generateOverview($competitorData)
 {
-    $rating = $competitorData['rating'] ?? 'N/A';
-    $reviews = $competitorData['total_ratings'] ?? 0;
+    $overview = "Análise do estabelecimento {$competitorData['name']}:\n\n";
     
-    return "Este estabelecimento possui uma avaliação média de {$rating} estrelas baseada em {$reviews} avaliações. " .
-           "Localizado em {$competitorData['address']}, o negócio demonstra " .
-           $this->getRatingAnalysis($rating);
+    if (isset($competitorData['rating'])) {
+        $overview .= "Avaliação média de {$competitorData['rating']}/5 ";
+        $overview .= isset($competitorData['total_ratings']) ? 
+            "baseada em {$competitorData['total_ratings']} avaliações. " : ". ";
+    }
+
+    if (isset($competitorData['status'])) {
+        $overview .= "O estabelecimento está " . 
+            ($competitorData['status'] === 'OPERATIONAL' ? 'ativo' : 'inativo') . ". ";
+    }
+
+    if (!empty($competitorData['photos'])) {
+        $overview .= "Possui " . count($competitorData['photos']) . " fotos disponíveis. ";
+    }
+
+    if (!empty($competitorData['website'])) {
+        $overview .= "Mantém presença online através de website próprio. ";
+    }
+
+    return $overview;
 }
 
 private function analyzeStrengths($competitorData)
 {
     $strengths = [];
-    
-    if (isset($competitorData['rating']) && $competitorData['rating'] >= 4.5) {
+
+    if (isset($competitorData['rating']) && $competitorData['rating'] >= 4.0) {
         $strengths[] = "Excelente reputação com clientes (Rating {$competitorData['rating']}/5)";
     }
-    
+
     if (isset($competitorData['total_ratings']) && $competitorData['total_ratings'] > 100) {
         $strengths[] = "Base sólida de avaliações ({$competitorData['total_ratings']} reviews)";
     }
-    
+
     if (!empty($competitorData['photos'])) {
         $strengths[] = "Forte presença visual com " . count($competitorData['photos']) . " fotos";
     }
-    
+
+    if (!empty($competitorData['website'])) {
+        $strengths[] = "Presença digital estabelecida com website próprio";
+    }
+
     return $strengths;
 }
 
 private function analyzeOpportunities($competitorData)
 {
     $opportunities = [];
-    
-    if (isset($competitorData['rating']) && $competitorData['rating'] < 4.5) {
-        $opportunities[] = "Potencial para superar a avaliação média do concorrente";
-    }
-    
+
     if (empty($competitorData['website'])) {
         $opportunities[] = "Concorrente sem presença web - oportunidade para diferenciação digital";
     }
-    
+
     if (empty($competitorData['photos']) || count($competitorData['photos']) < 5) {
         $opportunities[] = "Oportunidade para melhor apresentação visual do negócio";
     }
-    
+
+    if (!isset($competitorData['rating']) || $competitorData['rating'] < 4.5) {
+        $opportunities[] = "Potencial para melhorar a avaliação média dos clientes";
+    }
+
     return $opportunities;
 }
 
 private function generateRecommendations($competitorData)
 {
     $recommendations = [];
-    
+
     // Recomendações baseadas na avaliação
     if (isset($competitorData['rating'])) {
         if ($competitorData['rating'] >= 4.5) {
             $recommendations[] = "Focar em manter o alto padrão de qualidade e buscar diferenciais adicionais";
         } else {
-            $recommendations[] = "Identificar pontos de melhoria para superar a avaliação do concorrente";
+            $recommendations[] = "Implementar programa de melhoria contínua para aumentar a satisfação dos clientes";
         }
     }
-    
+
     // Recomendações baseadas na presença digital
     if (empty($competitorData['website'])) {
         $recommendations[] = "Investir em presença digital forte para se destacar da concorrência";
     }
-    
+
     // Recomendações baseadas no conteúdo visual
     if (empty($competitorData['photos']) || count($competitorData['photos']) < 5) {
         $recommendations[] = "Desenvolver um portfólio visual mais robusto que o concorrente";
     }
-    
+
     return $recommendations;
 }
 
