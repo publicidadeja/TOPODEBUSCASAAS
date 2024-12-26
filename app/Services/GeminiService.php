@@ -288,81 +288,53 @@ class GeminiService
         return $this->generateResponse($prompt);
     }
 
-    public function analyzeBusinessData($business, $analytics, $competitors = null)
-    {
-        try {
-            $prompt = $this->buildAnalysisPrompt($business, $analytics, $competitors);
-            
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . $this->apiKey
-            ])->post($this->apiEndpoint, [
-                'contents' => [
-                    [
-                        'parts' => [
-                            ['text' => $prompt]
-                        ]
-                    ]
-                ]
-            ]);
-    
-            if ($response->successful()) {
-                $data = $response->json();
-                return [
-                    'success' => true,
-                    'data' => [
-                        'overview' => $this->extractContent($data),
-                        'recommendations' => $this->extractSuggestions($data),
-                        'metrics' => [
-                            'performance_score' => $this->calculatePerformanceScore($analytics),
-                            'market_position' => $this->analyzeMarketPosition($business, $competitors),
-                            'growth_trend' => $this->calculateGrowthTrend($analytics)
-                        ]
-                    ]
-                ];
-            }
-    
-            return [
-                'success' => false,
-                'error' => 'Falha ao obter análise do Gemini'
-            ];
-        } catch (\Exception $e) {
-            Log::error('Erro na análise: ' . $e->getMessage());
-            return [
-                'success' => false,
-                'error' => 'Erro ao processar análise'
-            ];
-        }
-    }
-    
-    private function buildAnalysisPrompt($business, $analytics, $competitors)
+    public function analyzeBusinessData($businessData, $analytics = null)
 {
-    // Dados existentes do prompt
-    $basePrompt = "Analise os seguintes dados do negócio e forneça insights estratégicos:
+    try {
+        $prompt = $this->buildAnalysisPrompt($businessData);
         
-    Negócio: {$business->name}
-    Setor: {$business->sector}
-    
-    Métricas dos últimos 30 dias:
-    - Visualizações: {$analytics->total_views}
-    - Cliques: {$analytics->total_clicks}
-    - Ligações: {$analytics->total_calls}
-    - Taxa de conversão: {$analytics->conversion_rate}%";
+        $response = Http::post($this->apiEndpoint, [
+            'prompt' => $prompt,
+            'temperature' => 0.7,
+            'max_tokens' => 1000
+        ]);
 
-    // Adicionar dados específicos do Google Meu Negócio
-    $gmbData = "
-    
-    Dados do Google Meu Negócio:
-    - Avaliação média: {$business->rating}
-    - Total de avaliações: {$business->reviews_count}
-    - Tempo médio de resposta: {$business->response_time}
-    - Categorias principais: {$business->categories}
-    - Posts realizados: {$business->posts_count}
-    - Fotos publicadas: {$business->photos_count}
-    - Perguntas respondidas: {$business->questions_answered}
-    ";
+        if (!$response->successful()) {
+            throw new \Exception('Erro na requisição ao Gemini API');
+        }
 
-    return $basePrompt . $gmbData . ($competitors ? "\n\nDados dos competidores:\n" . $this->formatCompetitorsData($competitors) : "");
+        $analysis = $response->json()['response'];
+        
+        return [
+            'overview' => $this->extractSection($analysis, 'overview'),
+            'strengths' => $this->extractStrengths($analysis),
+            'opportunities' => $this->extractOpportunities($analysis),
+            'recommendations' => $this->extractRecommendations($analysis)
+        ];
+    } catch (\Exception $e) {
+        Log::error('Erro na análise Gemini: ' . $e->getMessage());
+        return [
+            'overview' => 'Não foi possível realizar a análise',
+            'strengths' => [],
+            'opportunities' => [],
+            'recommendations' => []
+        ];
+    }
+}
+
+private function buildAnalysisPrompt($businessData)
+{
+    return "Analise o seguinte negócio e forneça insights detalhados:\n\n" .
+           "Nome: {$businessData['name']}\n" .
+           "Endereço: {$businessData['address']}\n" .
+           "Avaliação: {$businessData['rating']}\n" .
+           "Total de Avaliações: {$businessData['total_ratings']}\n" .
+           "Site: {$businessData['website']}\n\n" .
+           "Forneça uma análise com os seguintes aspectos:\n" .
+           "1. Visão geral do negócio\n" .
+           "2. Pontos fortes\n" .
+           "3. Oportunidades de melhoria\n" .
+           "4. Recomendações estratégicas";
 }
 /**
  * Analisa os dados do negócio usando o Gemini API

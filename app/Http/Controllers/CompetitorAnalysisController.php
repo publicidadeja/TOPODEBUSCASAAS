@@ -323,57 +323,51 @@ private function isRelevantCompetitor($result, $business)
 public function analyzeSingle(Request $request)
 {
     try {
-        // Validação dos dados recebidos
-        $validated = $request->validate([
-            'name' => 'required|string',
-            'address' => 'required|string',
-            'competitor_data' => 'required|array'
-        ]);
+        $name = $request->input('name');
+        $address = $request->input('address');
+        $competitorData = $request->input('competitor_data');
 
-        // Processa os dados do competidor
-        $competitorData = $validated['competitor_data'];
+        // Verificar se competitorData é uma string JSON e converter para array
+        if (is_string($competitorData)) {
+            $competitorData = json_decode($competitorData, true);
+        }
+
+        // Verificar se a decodificação foi bem sucedida
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new \Exception('Erro ao decodificar dados do competidor');
+        }
+
+        // Busca informações adicionais usando o SerperService
+        $additionalInfo = $this->serper->searchSpecificCompetitor($name, $address);
         
-        // Gera a visão geral
-        $overview = $this->generateOverview($competitorData);
+        // Agora ambos são arrays e podem ser mesclados
+        $analysisData = array_merge($competitorData, $additionalInfo);
         
-        // Prepara as métricas
-        $metrics = [
-            'rating' => $competitorData['rating'] ?? 'N/A',
-            'reviews' => $competitorData['total_ratings'] ?? $competitorData['reviews'] ?? 'N/A',
-            'photos' => count($competitorData['photos'] ?? []),
-            'has_website' => !empty($competitorData['website']),
-            'has_phone' => !empty($competitorData['phone'])
-        ];
+        // Usa o GeminiService para análise
+        $analysis = $this->gemini->analyzeBusinessData($analysisData, null);
 
-        // Analisa os pontos fortes
-        $strengths = $this->analyzeStrengths($competitorData);
-
-        // Analisa as oportunidades
-        $opportunities = $this->analyzeOpportunities($competitorData);
-
-        // Gera recomendações
-        $recommendations = $this->generateRecommendations($competitorData);
-
-        // Monta a resposta
-        $analysis = [
-            'success' => true,
-            'analysis' => [
-                'overview' => $overview,
-                'metrics' => $metrics,
-                'strengths' => $strengths,
-                'opportunities' => $opportunities,
-                'recommendations' => $recommendations
+        // Formata a resposta
+        $formattedAnalysis = [
+            'overview' => $analysis['overview'] ?? 'Análise não disponível',
+            'strengths' => $analysis['strengths'] ?? [],
+            'opportunities' => $analysis['opportunities'] ?? [],
+            'recommendations' => $analysis['recommendations'] ?? [],
+            'metrics' => [
+                'rating' => $competitorData['rating'] ?? 0,
+                'reviews' => $competitorData['total_ratings'] ?? 0
             ]
         ];
 
-        return response()->json($analysis);
-
+        return response()->json([
+            'success' => true,
+            'analysis' => $formattedAnalysis
+        ]);
     } catch (\Exception $e) {
-        \Log::error('Erro na análise do concorrente: ' . $e->getMessage());
+        Log::error('Erro na análise do concorrente: ' . $e->getMessage());
         return response()->json([
             'success' => false,
             'message' => 'Erro ao analisar concorrente: ' . $e->getMessage()
-        ], 422);
+        ], 500);
     }
 }
 

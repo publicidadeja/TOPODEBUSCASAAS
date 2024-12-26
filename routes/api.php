@@ -7,6 +7,7 @@ use App\Http\Controllers\BusinessImageController;
 use App\Http\Controllers\GoogleController;
 use App\Http\Controllers\CompetitorAnalysisController;
 
+
 Route::post('/competitors/analyze-single', [CompetitorAnalysisController::class, 'analyzeSingle'])
     ->name('api.competitors.analyze-single');
 

@@ -2957,153 +2957,123 @@ function updateLastUpdate() {
 </script>
 
 <script>
-function analyzeSingleCompetitor(name, address, competitorData) {
-    // Mostrar loading com estilo melhorado
+async function analyzeSingleCompetitor(name, address, competitorData) {
+    // Mostrar loading
     Swal.fire({
         title: `Analisando ${name}...`,
         html: `
-            <div class="text-center">
-                <div class="mb-3">
-                    <i class="fas fa-chart-line text-3xl text-blue-500"></i>
-                </div>
-                <p class="text-gray-600">Processando dados do concorrente</p>
-                <div class="mt-2 text-sm text-gray-500">${address}</div>
+            <div class="flex flex-col items-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                <p class="mt-4 text-gray-600">Analisando dados do concorrente...</p>
+                <p class="text-sm text-gray-500">${address}</p>
             </div>
         `,
         allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
+        showConfirmButton: false
     });
 
-    // Processar dados do competidor
-    let processedData = competitorData;
-    if (typeof competitorData === 'string') {
-        try {
-            processedData = JSON.parse(competitorData);
-        } catch (e) {
-            console.error('Erro ao processar dados:', e);
-            processedData = {};
-        }
-    }
+    try {
+        // Fazer requisição para a API
+        const response = await fetch('/api/competitors/analyze-single', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                name: name,
+                address: address,
+                competitor_data: competitorData
+            })
+        });
 
-    // Requisição para análise
-    fetch('/api/competitors/analyze-single', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        },
-        body: JSON.stringify({
-            name: name,
-            address: address,
-            competitor_data: processedData
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(err => Promise.reject(err));
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
-            // Fechar loading
-            Swal.close();
-            
-            // Mostrar resultado com layout melhorado
-            Swal.fire({
-                title: `Análise de ${name}`,
-                html: `
-                    <div class="text-left max-h-[70vh] overflow-y-auto">
-                        <!-- Visão Geral -->
-                        <div class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
-                            <h3 class="font-bold text-lg text-blue-800 mb-2">
-                                <i class="fas fa-eye mr-2"></i>Visão Geral
-                            </h3>
-                            <p class="text-gray-700">${data.analysis.overview}</p>
-                        </div>
-                        
-                        <!-- Métricas -->
-                        <div class="grid grid-cols-2 gap-4 mb-6">
-                            <div class="p-4 bg-green-50 rounded-lg text-center">
-                                <div class="text-2xl font-bold text-green-600">
-                                    ${data.analysis.metrics?.rating || 'N/A'}
-                                </div>
-                                <div class="text-sm text-green-700">Avaliação Média</div>
-                            </div>
-                            <div class="p-4 bg-purple-50 rounded-lg text-center">
-                                <div class="text-2xl font-bold text-purple-600">
-                                    ${data.analysis.metrics?.reviews || 'N/A'}
-                                </div>
-                                <div class="text-sm text-purple-700">Total de Avaliações</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Pontos Fortes -->
-                        <div class="mb-6 p-4 bg-green-50 rounded-lg">
-                            <h3 class="font-bold text-lg text-green-800 mb-2">
-                                <i class="fas fa-star mr-2"></i>Pontos Fortes
-                            </h3>
-                            <ul class="list-disc pl-4 space-y-2">
-                                ${data.analysis.strengths.map(s => `
-                                    <li class="text-gray-700">${s}</li>
-                                `).join('')}
-                            </ul>
-                        </div>
-                        
-                        <!-- Oportunidades -->
-                        <div class="mb-6 p-4 bg-yellow-50 rounded-lg">
-                            <h3 class="font-bold text-lg text-yellow-800 mb-2">
-                                <i class="fas fa-lightbulb mr-2"></i>Oportunidades
-                            </h3>
-                            <ul class="list-disc pl-4 space-y-2">
-                                ${data.analysis.opportunities.map(o => `
-                                    <li class="text-gray-700">${o}</li>
-                                `).join('')}
-                            </ul>
-                        </div>
-                        
-                        <!-- Recomendações -->
-                        <div class="p-4 bg-indigo-50 rounded-lg">
-                            <h3 class="font-bold text-lg text-indigo-800 mb-2">
-                                <i class="fas fa-clipboard-check mr-2"></i>Recomendações
-                            </h3>
-                            <ul class="list-disc pl-4 space-y-2">
-                                ${data.analysis.recommendations.map(r => `
-                                    <li class="text-gray-700">${r}</li>
-                                `).join('')}
-                            </ul>
-                        </div>
-                    </div>
-                `,
-                width: '800px',
-                padding: '2rem',
-                confirmButtonText: 'Fechar',
-                confirmButtonColor: '#3085d6',
-                showCloseButton: true,
-                showDenyButton: true,
-                denyButtonText: 'Exportar PDF',
-                denyButtonColor: '#10B981'
-            }).then((result) => {
-                if (result.isDenied) {
-                    exportAnalysisPDF(name, data.analysis);
-                }
-            });
-        } else {
+        const data = await response.json();
+
+        if (!data.success) {
             throw new Error(data.message || 'Erro ao analisar concorrente');
         }
-    })
-    .catch(error => {
-        console.error('Erro na análise:', error);
+
+        // Fechar loading e mostrar resultados
+        Swal.fire({
+            title: `Análise de ${name}`,
+            html: `
+                <div class="text-left max-h-[70vh] overflow-y-auto space-y-6">
+                    <!-- Visão Geral -->
+                    <div class="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg">
+                        <h3 class="font-bold text-lg text-blue-800 mb-2">Visão Geral</h3>
+                        <p class="text-gray-700">${data.analysis.overview}</p>
+                    </div>
+
+                    <!-- Métricas -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-4 bg-green-50 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-green-600">
+                                ${data.analysis.metrics?.rating || 'N/A'}
+                            </div>
+                            <div class="text-sm text-green-700">Avaliação</div>
+                        </div>
+                        <div class="p-4 bg-purple-50 rounded-lg text-center">
+                            <div class="text-2xl font-bold text-purple-600">
+                                ${data.analysis.metrics?.reviews || 'N/A'}
+                            </div>
+                            <div class="text-sm text-purple-700">Avaliações</div>
+                        </div>
+                    </div>
+
+                    <!-- Pontos Fortes -->
+                    <div class="p-4 bg-green-50 rounded-lg">
+                        <h3 class="font-bold text-lg text-green-800 mb-2">Pontos Fortes</h3>
+                        <ul class="list-disc pl-4 space-y-2">
+                            ${data.analysis.strengths.map(s => `
+                                <li class="text-gray-700">${s}</li>
+                            `).join('')}
+                        </ul>
+                    </div>
+
+                    <!-- Oportunidades -->
+                    <div class="p-4 bg-yellow-50 rounded-lg">
+                        <h3 class="font-bold text-lg text-yellow-800 mb-2">Oportunidades</h3>
+                        <ul class="list-disc pl-4 space-y-2">
+                            ${data.analysis.opportunities.map(o => `
+                                <li class="text-gray-700">${o}</li>
+                            `).join('')}
+                        </ul>
+                    </div>
+
+                    <!-- Recomendações -->
+                    <div class="p-4 bg-indigo-50 rounded-lg">
+                        <h3 class="font-bold text-lg text-indigo-800 mb-2">Recomendações</h3>
+                        <ul class="list-disc pl-4 space-y-2">
+                            ${data.analysis.recommendations.map(r => `
+                                <li class="text-gray-700">${r}</li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `,
+            width: '800px',
+            padding: '2rem',
+            confirmButtonText: 'Fechar',
+            confirmButtonColor: '#3085d6',
+            showCloseButton: true,
+            showDenyButton: true,
+            denyButtonText: 'Exportar PDF',
+            denyButtonColor: '#10B981'
+        }).then((result) => {
+            if (result.isDenied) {
+                exportAnalysisPDF(name, data.analysis);
+            }
+        });
+
+    } catch (error) {
+        console.error('Erro:', error);
         Swal.fire({
             icon: 'error',
             title: 'Erro na Análise',
             text: error.message || 'Não foi possível realizar a análise do concorrente',
             confirmButtonColor: '#EF4444'
         });
-    });
+    }
 }
 
 // Função auxiliar para exportar PDF
@@ -3141,4 +3111,5 @@ function exportAnalysisPDF(competitorName, analysis) {
     });
 }
 </script>
+
 </x-app-layout>
