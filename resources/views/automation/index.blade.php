@@ -331,12 +331,29 @@
             });
     }
     function loadAISuggestions() {
-        fetch('/automation/ai-suggestions')
-            .then(response => response.json())
-            .then(data => {
-                const container = document.getElementById('ai-suggestions');
+    // Mostrar estado de carregamento
+    const container = document.getElementById('ai-suggestions');
+    container.innerHTML = `
+        <div class="animate-pulse">
+            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div class="space-y-3 mt-4">
+                <div class="h-4 bg-gray-200 rounded"></div>
+                <div class="h-4 bg-gray-200 rounded w-5/6"></div>
+            </div>
+        </div>
+    `;
+
+    fetch('/automation/ai-suggestions')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erro ao carregar sugestões');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.suggestions.length > 0) {
                 container.innerHTML = data.suggestions.map(suggestion => `
-                    <div class="suggestion-card bg-white p-4 rounded-lg shadow-sm mb-4">
+                    <div class="suggestion-card bg-white p-4 rounded-lg shadow-sm mb-4 border-l-4 border-blue-500">
                         <div class="flex justify-between items-start">
                             <div>
                                 <h4 class="font-medium text-gray-900">${suggestion.title}</h4>
@@ -361,8 +378,57 @@
                         </div>
                     </div>
                 `).join('');
+            } else {
+                container.innerHTML = `
+                    <div class="text-center py-4 text-gray-500">
+                        <p>Nenhuma sugestão disponível no momento.</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            container.innerHTML = `
+                <div class="text-center py-4 text-red-500">
+                    <p>Erro ao carregar sugestões. Tente novamente mais tarde.</p>
+                </div>
+            `;
+        });
+}
+
+// Função para aplicar sugestão
+function applySuggestion(suggestionId) {
+    fetch('/automation/apply-suggestion', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ suggestion_id: suggestionId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Sucesso!',
+                text: 'Sugestão aplicada com sucesso',
+                timer: 2000,
+                showConfirmButton: false
             });
-    }
+            loadAISuggestions(); // Recarrega as sugestões
+        } else {
+            throw new Error(data.message);
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: error.message || 'Erro ao aplicar sugestão'
+        });
+    });
+}
 
     function updateMetrics() {
         fetch('/automation/metrics')

@@ -2080,4 +2080,55 @@ public function manageGMBCalendar(Request $request)
         ], 500);
     }
 }
+
+public function getAISuggestions()
+{
+    try {
+        $business = auth()->user()->business;
+        
+        // Busca sugestões da IA
+        $suggestions = [
+            [
+                'id' => 1,
+                'title' => 'Sugestão de Post',
+                'description' => 'Baseado nas tendências atuais...',
+                'type' => 'post',
+                'action' => 'create_post'
+            ],
+            // Adicione mais sugestões mock para teste
+        ];
+
+        return response()->json([
+            'success' => true,
+            'suggestions' => $suggestions
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao buscar sugestões: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao carregar sugestões'
+        ], 500);
+    }
+}
+
+
+public function applySuggestion(Request $request)
+{
+    try {
+        $suggestionId = $request->input('suggestion_id');
+        // Implemente a lógica para aplicar a sugestão
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Sugestão aplicada com sucesso'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao aplicar sugestão: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+
 }

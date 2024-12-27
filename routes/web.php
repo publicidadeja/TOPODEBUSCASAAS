@@ -15,6 +15,10 @@ use App\Http\Controllers\CompetitorAnalysisController;
 use App\Http\Controllers\MarketAnalysisController;
 
 
+Route::get('/automation/ai-suggestions', [AutomationController::class, 'getAISuggestions'])
+    ->name('automation.ai-suggestions');
+
+
 Route::prefix('automation/gmb')->middleware(['auth'])->group(function () {
     Route::get('/', [AutomationController::class, 'gmbAutomationIndex'])->name('automation.gmb.index');
     Route::post('/post', [AutomationController::class, 'createGMBPost'])->name('automation.gmb.post');
