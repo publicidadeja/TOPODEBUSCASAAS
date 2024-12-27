@@ -631,4 +631,110 @@ private function extractSocialLink($place, $platform)
     return null;
 }
 
+
+public function searchForAutomation($business)
+{
+    try {
+        $response = Http::timeout(15)
+            ->withHeaders([
+                'X-API-KEY' => $this->apiKey,
+                'Content-Type' => 'application/json'
+            ])->post($this->apiEndpoint, [
+                'q' => "{$business->name} {$business->segment} atualizações tendências",
+                'gl' => 'br',
+                'num' => 5,
+                'type' => 'search',
+                'hl' => 'pt-br'
+            ]);
+
+        if ($response->successful()) {
+            $data = $response->json();
+            
+            if (!isset($data['organic'])) {
+                return [];
+            }
+
+            $suggestions = [];
+            foreach ($data['organic'] as $result) {
+                $suggestions[] = [
+                    'title' => $result['title'] ?? '',
+                    'description' => $result['snippet'] ?? '',
+                    'type' => 'suggestion',
+                    'source' => $result['link'] ?? '',
+                    'action_type' => 'review',
+                    'priority' => 'medium'
+                ];
+            }
+
+            return $suggestions;
+        }
+
+        return [];
+    } catch (\Exception $e) {
+        \Log::error('Erro na busca para automação', [
+            'erro' => $e->getMessage(),
+            'business' => $business->name
+        ]);
+        return [];
+    }
+}
+
+private function determineSuggestionType($result)
+{
+    $title = strtolower($result['title'] ?? '');
+    $snippet = strtolower($result['snippet'] ?? '');
+
+    if (str_contains($title, 'post') || str_contains($snippet, 'post')) {
+        return 'post';
+    } elseif (str_contains($title, 'evento') || str_contains($snippet, 'evento')) {
+        return 'event';
+    } elseif (str_contains($title, 'promoção') || str_contains($snippet, 'promoção')) {
+        return 'promotion';
+    }
+
+    return 'general';
+}
+
+private function calculateRelevanceScore($result)
+{
+    $score = 5; // Base score
+    
+    // Aumenta score baseado em palavras-chave relevantes
+    $keywords = ['atualização', 'novo', 'tendência', 'importante', 'evento'];
+    foreach ($keywords as $keyword) {
+        if (str_contains(strtolower($result['title'] ?? ''), $keyword)) {
+            $score += 1;
+        }
+    }
+
+    return min(10, $score);
+}
+
+private function determineActionType($result)
+{
+    $content = strtolower($result['title'] . ' ' . ($result['snippet'] ?? ''));
+    
+    if (str_contains($content, 'post')) return 'create_post';
+    if (str_contains($content, 'evento')) return 'create_event';
+    if (str_contains($content, 'promoção')) return 'create_promotion';
+    if (str_contains($content, 'atualização')) return 'update_info';
+    
+    return 'review_suggestion';
+}
+
+private function calculatePriority($result)
+{
+    $urgencyKeywords = ['urgente', 'importante', 'novo', 'atualização'];
+    $priority = 'medium';
+    
+    foreach ($urgencyKeywords as $keyword) {
+        if (str_contains(strtolower($result['title'] ?? ''), $keyword)) {
+            $priority = 'high';
+            break;
+        }
+    }
+    
+    return $priority;
+}
+
 }

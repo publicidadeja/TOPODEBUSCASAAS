@@ -15,6 +15,11 @@ use App\Http\Controllers\CompetitorAnalysisController;
 use App\Http\Controllers\MarketAnalysisController;
 
 
+Route::post('/automation/toggle', [AutomationController::class, 'toggleAutomation'])
+    ->name('automation.toggle')
+    ->middleware(['auth']);
+
+
 Route::get('/automation/ai-suggestions', [AutomationController::class, 'getAISuggestions'])
     ->name('automation.ai-suggestions');
 

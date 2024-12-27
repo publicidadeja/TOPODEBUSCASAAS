@@ -714,5 +714,91 @@ private function extractBulletPoints($text, $sectionName)
     }
     return [];
 }
+
+public function processSuggestions(array $suggestions)
+{
+    try {
+        $processedSuggestions = [];
+        
+        foreach ($suggestions as $suggestion) {
+            // Gerar um prompt para o Gemini processar a sugestão
+            $prompt = $this->buildSuggestionPrompt($suggestion);
+            
+            // Gerar conteúdo usando o Gemini
+            $response = $this->generateContent($prompt);
+            
+            // Processar e estruturar a resposta
+            $processedSuggestion = [
+                'id' => uniqid(), // Identificador único
+                'title' => $suggestion['title'] ?? 'Sugestão',
+                'description' => $suggestion['description'] ?? '',
+                'type' => $suggestion['type'] ?? 'general',
+                'action_type' => $suggestion['action_type'] ?? 'review_suggestion',
+                'priority' => $suggestion['priority'] ?? 'medium',
+                'source' => $suggestion['source'] ?? '',
+                'generated_content' => $response['content'] ?? '',
+                'relevance_score' => $suggestion['relevance_score'] ?? 5,
+                'created_at' => now()->toDateTimeString(),
+            ];
+            
+            // Adicionar análise adicional se necessário
+            if (isset($response['analysis'])) {
+                $processedSuggestion['analysis'] = $response['analysis'];
+            }
+            
+            $processedSuggestions[] = $processedSuggestion;
+        }
+        
+        return $processedSuggestions;
+    } catch (\Exception $e) {
+        \Log::error('Erro ao processar sugestões: ' . $e->getMessage());
+        return [];
+    }
+}
+
+private function buildSuggestionPrompt($suggestion)
+{
+    return "Analise a seguinte sugestão e forneça recomendações detalhadas:\n" .
+           "Título: {$suggestion['title']}\n" .
+           "Descrição: {$suggestion['description']}\n" .
+           "Tipo: {$suggestion['type']}\n" .
+           "Por favor, forneça:\n" .
+           "1. Uma análise da relevância\n" .
+           "2. Sugestões de implementação\n" .
+           "3. Possíveis benefícios\n" .
+           "4. Próximos passos recomendados";
+}
+
+private function formatSuggestionResponse($response)
+{
+    // Remover marcadores especiais e formatar o texto
+    $formatted = preg_replace('/^\d+\.\s+/m', '', $response);
+    $formatted = trim($formatted);
+    
+    // Dividir em parágrafos se necessário
+    $paragraphs = explode("\n\n", $formatted);
+    
+    return [
+        'content' => $formatted,
+        'paragraphs' => $paragraphs
+    ];
+}
+
+private function calculateRelevanceScore($suggestion)
+{
+    $score = 5; // Pontuação base
+    
+    // Aumentar pontuação baseado em palavras-chave
+    $keywords = ['urgente', 'importante', 'crítico', 'oportunidade', 'tendência'];
+    foreach ($keywords as $keyword) {
+        if (stripos($suggestion['title'] . ' ' . $suggestion['description'], $keyword) !== false) {
+            $score += 1;
+        }
+    }
+    
+    // Limitar score entre 1 e 10
+    return min(10, max(1, $score));
+}
+
     
 }

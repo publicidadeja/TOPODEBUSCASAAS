@@ -266,40 +266,71 @@
     }
 
     function toggleAutomation(type, enabled) {
-        fetch('/automation/toggle', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-            },
-            body: JSON.stringify({
-                type: type,
-                enabled: enabled
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Sucesso!',
-                    text: `Automação ${enabled ? 'ativada' : 'desativada'} com sucesso`,
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-                updateStatus(type, enabled);
-            } else {
-                throw new Error(data.message);
-            }
-        })
-        .catch(error => {
-            Swal.fire({
-                icon: 'error',
-                title: 'Erro',
-                text: error.message || 'Ocorreu um erro ao alterar a automação'
-            });
-        });
+    // Mostrar loading
+    const statusElement = document.getElementById(`${type}Status`);
+    if (statusElement) {
+        statusElement.textContent = 'Atualizando...';
     }
+
+    fetch('/automation/toggle', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            type: type,
+            enabled: enabled
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Erro na requisição');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Atualiza o status na interface
+            if (statusElement) {
+                statusElement.textContent = enabled ? 'Ativo' : 'Inativo';
+            }
+            
+            // Mostra notificação de sucesso
+            Swal.fire({
+                icon: 'success',
+                title: 'Sucesso!',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+        } else {
+            throw new Error(data.message || 'Erro ao alterar automação');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        
+        // Reverte o toggle em caso de erro
+        const toggleElement = document.getElementById(`${type}Toggle`);
+        if (toggleElement) {
+            toggleElement.checked = !enabled;
+        }
+        
+        // Atualiza o status
+        if (statusElement) {
+            statusElement.textContent = enabled ? 'Inativo' : 'Ativo';
+        }
+        
+        // Mostra erro
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: error.message || 'Ocorreu um erro ao alterar a automação'
+        });
+    });
+}
 
     function loadUpcomingPosts() {
         fetch('/automation/upcoming-posts')
@@ -331,7 +362,6 @@
             });
     }
     function loadAISuggestions() {
-    // Mostrar estado de carregamento
     const container = document.getElementById('ai-suggestions');
     container.innerHTML = `
         <div class="animate-pulse">
@@ -344,34 +374,22 @@
     `;
 
     fetch('/automation/ai-suggestions')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Erro ao carregar sugestões');
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
             if (data.success && data.suggestions.length > 0) {
                 container.innerHTML = data.suggestions.map(suggestion => `
-                    <div class="suggestion-card bg-white p-4 rounded-lg shadow-sm mb-4 border-l-4 border-blue-500">
+                    <div class="suggestion-card bg-white p-4 rounded-lg shadow-sm mb-4">
                         <div class="flex justify-between items-start">
                             <div>
                                 <h4 class="font-medium text-gray-900">${suggestion.title}</h4>
                                 <p class="text-sm text-gray-500 mt-1">${suggestion.description}</p>
                             </div>
                             <div class="flex space-x-2">
-                                <button onclick="applySuggestion(${suggestion.id})" 
+                                <button onclick="applySuggestion('${suggestion.id}')" 
                                         class="text-blue-600 hover:text-blue-800">
                                     <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                                               d="M5 13l4 4L19 7"></path>
-                                    </svg>
-                                </button>
-                                <button onclick="dismissSuggestion(${suggestion.id})" 
-                                        class="text-gray-400 hover:text-gray-600">
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                              d="M6 18L18 6M6 6l12 12"></path>
                                     </svg>
                                 </button>
                             </div>
@@ -394,6 +412,17 @@
                 </div>
             `;
         });
+}
+
+function getPriorityClass(priority) {
+    switch (priority) {
+        case 'high':
+            return 'bg-red-100 text-red-800';
+        case 'medium':
+            return 'bg-yellow-100 text-yellow-800';
+        default:
+            return 'bg-green-100 text-green-800';
+    }
 }
 
 // Função para aplicar sugestão

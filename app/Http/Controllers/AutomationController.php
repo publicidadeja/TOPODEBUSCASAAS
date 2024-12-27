@@ -30,22 +30,22 @@ public function __construct(
 public function getAIInsights(Business $business)
 {
     try {
-        // Buscar dados dos concorrentes
-        $competitors = $this->serper->search("{$business->name} concorrentes {$business->segment} {$business->address}");
-
-        $insights = [
-            'performance' => $this->aiAnalysis->analyzeBusinessPerformance($business),
-            'content' => $this->aiAnalysis->generateContentSuggestions($business),
-            'competitors' => $this->aiAnalysis->analyzeCompetitors($business, $competitors)
-        ];
+        // Usar a nova função específica para automação
+        $suggestions = $this->serper->searchForAutomation($business);
+        
+        // Processar sugestões com o Gemini
+        $processedSuggestions = $this->gemini->processSuggestions($suggestions);
 
         return response()->json([
             'success' => true,
-            'insights' => $insights
+            'suggestions' => $processedSuggestions
         ]);
     } catch (\Exception $e) {
         \Log::error('Erro ao gerar insights: ' . $e->getMessage());
-        return response()->json(['error' => 'Erro ao gerar insights'], 500);
+        return response()->json([
+            'success' => false,
+            'error' => 'Erro ao gerar insights'
+        ], 500);
     }
 }
 
@@ -300,30 +300,19 @@ private function analyzeSentiment($reviews)
         ->take(5)
         ->get();
 
-    // Carregar dados de proteção e análise
-    $protectionStatus = $this->getProtectionStatus();
-    $competitiveAnalysis = $this->getDetailedCompetitiveAnalysis();
-    $smartNotifications = $this->getSmartNotifications();
-    
     // Carregar eventos do calendário
     $calendarEvents = CalendarEvent::where('business_id', $business->id)
         ->whereDate('start_date', '>=', now()->subDays(30))
         ->get();
 
-    // Carregar sugestões da IA
-    $aiSuggestions = $this->getAIInsights($business);
-
     return view('automation.index', compact(
         'business',
         'scheduledPosts',
         'postedPosts',
-        'protectionStatus',
-        'competitiveAnalysis',
-        'smartNotifications',
-        'calendarEvents',
-        'aiSuggestions'
+        'calendarEvents'
     ));
 }
+
     public function createPost(Request $request)
     {
         $business = Business::where('user_id', auth()->id())->first();
@@ -1806,35 +1795,41 @@ private function extractDate($text)
 /**
  * Toggle automation features for the business
  */
-public function toggleAutomation(Business $business, $type)
+public function toggleAutomation(Request $request)
 {
     try {
-        $settings = $business->settings ?? [];
+        $validated = $request->validate([
+            'type' => 'required|string|in:posts,calendar',
+            'enabled' => 'required|boolean'
+        ]);
+
+        $business = Business::where('user_id', auth()->id())->first();
         
-        switch ($type) {
-            case 'posts':
-                $settings['auto_posts'] = !($settings['auto_posts'] ?? false);
-                $message = $settings['auto_posts'] ? 'Posts automáticos ativados' : 'Posts automáticos desativados';
-                break;
-            case 'calendar':
-                $settings['auto_calendar'] = !($settings['auto_calendar'] ?? false);
-                $message = $settings['auto_calendar'] ? 'Calendário automático ativado' : 'Calendário automático desativado';
-                break;
-            default:
-                return response()->json(['error' => 'Tipo de automação inválido'], 400);
+        if (!$business) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Negócio não encontrado'
+            ], 404);
         }
 
-        $business->settings = $settings;
+        // Atualiza as configurações de automação
+        $settings = $business->automation_settings ?? [];
+        $settings[$validated['type']] = $validated['enabled'];
+        $business->automation_settings = $settings;
         $business->save();
 
         return response()->json([
             'success' => true,
-            'message' => $message,
-            'status' => $settings
+            'message' => 'Automação ' . ($validated['enabled'] ? 'ativada' : 'desativada') . ' com sucesso',
+            'settings' => $settings
         ]);
+
     } catch (\Exception $e) {
-        \Log::error('Erro ao alterar automação: ' . $e->getMessage());
-        return response()->json(['error' => 'Erro ao alterar automação'], 500);
+        \Log::error('Erro ao alternar automação: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao alterar automação'
+        ], 500);
     }
 }
 

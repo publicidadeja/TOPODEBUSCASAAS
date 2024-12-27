@@ -28,7 +28,8 @@ class Business extends Model
     ];
 
     protected $casts = [
-        'settings' => 'array', // Adicione esta linha para o cast do settings
+        'settings' => 'array',
+        'automation_settings' => 'array'
     ];
 
     /**
