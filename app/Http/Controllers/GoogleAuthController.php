@@ -33,30 +33,25 @@ class GoogleAuthController extends Controller
 {
     try {
         if ($request->has('error')) {
-            return redirect()
-                ->route('business.index')
+            return redirect()->route('business.index')
                 ->with('error', 'Autorização do Google negada.');
         }
 
-        $token = $this->googleAuth->handleCallback($request->code);
+        $token = $this->googleAuth->handleCallback();
+        $business = Business::where('user_id', auth()->id())->first();
         
-        // Salva o token no usuário
-        auth()->user()->update([
-            'google_token' => json_encode($token)
-        ]);
+        if ($business) {
+            $business->update([
+                'is_connected' => true,
+                'google_token' => json_encode($token)
+            ]);
+        }
 
-        // Dispara o job de importação
-        ImportGoogleBusinesses::dispatch(auth()->user())
-            ->delay(now()->addSeconds(5));
-
-        return redirect()
-            ->route('business.index')
-            ->with('success', 'Autenticação realizada com sucesso! A importação dos negócios começará em breve.');
-
+        return redirect()->route('automation.index')
+            ->with('success', 'Conectado com sucesso ao Google Meu Negócio.');
     } catch (\Exception $e) {
-        return redirect()
-            ->route('business.index')
-            ->with('error', 'Erro ao importar negócios: ' . $e->getMessage());
+        return redirect()->route('business.index')
+            ->with('error', 'Erro ao conectar com o Google Meu Negócio.');
     }
 }
 }

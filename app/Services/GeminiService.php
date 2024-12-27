@@ -21,45 +21,43 @@ class GeminiService
     
 
     public function generateContent($prompt)
-    {
-        try {
-            $response = Http::withHeaders([
-                'Content-Type' => 'application/json',
-            ])->post($this->apiEndpoint . '?key=' . $this->apiKey, [
-                'contents' => [
-                    [
-                        'parts' => [
-                            ['text' => $prompt]
-                        ]
+{
+    try {
+        $response = Http::withHeaders([
+            'Content-Type' => 'application/json',
+        ])->post($this->apiEndpoint . '?key=' . $this->apiKey, [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $prompt]
                     ]
                 ]
-            ]);
+            ]
+        ]);
 
-            if ($response->successful()) {
-                $data = $response->json();
-                return [
-                    'title' => $this->extractTitle($data),
-                    'content' => $this->extractContent($data)
-                ];
-            }
-
-            Log::error('Erro na resposta da API Gemini', [
-                'response' => $response->json(),
-                'status' => $response->status()
-            ]);
-
+        if ($response->successful()) {
+            $data = $response->json();
             return [
-                'title' => 'Erro',
-                'content' => 'Não foi possível gerar o conteúdo. Tente novamente.'
-            ];
-        } catch (\Exception $e) {
-            Log::error('Erro ao gerar conteúdo com Gemini: ' . $e->getMessage());
-            return [
-                'title' => 'Erro',
-                'content' => 'Ocorreu um erro ao processar sua solicitação.'
+                'analysis' => $data['candidates'][0]['content']['parts'][0]['text'] ?? 'Análise não disponível',
+                'status' => 'success'
             ];
         }
+
+        return [
+            'analysis' => 'Não foi possível gerar a análise',
+            'status' => 'error',
+            'error' => $response->json()
+        ];
+
+    } catch (\Exception $e) {
+        Log::error('Erro na API Gemini: ' . $e->getMessage());
+        return [
+            'analysis' => 'Erro ao processar a análise',
+            'status' => 'error',
+            'error' => $e->getMessage()
+        ];
     }
+}
 
     private function extractSuggestions($content)
     {

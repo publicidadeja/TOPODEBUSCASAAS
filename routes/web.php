@@ -15,6 +15,29 @@ use App\Http\Controllers\CompetitorAnalysisController;
 use App\Http\Controllers\MarketAnalysisController;
 
 
+Route::get('/business/{business}/protection', [AutomationController::class, 'protection'])
+    ->name('protection.index');
+
+Route::get('/business/{business}/connect', [BusinessController::class, 'connect'])->name('business.connect');
+
+Route::get('/business/{business}/connect', [BusinessController::class, 'connect'])->name('business.connect');
+
+Route::prefix('automation')->middleware(['auth'])->group(function () {
+    Route::get('/suggestions/{business}', [AutomationController::class, 'getSuggestions']);
+    Route::get('/segment-events/{business}', [AutomationController::class, 'getSegmentEvents']);
+    Route::post('/toggle/{business}/{type}', [AutomationController::class, 'toggleAutomation']);
+});
+
+Route::prefix('automation')->group(function () {
+    Route::get('/suggestions/{business}', 'AutomationController@getSuggestions');
+    Route::get('/segment-events/{business}', 'AutomationController@getSegmentEvents');
+    Route::post('/toggle/{business}/{type}', 'AutomationController@toggleAutomation');
+    Route::post('/dismiss-suggestion/{business}/{suggestionId}', 'AutomationController@dismissSuggestion');
+    Route::post('/add-to-calendar/{business}', 'AutomationController@addToCalendar');
+    Route::post('/create-automated-post/{business}', 'AutomationController@createAutomatedPost');
+});
+
+
 Route::prefix('analytics')->group(function () {
     Route::get('/refresh/{business}', 'AnalyticsController@refresh');
     Route::get('/export/{format}/{business}', 'AnalyticsController@export');

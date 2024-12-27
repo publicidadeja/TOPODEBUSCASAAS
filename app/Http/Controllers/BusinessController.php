@@ -193,4 +193,17 @@ public function edit(Business $business)
 {
     return view('business.edit', compact('business'));
 }
+
+
+public function connect(Business $business)
+{
+    // Verifica se o negócio já está conectado
+    if ($business->is_connected) {
+        return redirect()->route('automation.index')
+            ->with('info', 'Este negócio já está conectado ao Google Meu Negócio.');
+    }
+
+    // Se não estiver conectado, redireciona para autenticação
+    return redirect()->route('google.auth');
+}
 }

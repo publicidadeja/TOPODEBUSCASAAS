@@ -4,342 +4,350 @@
     <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.css' rel='stylesheet' />
     <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.css' rel='stylesheet' />
     <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@4.4.0/main.min.css' rel='stylesheet' />
-    <link href='https://cdn.jsdelivr.net/npm/tippy.js@6/dist/tippy.css' rel='stylesheet' />
+    <link href='https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.css' rel='stylesheet' />
+    <style>
+        .fc-event {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .fc-event:hover {
+            transform: scale(1.02);
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        .animate-fade-out {
+            animation: fadeOut 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+    </style>
     @endpush
 
     <div class="py-6">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <!-- Painel de Controle Principal -->
-            <div class="mb-6 bg-white rounded-lg shadow-sm border border-gray-100 p-6">
-                <h3 class="text-lg font-semibold mb-4">Painel de Automação</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- Controle de Posts Automáticos -->
-                    <div class="p-4 bg-gray-50 rounded-lg">
-                        <h4 class="font-semibold mb-2">Posts Automáticos</h4>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="autoPostToggle" class="sr-only peer" 
-                                   onchange="toggleAutomation('posts')"
-                                   @if($business->automation_settings['auto_posts'] ?? false) checked @endif>
-                            <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                        </label>
-                        <p class="text-sm text-gray-600 mt-2">Permite que a IA crie e agende posts automaticamente</p>
-                    </div>
+            <!-- Cabeçalho da Página -->
+            <div class="mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">
+                    Automação do Google Meu Negócio
+                </h2>
+                <p class="mt-1 text-sm text-gray-600">
+                    Gerencie suas automações e mantenha seu negócio atualizado automaticamente
+                </p>
+            </div>
 
-                    <!-- Análise de Tendências -->
-                    <div class="p-4 bg-gray-50 rounded-lg">
-                        <h4 class="font-semibold mb-2">Análise de Tendências</h4>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="trendAnalysisToggle" class="sr-only peer"
-                                   onchange="toggleAutomation('trends')"
-                                   @if($business->automation_settings['trend_analysis'] ?? false) checked @endif>
-                            <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                        </label>
-                        <p class="text-sm text-gray-600 mt-2">Monitora tendências do seu segmento</p>
-                    </div>
+<!-- Painel de Status -->
+<div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <!-- Status da Integração -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div class="flex items-center">
+            <div class="flex-shrink-0">
+                @if($business->is_connected)
+                    <svg class="h-8 w-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                @else
+                    <svg class="h-8 w-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                @endif
+            </div>
+            <div class="ml-4">
+                <h3 class="text-lg font-medium text-gray-900">Status da Integração</h3>
+                <p class="text-sm text-gray-500">
+                    @if($business->is_connected)
+                        Google Meu Negócio conectado
+                        @if($business->last_sync_at)
+                            <div class="mt-1 text-xs text-gray-400">
+                                Última sincronização: {{ $business->last_sync_at->diffForHumans() }}
+                            </div>
+                        @endif
+                    @else
+                        Não conectado
+                        <a href="{{ route('business.settings', $business) }}" 
+                           class="text-blue-600 hover:text-blue-800">
+                            Configurar integração
+                        </a>
+                    @endif
+                </p>
+            </div>
+        </div>
+    </div>
 
-                    <!-- Sugestões Inteligentes -->
-                    <div class="p-4 bg-gray-50 rounded-lg">
-                        <h4 class="font-semibold mb-2">Sugestões Inteligentes</h4>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="smartSuggestionsToggle" class="sr-only peer"
-                                   onchange="toggleAutomation('suggestions')"
-                                   @if($business->automation_settings['smart_suggestions'] ?? false) checked @endif>
-                            <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                        </label>
-                        <p class="text-sm text-gray-600 mt-2">Receba sugestões personalizadas para seu negócio</p>
+
+    <!-- Posts Automáticos -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-medium text-gray-900">Posts Automáticos</h3>
+                <p class="text-sm text-gray-500">Status: 
+                    <span id="autoPostStatus" class="@if($business->automation_settings['auto_posts'] ?? false) text-green-500 @else text-gray-500 @endif">
+                        {{ ($business->automation_settings['auto_posts'] ?? false) ? 'Ativo' : 'Inativo' }}
+                    </span>
+                </p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" 
+                       id="autoPostToggle" 
+                       class="sr-only peer" 
+                       onchange="toggleAutomation('posts', this.checked)"
+                       @if($business->automation_settings['auto_posts'] ?? false) checked @endif
+                       @if(!$business->is_connected) disabled @endif>
+                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
+            </label>
+        </div>
+    </div>
+
+    <!-- Calendário Inteligente -->
+    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-medium text-gray-900">Calendário Inteligente</h3>
+                <p class="text-sm text-gray-500">Status: 
+                    <span id="calendarStatus" class="@if($business->automation_settings['auto_calendar'] ?? false) text-green-500 @else text-gray-500 @endif">
+                        {{ ($business->automation_settings['auto_calendar'] ?? false) ? 'Ativo' : 'Inativo' }}
+                    </span>
+                </p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" 
+                       id="calendarToggle" 
+                       class="sr-only peer"
+                       onchange="toggleAutomation('calendar', this.checked)"
+                       @if($business->automation_settings['auto_calendar'] ?? false) checked @endif
+                       @if(!$business->is_connected) disabled @endif>
+                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
+            </label>
+        </div>
+    </div>
+</div>
+
+<!-- Grid Principal -->
+<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <!-- Calendário -->
+    <div class="lg:col-span-3">
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Calendário de Publicações</h3>
+                <button onclick="refreshCalendar()" 
+                        class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Atualizar
+                </button>
+            </div>
+            <div id="calendar"></div>
+        </div>
+    </div>
+
+    <!-- Painéis Laterais -->
+    <div class="space-y-6">
+        <!-- Próximas Publicações -->
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Próximas Publicações</h3>
+            <div id="upcoming-posts" class="space-y-4">
+                <div class="animate-pulse">
+                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div class="space-y-3 mt-4">
+                        <div class="h-4 bg-gray-200 rounded"></div>
+                        <div class="h-4 bg-gray-200 rounded w-5/6"></div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Grid Principal -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <!-- Calendário e Eventos -->
-                <div class="space-y-6">
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-100">
-                        <div class="p-6">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-semibold">Calendário de Publicações</h3>
-                                <div class="flex space-x-2">
-                                    <button onclick="refreshCalendarEvents()" 
-                                            class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
-                                        Atualizar
-                                    </button>
-                                    <button onclick="openEventModal()" 
-                                            class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition">
-                                        Novo Evento
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="calendar"></div>
-                        </div>
-                    </div>
-
-                    <!-- Eventos Sazonais -->
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-100">
-                        <div class="p-6">
-                            <h3 class="text-lg font-semibold mb-4">Eventos Sazonais</h3>
-                            <div id="seasonal-events" class="space-y-4">
-                                <!-- Carregado via JavaScript -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Sugestões e Análises -->
-                <div class="space-y-6">
-                    <!-- Sugestões da IA -->
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-100">
-                        <div class="p-6">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-semibold">Sugestões Inteligentes</h3>
-                                <button onclick="refreshSuggestions()" 
-                                        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
-                                    Atualizar
-                                </button>
-                            </div>
-                            <div id="ai-suggestions" class="space-y-4">
-                                <!-- Carregado via JavaScript -->
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Análise de Tendências -->
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-100">
-                        <div class="p-6">
-                            <div class="flex justify-between items-center mb-4">
-                                <h3 class="text-lg font-semibold">Tendências do Segmento</h3>
-                                <button onclick="refreshTrends()" 
-                                        class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
-                                    Atualizar
-                                </button>
-                            </div>
-                            <div id="segment-trends" class="space-y-4">
-                                <!-- Carregado via JavaScript -->
-                            </div>
-                        </div>
+        <!-- Sugestões de IA -->
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Sugestões da IA</h3>
+            <div id="ai-suggestions" class="space-y-4">
+                <div class="animate-pulse">
+                    <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                    <div class="space-y-3 mt-4">
+                        <div class="h-4 bg-gray-200 rounded"></div>
+                        <div class="h-4 bg-gray-200 rounded w-5/6"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <!-- Modal de Eventos -->
-    @include('automation.modals.event-modal')
+<!-- Modal de Evento -->
+<div id="eventModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full" aria-modal="true">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Detalhes do Evento</h3>
+            <form id="eventForm" class="space-y-4">
+                <input type="hidden" id="eventId">
+                <div>
+                    <label for="eventTitle" class="block text-sm font-medium text-gray-700">Título</label>
+                    <input type="text" id="eventTitle" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="eventStart" class="block text-sm font-medium text-gray-700">Início</label>
+                    <input type="datetime-local" id="eventStart" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="eventEnd" class="block text-sm font-medium text-gray-700">Fim</label>
+                    <input type="datetime-local" id="eventEnd" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+                <div class="flex justify-end space-x-3">
+                    <button type="button" onclick="closeEventModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700">
+                        Salvar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-    @push('scripts')
-    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@4.4.0/main.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@4.4.0/main.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/tippy.js@6/dist/tippy.umd.min.js'></script>
+@push('scripts')
+<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@4.4.0/main.min.js'></script>
+<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.js'></script>
 
-    <script>
-        let calendar;
-        const businessId = {{ $business->id }};
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCalendar();
+    loadUpcomingPosts();
+    loadAISuggestions();
+});
 
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeCalendar();
-            loadInitialData();
-            setupEventListeners();
-        });
+// Inicialização do Calendário
+function initializeCalendar() {
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        plugins: ['dayGrid', 'timeGrid'],
+        header: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        defaultView: 'dayGridMonth',
+        events: '/api/business/{{ $business->id }}/events',
+        eventClick: function(info) {
+            showEventModal(info.event);
+        },
+        dateClick: function(info) {
+            showEventModal(null, info.date);
+        }
+    });
+    calendar.render();
+    window.calendar = calendar;
+}
 
-        function initializeCalendar() {
-            const calendarEl = document.getElementById('calendar');
-            calendar = new FullCalendar.Calendar(calendarEl, {
-                plugins: ['dayGrid', 'timeGrid', 'interaction'],
-                initialView: 'dayGridMonth',
-                locale: 'pt-br',
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                },
-                events: `/automation/calendar-events`,
-                editable: true,
-                selectable: true,
-                selectMirror: true,
-                dayMaxEvents: true,
-                select: handleDateSelect,
-                eventClick: handleEventClick,
-                eventDrop: handleEventDrop,
-                eventResize: handleEventResize,
-                loading: function(isLoading) {
-                    // Adicionar indicador de carregamento
-                }
+// Toggle de Automação
+function toggleAutomation(type, enabled) {
+    fetch(`/api/business/{{ $business->id }}/automation/${type}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({ enabled: enabled })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const statusElement = document.getElementById(`${type}Status`);
+            statusElement.textContent = enabled ? 'Ativo' : 'Inativo';
+            statusElement.className = enabled ? 'text-green-500' : 'text-gray-500';
+            
+            Swal.fire({
+                icon: 'success',
+                title: 'Sucesso!',
+                text: `Automação ${enabled ? 'ativada' : 'desativada'} com sucesso.`,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
             });
-            calendar.render();
         }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Erro',
+            text: 'Ocorreu um erro ao alterar a automação.',
+        });
+    });
+}
 
-        function loadInitialData() {
-            refreshSuggestions();
-            refreshTrends();
-            loadSeasonalEvents();
+// Funções do Modal de Evento
+function showEventModal(event = null, date = null) {
+    const modal = document.getElementById('eventModal');
+    const form = document.getElementById('eventForm');
+    
+    if (event) {
+        document.getElementById('eventId').value = event.id;
+        document.getElementById('eventTitle').value = event.title;
+        document.getElementById('eventStart').value = event.start.toISOString().slice(0, 16);
+        document.getElementById('eventEnd').value = event.end ? event.end.toISOString().slice(0, 16) : '';
+    } else {
+        form.reset();
+        document.getElementById('eventId').value = '';
+        if (date) {
+            document.getElementById('eventStart').value = date.toISOString().slice(0, 16);
         }
+    }
+    
+    modal.classList.remove('hidden');
+}
 
-        async function refreshSuggestions() {
-            try {
-                const response = await fetch(`/automation/suggestions/${businessId}`);
-                const data = await response.json();
-                
-                const container = document.getElementById('ai-suggestions');
-                container.innerHTML = data.suggestions.map(suggestion => `
-                    <div class="p-4 bg-gray-50 rounded-lg">
-                        <h4 class="font-semibold">${suggestion.title}</h4>
-                        <p class="text-gray-600 mt-2">${suggestion.description}</p>
-                        <div class="mt-4 flex space-x-2">
-                            <button onclick="applySuggestion('${suggestion.id}')" 
-                                    class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
-                                Aplicar
-                            </button>
-                            <button onclick="dismissSuggestion('${suggestion.id}')"
-                                    class="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition">
-                                Ignorar
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (error) {
-                showNotification('Erro ao carregar sugestões', 'error');
-            }
-        }
+function closeEventModal() {
+    document.getElementById('eventModal').classList.add('hidden');
+}
 
-        async function refreshTrends() {
-            try {
-                const response = await fetch(`/automation/segment-events/${businessId}`);
-                const data = await response.json();
-                
-                const container = document.getElementById('segment-trends');
-                container.innerHTML = data.trends.map(trend => `
-                    <div class="p-4 bg-gray-50 rounded-lg">
-                        <h4 class="font-semibold">${trend.title}</h4>
-                        <p class="text-gray-600 mt-2">${trend.description}</p>
-                        <div class="mt-2 flex flex-wrap gap-2">
-                            ${trend.tags.map(tag => `
-                                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                                    ${tag}
-                                </span>
-                            `).join('')}
-                        </div>
-                    </div>
-                `).join('');
-            } catch (error) {
-                showNotification('Erro ao carregar tendências', 'error');
-            }
-        }
+// Atualização do Calendário
+function refreshCalendar() {
+    window.calendar.refetchEvents();
+    loadUpcomingPosts();
+    loadAISuggestions();
+}
 
-        async function loadSeasonalEvents() {
-            try {
-                const response = await fetch(`/automation/segment-events/${businessId}`);
-                const data = await response.json();
-                
-                const container = document.getElementById('seasonal-events');
-                container.innerHTML = data.events.map(event => `
-                    <div class="p-4 bg-gray-50 rounded-lg">
-                        <h4 class="font-semibold">${event.title}</h4>
-                        <p class="text-gray-600 mt-2">${event.description}</p>
-                        <div class="mt-4 flex space-x-2">
-                            <button onclick="addToCalendar(${JSON.stringify(event)})" 
-                                    class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition">
-                                Adicionar ao Calendário
-                            </button>
-                            <button onclick="createAutomatedPost(${JSON.stringify(event)})"
-                                    class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
-                                Criar Post
-                            </button>
-                        </div>
-                    </div>
-                `).join('');
-            } catch (error) {
-                showNotification('Erro ao carregar eventos sazonais', 'error');
-            }
-        }
+// Carregamento de Posts Futuros
+function loadUpcomingPosts() {
+    fetch(`/api/business/{{ $business->id }}/upcoming-posts`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('upcoming-posts');
+            container.innerHTML = data.posts.map(post => `
+                <div class="border-l-4 border-blue-500 pl-4">
+                    <p class="font-medium">${post.title}</p>
+                    <p class="text-sm text-gray-500">${post.scheduled_date}</p>
+                </div>
+            `).join('') || '<p class="text-gray-500">Nenhuma publicação agendada</p>';
+        });
+}
 
-        async function toggleAutomation(type) {
-            try {
-                const response = await fetch(`/automation/toggle/${businessId}/${type}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    }
-                });
-                
-                const data = await response.json();
-                showNotification(data.message, data.success ? 'success' : 'error');
-                
-                if (data.success) {
-                    loadInitialData();
-                }
-            } catch (error) {
-                showNotification('Erro ao alterar automação', 'error');
-            }
-        }
+// Carregamento de Sugestões da IA
+function loadAISuggestions() {
+    fetch(`/api/business/{{ $business->id }}/ai-suggestions`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('ai-suggestions');
+            container.innerHTML = data.suggestions.map(suggestion => `
+                <div class="border-l-4 border-green-500 pl-4">
+                    <p class="font-medium">${suggestion.title}</p>
+                    <p class="text-sm text-gray-500">${suggestion.description}</p>
+                </div>
+            `).join('') || '<p class="text-gray-500">Nenhuma sugestão disponível</p>';
+        });
+}
+</script>
+@endpush
 
-        function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            notification.className = `fixed bottom-4 right-4 p-4 rounded-lg text-white ${
-                type === 'success' ? 'bg-green-500' : 'bg-red-500'
-            } animate-fade-in z-50`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => {
-                notification.classList.add('animate-fade-out');
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        }
-
-        // Funções de manipulação de eventos do calendário
-        function handleDateSelect(selectInfo) {
-            const modal = document.getElementById('event-modal');
-            const form = document.getElementById('event-form');
-            
-            form.reset();
-            document.getElementById('event-start').value = selectInfo.startStr;
-            document.getElementById('event-end').value = selectInfo.endStr;
-            
-            modal.classList.remove('hidden');
-        }
-
-        async function handleEventClick(info) {
-            // Implementar visualização/edição de evento existente
-        }
-
-        async function handleEventDrop(info) {
-            // Implementar atualização de data/hora do evento
-        }
-
-        async function handleEventResize(info) {
-            // Implementar atualização de duração do evento
-        }
-
-        // Funções auxiliares
-        async function applySuggestion(suggestionId) {
-            try {
-                const response = await fetch(`/automation/apply-improvement/${businessId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-                    },
-                    body: JSON.stringify({ suggestion_id: suggestionId })
-                });
-                
-                const data = await response.json();
-                showNotification(data.message, data.success ? 'success' : 'error');
-                
-                if (data.success) {
-                    refreshSuggestions();
-                    refreshCalendarEvents();
-                }
-            } catch (error) {
-                showNotification('Erro ao aplicar sugestão', 'error');
-            }
-        }
-
-        function setupEventListeners() {
-            // Implementar listeners adicionais conforme necessário
-        }
-    </script>
-    @endpush
+</div>
 </x-app-layout>

@@ -7,6 +7,7 @@ use App\Http\Controllers\BusinessImageController;
 use App\Http\Controllers\GoogleController;
 use App\Http\Controllers\CompetitorAnalysisController;
 
+
 Route::middleware('api')->group(function () {
     Route::prefix('competitors')->group(function () {
         Route::post('/analyze-single', [CompetitorAnalysisController::class, 'analyzeSingle']);

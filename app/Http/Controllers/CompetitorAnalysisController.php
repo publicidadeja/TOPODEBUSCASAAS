@@ -324,76 +324,78 @@ private function isRelevantCompetitor($result, $business)
 public function analyzeSingle(Request $request)
 {
     try {
-        // Validate request data
+        // Validação dos dados de entrada
         $name = $request->input('name');
         $address = $request->input('address');
-
+        
         if (empty($name) || empty($address)) {
             throw new \Exception('Nome e endereço do concorrente são obrigatórios');
         }
 
-        // First, search competitor data using SerperService
+        // Busca dados do concorrente usando SerperService
         $searchResults = $this->serper->searchSpecificCompetitor($name, $address);
-
+        
         if (empty($searchResults)) {
             throw new \Exception('Não foi possível encontrar dados do concorrente');
         }
 
-        // Format competitor data for analysis
+        // Formata os dados para análise
         $competitorData = [
             'name' => $name,
             'address' => $address,
-            'rating' => $searchResults['rating'] ?? 0,
-            'reviews' => $searchResults['reviews'] ?? 0,
-            'website' => $searchResults['website'] ?? '',
-            'description' => $searchResults['description'] ?? '',
-            'social_media' => $searchResults['social_media'] ?? [],
-            'market_presence' => $searchResults['market_presence'] ?? 0
+            'rating' => floatval($searchResults['rating'] ?? 0),
+            'reviews_count' => intval($searchResults['reviews_count'] ?? 0),
+            'website' => strval($searchResults['website'] ?? ''),
+            'phone' => strval($searchResults['phone'] ?? ''),
+            'business_status' => strval($searchResults['business_status'] ?? ''),
+            'price_level' => strval($searchResults['price_level'] ?? ''),
+            'categories' => is_array($searchResults['categories']) ? 
+                          implode(', ', $searchResults['categories']) : 
+                          strval($searchResults['categories'] ?? ''),
+            'hours' => is_array($searchResults['hours']['weekday_text'] ?? []) ? 
+                      implode("\n", $searchResults['hours']['weekday_text']) : ''
         ];
 
-        // Build prompt for Gemini analysis
-        $prompt = "Analise o seguinte estabelecimento comercial:\n" .
+        // Constrói o prompt para o Gemini
+        $prompt = "Por favor, analise o seguinte estabelecimento comercial:\n\n" .
                  "Nome: {$competitorData['name']}\n" .
                  "Endereço: {$competitorData['address']}\n" .
                  "Avaliação: {$competitorData['rating']}\n" .
-                 "Total de Avaliações: {$competitorData['reviews']}\n" .
-                 "Presença Online: " . (!empty($competitorData['website']) ? "Sim" : "Não") . "\n" .
-                 "Descrição: {$competitorData['description']}\n\n" .
-                 "Forneça uma análise detalhada incluindo:\n" .
-                 "1. Visão geral do negócio\n" .
-                 "2. Pontos fortes\n" .
+                 "Total de Avaliações: {$competitorData['reviews_count']}\n" .
+                 "Website: {$competitorData['website']}\n" .
+                 "Telefone: {$competitorData['phone']}\n" .
+                 "Status: {$competitorData['business_status']}\n" .
+                 "Nível de Preço: {$competitorData['price_level']}\n" .
+                 "Categorias: {$competitorData['categories']}\n" .
+                 "Horários:\n{$competitorData['hours']}\n\n" .
+                 "Por favor, forneça:\n" .
+                 "1. Uma visão geral do negócio\n" .
+                 "2. Pontos fortes identificados\n" .
                  "3. Oportunidades de melhoria\n" .
-                 "4. Recomendações estratégicas";
+                 "4. Recomendações estratégicas\n" .
+                 "5. Análise da presença online\n" .
+                 "6. Avaliação da competitividade no mercado local";
 
-        // Get analysis from Gemini
+        // Obtém análise do Gemini
         $analysis = $this->gemini->generateContent($prompt);
 
-        // Process Gemini response
-        $processedAnalysis = $this->processGeminiResponse($analysis);
-
-        // Calculate metrics
-        $metrics = [
-            'rating' => floatval($competitorData['rating']),
-            'total_ratings' => intval($competitorData['reviews']),
-            'engagement_rate' => $this->calculateEngagementRate($competitorData)
-        ];
-
-        // Format final response
-        $formattedAnalysis = [
-            'overview' => $processedAnalysis['overview'] ?? 'Análise não disponível',
-            'strengths' => $processedAnalysis['strengths'] ?? [],
-            'opportunities' => $processedAnalysis['opportunities'] ?? [],
-            'recommendations' => $processedAnalysis['recommendations'] ?? [],
-            'metrics' => $metrics
-        ];
-
+        // Retorna a resposta formatada
         return response()->json([
             'success' => true,
-            'analysis' => $formattedAnalysis
+            'analysis' => $analysis,
+            'data' => [
+                'business' => $competitorData,
+                'raw_data' => $searchResults
+            ]
         ]);
 
     } catch (\Exception $e) {
-        \Log::error('Erro na análise do concorrente: ' . $e->getMessage());
+        \Log::error('Erro na análise do concorrente: ' . $e->getMessage(), [
+            'name' => $name ?? null,
+            'address' => $address ?? null,
+            'trace' => $e->getTraceAsString()
+        ]);
+        
         return response()->json([
             'success' => false,
             'message' => 'Erro ao analisar concorrente: ' . $e->getMessage()

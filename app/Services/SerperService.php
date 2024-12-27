@@ -558,13 +558,11 @@ private function isValidImageUrl($url)
 public function searchSpecificCompetitor($name, $address)
 {
     try {
-        $query = sprintf('"%s" "%s"', $name, $address);
-        
         $response = Http::withHeaders([
             'X-API-KEY' => $this->apiKey,
             'Content-Type' => 'application/json'
         ])->post($this->apiEndpoint, [
-            'q' => $query,
+            'q' => sprintf('"%s" "%s"', $name, $address),
             'gl' => 'br',
             'hl' => 'pt-br',
             'type' => 'places'
@@ -572,10 +570,37 @@ public function searchSpecificCompetitor($name, $address)
 
         if ($response->successful()) {
             $data = $response->json();
-            $places = $data['places'] ?? [];
+            $place = $data['places'][0] ?? null;
             
-            // Retorna apenas o primeiro resultado mais relevante
-            return !empty($places) ? $places[0] : [];
+            if (!$place) {
+                return [];
+            }
+
+            return [
+                'title' => strval($place['title'] ?? ''),
+                'name' => strval($place['title'] ?? ''),
+                'location' => strval($place['address'] ?? ''),
+                'address' => strval($place['address'] ?? ''),
+                'rating' => floatval($place['rating'] ?? 0),
+                'reviews_count' => intval($place['reviewsCount'] ?? 0),
+                'reviews' => $place['reviews'] ?? [],
+                'phone' => strval($place['phoneNumber'] ?? ''),
+                'website' => strval($place['website'] ?? ''),
+                'social_media' => [
+                    'facebook' => strval($place['facebook'] ?? ''),
+                    'instagram' => strval($place['instagram'] ?? ''),
+                    'twitter' => strval($place['twitter'] ?? '')
+                ],
+                'business_status' => strval($place['businessStatus'] ?? ''),
+                'price_level' => strval($place['priceLevel'] ?? ''),
+                'categories' => $place['categories'] ?? [],
+                'features' => $place['features'] ?? [],
+                'hours' => [
+                    'periods' => $place['hours']['periods'] ?? [],
+                    'weekday_text' => $place['hours']['weekdayText'] ?? [],
+                    'open_now' => boolval($place['hours']['openNow'] ?? false)
+                ]
+            ];
         }
 
         return [];
@@ -583,6 +608,27 @@ public function searchSpecificCompetitor($name, $address)
         \Log::error('Erro na busca específica do Serper: ' . $e->getMessage());
         throw $e;
     }
+}
+
+// Método auxiliar para extrair links de redes sociais
+private function extractSocialLink($place, $platform)
+{
+    if (empty($place['website'])) {
+        return null;
+    }
+
+    $patterns = [
+        'facebook' => '/(?:https?:\/\/)?(?:www\.)?facebook\.com\/[a-zA-Z0-9\.]+/i',
+        'instagram' => '/(?:https?:\/\/)?(?:www\.)?instagram\.com\/[a-zA-Z0-9\.]+/i',
+        'twitter' => '/(?:https?:\/\/)?(?:www\.)?twitter\.com\/[a-zA-Z0-9\.]+/i'
+    ];
+
+    if (isset($patterns[$platform])) {
+        preg_match($patterns[$platform], $place['website'], $matches);
+        return $matches[0] ?? null;
+    }
+
+    return null;
 }
 
 }

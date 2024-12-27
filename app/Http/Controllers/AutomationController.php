@@ -1428,22 +1428,7 @@ public function createScheduledPost($business, $postData)
     }
 }
 
-public function getSegmentEvents(Business $business)
-{
-    try {
-        $events = $this->aiAnalysis->getSeasonalEvents($business);
-        return response()->json([
-            'success' => true,
-            'seasonal_events' => $events
-        ]);
-    } catch (\Exception $e) {
-        \Log::error('Erro ao buscar eventos sazonais: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'error' => 'Erro ao buscar eventos sazonais'
-        ], 500);
-    }
-}
+
 
 public function updateCalendarEvent(Request $request)
 {
@@ -1721,6 +1706,225 @@ public function getSmartNotifications()
             ]
         ]
     ]);
+}
+
+/**
+ * Get AI-powered suggestions for the business
+ */
+public function getSuggestions(Business $business)
+{
+    try {
+        // Buscar dados do negócio e do segmento
+        $businessData = [
+            'name' => $business->name,
+            'segment' => $business->segment,
+            'city' => $business->city,
+            'state' => $business->state
+        ];
+
+        // Usar o Serper para buscar eventos e datas importantes
+        $searchResults = $this->serper->search("{$business->segment} datas comemorativas eventos {$business->city}");
+
+        // Usar o Gemini para analisar e gerar sugestões
+        $suggestions = $this->gemini->analyzeBusinessData($business, [
+            'search_results' => $searchResults,
+            'business_data' => $businessData
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'suggestions' => $suggestions
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao buscar sugestões: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao buscar sugestões'], 500);
+    }
+}
+
+public function getSegmentEvents(Business $business)
+{
+    try {
+        // Buscar eventos específicos do segmento usando Serper
+        $searchQuery = "{$business->segment} eventos importantes datas comemorativas {$business->city} {$business->state}";
+        $searchResults = $this->serper->search($searchQuery);
+
+        // Usar Gemini para processar e formatar os eventos
+        $prompt = "Analise estes resultados de busca e crie uma lista de eventos importantes para um(a) {$business->segment}:\n" . 
+                 json_encode($searchResults);
+        
+        $events = $this->gemini->generateContent($prompt);
+
+        return response()->json([
+            'success' => true,
+            'events' => $this->formatEvents($events['content'])
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao buscar eventos: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao buscar eventos'], 500);
+    }
+}
+
+private function formatEvents($content)
+{
+    $events = [];
+    $lines = explode("\n", $content);
+    
+    foreach ($lines as $line) {
+        if (preg_match('/^(.*?):\s*(.*)$/', $line, $matches)) {
+            $events[] = [
+                'title' => trim($matches[1]),
+                'description' => trim($matches[2]),
+                'date' => $this->extractDate($line),
+                'type' => 'segment_event'
+            ];
+        }
+    }
+    
+    return $events;
+}
+
+private function extractDate($text)
+{
+    // Implementar lógica para extrair data do texto
+    // Por exemplo: "25 de dezembro" ou "15/12"
+    $date = date('Y-m-d'); // Data padrão
+    return $date;
+}
+
+/**
+ * Toggle automation features for the business
+ */
+public function toggleAutomation(Business $business, $type)
+{
+    try {
+        $settings = $business->settings ?? [];
+        
+        switch ($type) {
+            case 'posts':
+                $settings['auto_posts'] = !($settings['auto_posts'] ?? false);
+                $message = $settings['auto_posts'] ? 'Posts automáticos ativados' : 'Posts automáticos desativados';
+                break;
+            case 'calendar':
+                $settings['auto_calendar'] = !($settings['auto_calendar'] ?? false);
+                $message = $settings['auto_calendar'] ? 'Calendário automático ativado' : 'Calendário automático desativado';
+                break;
+            default:
+                return response()->json(['error' => 'Tipo de automação inválido'], 400);
+        }
+
+        $business->settings = $settings;
+        $business->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'status' => $settings
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao alterar automação: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao alterar automação'], 500);
+    }
+}
+
+/**
+ * Dismiss a suggestion
+ */
+public function dismissSuggestion(Business $business, $suggestionId)
+{
+    try {
+        // Marcar sugestão como descartada no banco
+        $suggestion = Notification::where('business_id', $business->id)
+            ->where('id', $suggestionId)
+            ->first();
+
+        if (!$suggestion) {
+            return response()->json(['error' => 'Sugestão não encontrada'], 404);
+        }
+
+        $suggestion->update([
+            'status' => 'dismissed',
+            'dismissed_at' => now()
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sugestão descartada com sucesso'
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao descartar sugestão: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao descartar sugestão'], 500);
+    }
+}
+
+/**
+ * Add event to calendar
+ */
+public function addToCalendar(Request $request, Business $business)
+{
+    try {
+        $validated = $request->validate([
+            'title' => 'required|string',
+            'description' => 'nullable|string',
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after:start_date',
+            'event_type' => 'required|string'
+        ]);
+
+        $event = CalendarEvent::create([
+            'business_id' => $business->id,
+            'title' => $validated['title'],
+            'description' => $validated['description'],
+            'start_date' => $validated['start_date'],
+            'end_date' => $validated['end_date'],
+            'event_type' => $validated['event_type'],
+            'status' => 'active'
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Evento adicionado ao calendário',
+            'event' => $event
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao adicionar evento: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao adicionar evento'], 500);
+    }
+}
+
+/**
+ * Create automated post
+ */
+public function createAutomatedPost(Request $request, Business $business)
+{
+    try {
+        $validated = $request->validate([
+            'event_type' => 'required|string',
+            'title' => 'required|string',
+            'scheduled_for' => 'required|date|after:now'
+        ]);
+
+        // Gerar conteúdo com Gemini
+        $prompt = $this->getDefaultPrompt($business, $validated['event_type']);
+        $content = $this->gemini->generateContent($prompt);
+
+        $post = AutomatedPost::create([
+            'business_id' => $business->id,
+            'type' => $validated['event_type'],
+            'title' => $validated['title'],
+            'content' => $content['content'],
+            'scheduled_for' => $validated['scheduled_for'],
+            'status' => 'pending'
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Post automático criado com sucesso',
+            'post' => $post
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Erro ao criar post: ' . $e->getMessage());
+        return response()->json(['error' => 'Erro ao criar post'], 500);
+    }
 }
 
 }

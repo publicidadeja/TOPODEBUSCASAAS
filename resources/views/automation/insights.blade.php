@@ -31,6 +31,48 @@
         </div>
     </div>
 
+
+    <!-- Adicione esta seção no grid principal -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Controles de Automação -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold mb-4">Automações do Google Meu Negócio</h3>
+        
+        <!-- Toggle Posts Automáticos -->
+        <div class="mb-4">
+            <label class="flex items-center space-x-3">
+                <input type="checkbox" 
+                       class="form-checkbox h-5 w-5 text-blue-600"
+                       onchange="toggleAutomation('posts')"
+                       @if($business->settings['auto_posts'] ?? false) checked @endif>
+                <span>Posts Automáticos</span>
+            </label>
+            <p class="text-sm text-gray-600 mt-1">
+                Permite que o sistema crie e publique posts automaticamente
+            </p>
+        </div>
+
+        <!-- Toggle Calendário Automático -->
+        <div class="mb-4">
+            <label class="flex items-center space-x-3">
+                <input type="checkbox" 
+                       class="form-checkbox h-5 w-5 text-blue-600"
+                       onchange="toggleAutomation('calendar')"
+                       @if($business->settings['auto_calendar'] ?? false) checked @endif>
+                <span>Calendário Inteligente</span>
+            </label>
+            <p class="text-sm text-gray-600 mt-1">
+                Preenche automaticamente o calendário com datas importantes
+            </p>
+        </div>
+    </div>
+
+    <!-- Calendário de Eventos -->
+    <div class="bg-white rounded-lg shadow-sm p-6">
+        <h3 class="text-lg font-semibold mb-4">Calendário de Eventos</h3>
+        <div id="calendar"></div>
+    </div>
+</div>
     @push('scripts')
     <script>
         function loadInsights() {

@@ -322,6 +322,7 @@ return view('analytics.dashboard', compact(
     'competitorAnalysis',
     'competitorsSummary',
     'competitors'
+    
 ));
 
 
