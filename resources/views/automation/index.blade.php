@@ -222,12 +222,43 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeCalendar();
     loadUpcomingPosts();
     loadAISuggestions();
+    
+    // Event listener para o formulário de evento
+    document.getElementById('eventForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const eventId = this.dataset.eventId;
+        
+        fetch(`/api/automation/calendar-events${eventId ? `/${eventId}` : ''}`, {
+            method: eventId ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify(Object.fromEntries(formData))
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeEventModal();
+                calendar.refetchEvents();
+                Swal.fire({
+                    icon: 'success',
+                    title: `Evento ${eventId ? 'atualizado' : 'criado'} com sucesso!`,
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000
+                });
+            }
+        });
+    });
 });
 
 // Inicialização do Calendário
 function initializeCalendar() {
-    var calendarEl = document.getElementById('calendar');
-    var calendar = new FullCalendar.Calendar(calendarEl, {
+    const calendarEl = document.getElementById('calendar');
+    const calendar = new FullCalendar.Calendar(calendarEl, {
         plugins: ['dayGrid', 'timeGrid'],
         header: {
             left: 'prev,next today',
@@ -235,12 +266,19 @@ function initializeCalendar() {
             right: 'dayGridMonth,timeGridWeek,timeGridDay'
         },
         defaultView: 'dayGridMonth',
-        events: '/api/business/{{ $business->id }}/events',
+        events: `/api/automation/calendar-events/${businessId}`,
         eventClick: function(info) {
             showEventModal(info.event);
         },
         dateClick: function(info) {
             showEventModal(null, info.date);
+        },
+        editable: true,
+        eventDrop: function(info) {
+            updateEvent(info.event);
+        },
+        eventResize: function(info) {
+            updateEvent(info.event);
         }
     });
     calendar.render();
@@ -289,21 +327,56 @@ function toggleAutomation(type, enabled) {
 function showEventModal(event = null, date = null) {
     const modal = document.getElementById('eventModal');
     const form = document.getElementById('eventForm');
+    const titleInput = document.getElementById('eventTitle');
+    const startInput = document.getElementById('eventStart');
+    const endInput = document.getElementById('eventEnd');
     
     if (event) {
-        document.getElementById('eventId').value = event.id;
-        document.getElementById('eventTitle').value = event.title;
-        document.getElementById('eventStart').value = event.start.toISOString().slice(0, 16);
-        document.getElementById('eventEnd').value = event.end ? event.end.toISOString().slice(0, 16) : '';
+        titleInput.value = event.title;
+        startInput.value = event.start.toISOString().slice(0, 16);
+        endInput.value = event.end ? event.end.toISOString().slice(0, 16) : '';
+        form.dataset.eventId = event.id;
     } else {
         form.reset();
-        document.getElementById('eventId').value = '';
+        delete form.dataset.eventId;
         if (date) {
-            document.getElementById('eventStart').value = date.toISOString().slice(0, 16);
+            startInput.value = date.toISOString().slice(0, 16);
         }
     }
     
     modal.classList.remove('hidden');
+}
+
+function updateEvent(event) {
+    fetch(`/api/automation/calendar-events/${event.id}`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+        },
+        body: JSON.stringify({
+            title: event.title,
+            start: event.start,
+            end: event.end
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Evento atualizado com sucesso!',
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao atualizar evento:', error);
+        calendar.refetchEvents();
+    });
 }
 
 function closeEventModal() {
@@ -319,31 +392,49 @@ function refreshCalendar() {
 
 // Carregamento de Posts Futuros
 function loadUpcomingPosts() {
-    fetch(`/api/business/{{ $business->id }}/upcoming-posts`)
+    fetch(`/api/automation/upcoming-posts/${businessId}`)  // Adicionar businessId
         .then(response => response.json())
         .then(data => {
             const container = document.getElementById('upcoming-posts');
-            container.innerHTML = data.posts.map(post => `
-                <div class="border-l-4 border-blue-500 pl-4">
-                    <p class="font-medium">${post.title}</p>
-                    <p class="text-sm text-gray-500">${post.scheduled_date}</p>
-                </div>
-            `).join('') || '<p class="text-gray-500">Nenhuma publicação agendada</p>';
+            if (data.posts && data.posts.length > 0) {
+                container.innerHTML = data.posts.map(post => `
+                    <div class="border-l-4 border-blue-500 pl-4 mb-4">
+                        <p class="font-medium">${post.title}</p>
+                        <p class="text-sm text-gray-500">${new Date(post.scheduled_for).toLocaleDateString()}</p>
+                        <p class="text-xs text-gray-400">${post.status}</p>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = '<p class="text-gray-500">Nenhuma publicação agendada</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar posts:', error);
         });
 }
 
-// Carregamento de Sugestões da IA
 function loadAISuggestions() {
-    fetch(`/api/business/{{ $business->id }}/ai-suggestions`)
+    fetch(`/api/automation/ai-suggestions/${businessId}`)  // Adicionar businessId
         .then(response => response.json())
         .then(data => {
             const container = document.getElementById('ai-suggestions');
-            container.innerHTML = data.suggestions.map(suggestion => `
-                <div class="border-l-4 border-green-500 pl-4">
-                    <p class="font-medium">${suggestion.title}</p>
-                    <p class="text-sm text-gray-500">${suggestion.description}</p>
-                </div>
-            `).join('') || '<p class="text-gray-500">Nenhuma sugestão disponível</p>';
+            if (data.insights && Object.keys(data.insights).length > 0) {
+                container.innerHTML = `
+                    <div class="space-y-4">
+                        ${Object.entries(data.insights).map(([type, content]) => `
+                            <div class="border-l-4 border-green-500 pl-4">
+                                <h4 class="font-medium mb-2">${type.charAt(0).toUpperCase() + type.slice(1)}</h4>
+                                <p class="text-sm text-gray-600">${content}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                container.innerHTML = '<p class="text-gray-500">Nenhuma sugestão disponível no momento</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar sugestões:', error);
         });
 }
 </script>

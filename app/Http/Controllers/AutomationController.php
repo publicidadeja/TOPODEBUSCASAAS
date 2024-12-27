@@ -30,10 +30,13 @@ public function __construct(
 public function getAIInsights(Business $business)
 {
     try {
+        // Buscar dados dos concorrentes
+        $competitors = $this->serper->search("{$business->name} concorrentes {$business->segment} {$business->address}");
+
         $insights = [
             'performance' => $this->aiAnalysis->analyzeBusinessPerformance($business),
             'content' => $this->aiAnalysis->generateContentSuggestions($business),
-            'competitors' => $this->aiAnalysis->analyzeCompetitors($business)
+            'competitors' => $this->aiAnalysis->analyzeCompetitors($business, $competitors)
         ];
 
         return response()->json([
@@ -285,6 +288,7 @@ private function analyzeSentiment($reviews)
             ->with('warning', 'Você precisa cadastrar seu negócio primeiro.');
     }
 
+    // Carregar dados necessários
     $scheduledPosts = AutomatedPost::where('business_id', $business->id)
         ->where('is_posted', false)
         ->orderBy('scheduled_for')
@@ -296,10 +300,18 @@ private function analyzeSentiment($reviews)
         ->take(5)
         ->get();
 
-    // Adicionar novos dados
+    // Carregar dados de proteção e análise
     $protectionStatus = $this->getProtectionStatus();
     $competitiveAnalysis = $this->getDetailedCompetitiveAnalysis();
     $smartNotifications = $this->getSmartNotifications();
+    
+    // Carregar eventos do calendário
+    $calendarEvents = CalendarEvent::where('business_id', $business->id)
+        ->whereDate('start_date', '>=', now()->subDays(30))
+        ->get();
+
+    // Carregar sugestões da IA
+    $aiSuggestions = $this->getAIInsights($business);
 
     return view('automation.index', compact(
         'business',
@@ -307,7 +319,9 @@ private function analyzeSentiment($reviews)
         'postedPosts',
         'protectionStatus',
         'competitiveAnalysis',
-        'smartNotifications'
+        'smartNotifications',
+        'calendarEvents',
+        'aiSuggestions'
     ));
 }
     public function createPost(Request $request)
@@ -633,27 +647,24 @@ public function storeCalendarEvent(Request $request)
 
 public function getCalendarEvents()
 {
-    // Pega o business_id da sessão (definido pelo middleware ShareCurrentBusiness)
     $businessId = session('current_business_id');
     
     if (!$businessId) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Nenhum negócio selecionado'
-        ], 404);
+        $businessId = auth()->user()->businesses()->first()->id;
     }
 
     try {
-        $events = CalendarEvent::where('business_id', $businessId)->get();
+        $events = CalendarEvent::where('business_id', $businessId)
+            ->whereDate('start_date', '>=', now()->subDays(30))
+            ->get();
 
-        // Formatar os eventos para o formato que o FullCalendar espera
         $formattedEvents = $events->map(function($event) {
             return [
                 'id' => $event->id,
                 'title' => $event->title,
                 'start' => $event->start_date,
                 'end' => $event->end_date,
-                'color' => $event->color,
+                'color' => $event->color ?? '#3788d8',
                 'description' => $event->description,
                 'event_type' => $event->event_type
             ];
@@ -661,6 +672,7 @@ public function getCalendarEvents()
 
         return response()->json($formattedEvents);
     } catch (\Exception $e) {
+        \Log::error('Erro ao carregar eventos: ' . $e->getMessage());
         return response()->json([
             'success' => false,
             'message' => 'Erro ao carregar eventos: ' . $e->getMessage()

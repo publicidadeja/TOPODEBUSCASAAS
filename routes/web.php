@@ -14,6 +14,12 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\CompetitorAnalysisController;
 use App\Http\Controllers\MarketAnalysisController;
 
+Route::prefix('automation')->group(function () {
+    Route::get('/', [AutomationController::class, 'index'])->name('automation.index');
+    Route::get('/calendar-events', [AutomationController::class, 'getCalendarEvents'])->name('automation.calendar-events');
+    Route::get('/ai-insights/{business}', [AutomationController::class, 'getAIInsights'])->name('automation.ai-insights');
+});
+
 
 Route::get('/business/{business}/protection', [AutomationController::class, 'protection'])
     ->name('protection.index');

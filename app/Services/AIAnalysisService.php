@@ -304,4 +304,77 @@ private function formatCompetitorAnalysis($analysis)
     
     return $formattedSections;
 }
+
+public function generateContentSuggestions($business)
+{
+    try {
+        // Buscar dados relevantes do negócio
+        $metrics = [
+            'views' => $business->analytics()->sum('views'),
+            'engagement' => $business->analytics()->avg('engagement_rate'),
+            'popular_times' => $business->analytics()->pluck('popular_times')->filter()
+        ];
+
+        // Criar prompt para o Gemini
+        $prompt = "Gere sugestões de conteúdo para um negócio do segmento {$business->segment} " .
+                 "considerando os seguintes dados:\n" .
+                 "- Visualizações: {$metrics['views']}\n" .
+                 "- Taxa de engajamento: {$metrics['engagement']}\n" .
+                 "- Localização: {$business->city}, {$business->state}";
+
+        // Gerar sugestões usando o Gemini
+        $suggestions = $this->gemini->generateContent($prompt);
+
+        // Formatar as sugestões
+        return [
+            'post_ideas' => [
+                [
+                    'title' => 'Conteúdo Engajador',
+                    'description' => 'Posts que destacam os diferenciais do seu negócio',
+                    'examples' => $this->formatPostExamples($suggestions['content'])
+                ],
+                [
+                    'title' => 'Promoções Sazonais',
+                    'description' => 'Ofertas baseadas na sazonalidade do seu segmento',
+                    'examples' => $this->formatPromotionExamples($suggestions['content'])
+                ]
+            ],
+            'best_times' => [
+                'to_post' => $this->analyzeBestTimes($metrics['popular_times']),
+                'explanation' => 'Horários com maior engajamento do público'
+            ],
+            'content_types' => [
+                'recommended' => ['photos', 'videos', 'stories'],
+                'priority' => 'photos'
+            ]
+        ];
+    } catch (\Exception $e) {
+        \Log::error('Erro ao gerar sugestões de conteúdo: ' . $e->getMessage());
+        return [
+            'error' => true,
+            'message' => 'Não foi possível gerar sugestões de conteúdo'
+        ];
+    }
+}
+
+private function formatPostExamples($content)
+{
+    // Implementar lógica de formatação de exemplos de posts
+    return array_slice(explode("\n", $content), 0, 3);
+}
+
+private function formatPromotionExamples($content)
+{
+    // Implementar lógica de formatação de exemplos de promoções
+    return array_slice(explode("\n", $content), 3, 3);
+}
+
+private function analyzeBestTimes($popularTimes)
+{
+    // Implementar lógica para analisar melhores horários
+    return [
+        'weekdays' => ['10:00', '15:00', '19:00'],
+        'weekends' => ['11:00', '16:00', '20:00']
+    ];
+}
 }
