@@ -14,6 +14,14 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\CompetitorAnalysisController;
 use App\Http\Controllers\MarketAnalysisController;
 
+
+Route::prefix('automation/gmb')->middleware(['auth'])->group(function () {
+    Route::get('/', [AutomationController::class, 'gmbAutomationIndex'])->name('automation.gmb.index');
+    Route::post('/post', [AutomationController::class, 'createGMBPost'])->name('automation.gmb.post');
+    Route::post('/calendar', [AutomationController::class, 'manageGMBCalendar'])->name('automation.gmb.calendar');
+    Route::get('/suggestions', [AutomationController::class, 'getGMBSuggestions'])->name('automation.gmb.suggestions');
+});
+
 Route::prefix('automation')->group(function () {
     Route::get('/', [AutomationController::class, 'index'])->name('automation.index');
     Route::get('/calendar-events', [AutomationController::class, 'getCalendarEvents'])->name('automation.calendar-events');

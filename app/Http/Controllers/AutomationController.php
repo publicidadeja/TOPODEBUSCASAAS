@@ -1939,4 +1939,145 @@ public function createAutomatedPost(Request $request, Business $business)
     }
 }
 
+
+
+// AutomationController.php
+
+// Nova função para gerenciar automações do GMB
+public function gmbAutomationIndex()
+{
+    $business = Business::where('user_id', auth()->id())->first();
+
+    if (!$business) {
+        return redirect()
+            ->route('business.create')
+            ->with('warning', 'Você precisa cadastrar seu negócio primeiro.');
+    }
+
+    // Carregar dados específicos para automações do GMB
+    $automationSettings = $this->getGMBAutomationSettings($business);
+    $scheduledPosts = $this->getScheduledGMBPosts($business);
+    $calendarEvents = $this->getGMBCalendarEvents($business);
+    $aiSuggestions = $this->getGMBSuggestions($business);
+
+    return view('automation.gmb.index', compact(
+        'business',
+        'automationSettings',
+        'scheduledPosts',
+        'calendarEvents',
+        'aiSuggestions'
+    ));
+}
+
+// Função para buscar configurações de automação do GMB
+private function getGMBAutomationSettings($business)
+{
+    return [
+        'auto_posts' => $business->automation_settings['gmb_auto_posts'] ?? false,
+        'smart_calendar' => $business->automation_settings['gmb_smart_calendar'] ?? false,
+        'ai_suggestions' => $business->automation_settings['gmb_ai_suggestions'] ?? false
+    ];
+}
+
+// Função para buscar posts agendados do GMB
+private function getScheduledGMBPosts($business)
+{
+    return AutomatedPost::where('business_id', $business->id)
+        ->where('platform', 'gmb')
+        ->where('is_posted', false)
+        ->orderBy('scheduled_for')
+        ->get();
+}
+
+// Função para buscar eventos do calendário do GMB
+private function getGMBCalendarEvents($business)
+{
+    return CalendarEvent::where('business_id', $business->id)
+        ->where('type', 'gmb')
+        ->whereDate('start_date', '>=', now()->subDays(30))
+        ->get();
+}
+
+// Função para gerar sugestões da IA para o GMB
+private function getGMBSuggestions($business)
+{
+    try {
+        // Buscar dados relevantes para o segmento
+        $segmentData = $this->serper->search("{$business->segment} tendências marketing");
+        
+        // Analisar com Gemini
+        $suggestions = $this->gemini->analyzeForGMB([
+            'business' => $business->toArray(),
+            'segment_data' => $segmentData,
+            'current_month' => now()->month
+        ]);
+
+        return $suggestions;
+    } catch (\Exception $e) {
+        \Log::error('Erro ao gerar sugestões GMB: ' . $e->getMessage());
+        return [];
+    }
+}
+
+// Função para criar post automático no GMB
+public function createGMBPost(Request $request)
+{
+    try {
+        $validated = $request->validate([
+            'type' => 'required|string',
+            'content' => 'required|string',
+            'scheduled_for' => 'required|date',
+            'media' => 'nullable|file'
+        ]);
+
+        $business = Business::where('user_id', auth()->id())->first();
+
+        $post = new AutomatedPost();
+        $post->business_id = $business->id;
+        $post->platform = 'gmb';
+        $post->type = $validated['type'];
+        $post->content = $validated['content'];
+        $post->scheduled_for = $validated['scheduled_for'];
+        $post->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Post agendado com sucesso'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao agendar post: ' . $e->getMessage()
+        ], 500);
+    }
+}
+
+// Função para gerenciar calendário inteligente do GMB
+public function manageGMBCalendar(Request $request)
+{
+    try {
+        $validated = $request->validate([
+            'action' => 'required|string',
+            'event_data' => 'required|array'
+        ]);
+
+        $business = Business::where('user_id', auth()->id())->first();
+
+        switch ($validated['action']) {
+            case 'create':
+                return $this->createGMBCalendarEvent($business, $validated['event_data']);
+            case 'update':
+                return $this->updateGMBCalendarEvent($business, $validated['event_data']);
+            case 'delete':
+                return $this->deleteGMBCalendarEvent($business, $validated['event_data']);
+            default:
+                return response()->json(['error' => 'Ação inválida'], 400);
+        }
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Erro ao gerenciar calendário: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }

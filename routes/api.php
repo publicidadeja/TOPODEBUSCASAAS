@@ -8,6 +8,15 @@ use App\Http\Controllers\GoogleController;
 use App\Http\Controllers\CompetitorAnalysisController;
 
 
+Route::prefix('api/automation')->group(function () {
+    Route::get('/calendar-events/{business}', [AutomationController::class, 'getCalendarEvents']);
+    Route::post('/calendar-events', [AutomationController::class, 'storeCalendarEvent']);
+    Route::put('/calendar-events/{event}', [AutomationController::class, 'updateCalendarEvent']);
+    Route::get('/upcoming-posts/{business}', [AutomationController::class, 'getUpcomingPosts']);
+    Route::get('/ai-suggestions/{business}', [AutomationController::class, 'getAIInsights']);
+});
+
+
 Route::middleware('api')->group(function () {
     Route::prefix('competitors')->group(function () {
         Route::post('/analyze-single', [CompetitorAnalysisController::class, 'analyzeSingle']);

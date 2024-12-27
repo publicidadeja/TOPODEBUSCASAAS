@@ -6,33 +6,33 @@
     <link href='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@4.4.0/main.min.css' rel='stylesheet' />
     <link href='https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.css' rel='stylesheet' />
     <style>
-        .fc-event {
-            cursor: pointer;
-            transition: all 0.2s ease;
+        .automation-card {
+            transition: all 0.3s ease;
         }
-        .fc-event:hover {
-            transform: scale(1.02);
+        .automation-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-in;
+        .calendar-container {
+            height: 600px;
+            overflow: hidden;
         }
-        .animate-fade-out {
-            animation: fadeOut 0.3s ease-out;
+        .suggestion-card {
+            border-left: 4px solid #4F46E5;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
         }
     </style>
     @endpush
 
     <div class="py-6">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <!-- Cabeçalho da Página -->
+            <!-- Cabeçalho -->
             <div class="mb-6">
                 <h2 class="text-2xl font-bold text-gray-800">
                     Automação do Google Meu Negócio
@@ -42,108 +42,111 @@
                 </p>
             </div>
 
-<!-- Painel de Status -->
-<div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-    <!-- Status da Integração -->
-    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <div class="flex items-center">
-            <div class="flex-shrink-0">
-                @if($business->is_connected)
-                    <svg class="h-8 w-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                @else
-                    <svg class="h-8 w-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                @endif
+
+                        <!-- Painel de Status -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <!-- Status da Integração -->
+                <div class="automation-card bg-white p-6 rounded-lg shadow-sm">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            @if($business->is_connected)
+                                <svg class="h-8 w-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            @else
+                                <svg class="h-8 w-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            @endif
+                        </div>
+                        <div class="ml-4">
+                            <h3 class="text-lg font-medium text-gray-900">Status da Integração</h3>
+                            <p class="text-sm text-gray-500">
+                                @if($business->is_connected)
+                                    Google Meu Negócio conectado
+                                    @if($business->last_sync_at)
+                                        <div class="mt-1 text-xs text-gray-400">
+                                            Última sincronização: {{ $business->last_sync_at->diffForHumans() }}
+                                        </div>
+                                    @endif
+                                @else
+                                    Não conectado
+                                    <a href="{{ route('business.settings', $business) }}" class="text-blue-600 hover:text-blue-800">
+                                        Configurar integração
+                                    </a>
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Automação de Posts -->
+                <div class="automation-card bg-white p-6 rounded-lg shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900">Posts Automáticos</h3>
+                            <p class="text-sm text-gray-500">
+                                Status: <span id="autoPostStatus" class="font-medium"></span>
+                            </p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="autoPostToggle" class="sr-only peer" 
+                                   @if($business->automation_settings['auto_posts'] ?? false) checked @endif>
+                            <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full 
+                                      peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-0.5 
+                                      after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 
+                                      after:w-5 after:transition-all"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Calendário Inteligente -->
+                <div class="automation-card bg-white p-6 rounded-lg shadow-sm">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900">Calendário Inteligente</h3>
+                            <p class="text-sm text-gray-500">
+                                Status: <span id="calendarStatus" class="font-medium"></span>
+                            </p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="calendarToggle" class="sr-only peer"
+                                   @if($business->automation_settings['smart_calendar'] ?? false) checked @endif>
+                            <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full 
+                                      peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-0.5 
+                                      after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 
+                                      after:w-5 after:transition-all"></div>
+                        </label>
+                    </div>
+                </div>
             </div>
-            <div class="ml-4">
-                <h3 class="text-lg font-medium text-gray-900">Status da Integração</h3>
-                <p class="text-sm text-gray-500">
-                    @if($business->is_connected)
-                        Google Meu Negócio conectado
-                        @if($business->last_sync_at)
-                            <div class="mt-1 text-xs text-gray-400">
-                                Última sincronização: {{ $business->last_sync_at->diffForHumans() }}
-                            </div>
-                        @endif
-                    @else
-                        Não conectado
-                        <a href="{{ route('business.settings', $business) }}" 
-                           class="text-blue-600 hover:text-blue-800">
-                            Configurar integração
-                        </a>
-                    @endif
-                </p>
-            </div>
-        </div>
-    </div>
 
 
-    <!-- Posts Automáticos -->
-    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <div class="flex items-center justify-between">
-            <div>
-                <h3 class="text-lg font-medium text-gray-900">Posts Automáticos</h3>
-                <p class="text-sm text-gray-500">Status: 
-                    <span id="autoPostStatus" class="@if($business->automation_settings['auto_posts'] ?? false) text-green-500 @else text-gray-500 @endif">
-                        {{ ($business->automation_settings['auto_posts'] ?? false) ? 'Ativo' : 'Inativo' }}
-                    </span>
-                </p>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" 
-                       id="autoPostToggle" 
-                       class="sr-only peer" 
-                       onchange="toggleAutomation('posts', this.checked)"
-                       @if($business->automation_settings['auto_posts'] ?? false) checked @endif
-                       @if(!$business->is_connected) disabled @endif>
-                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
-            </label>
-        </div>
-    </div>
-
-    <!-- Calendário Inteligente -->
-    <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-        <div class="flex items-center justify-between">
-            <div>
-                <h3 class="text-lg font-medium text-gray-900">Calendário Inteligente</h3>
-                <p class="text-sm text-gray-500">Status: 
-                    <span id="calendarStatus" class="@if($business->automation_settings['auto_calendar'] ?? false) text-green-500 @else text-gray-500 @endif">
-                        {{ ($business->automation_settings['auto_calendar'] ?? false) ? 'Ativo' : 'Inativo' }}
-                    </span>
-                </p>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" 
-                       id="calendarToggle" 
-                       class="sr-only peer"
-                       onchange="toggleAutomation('calendar', this.checked)"
-                       @if($business->automation_settings['auto_calendar'] ?? false) checked @endif
-                       @if(!$business->is_connected) disabled @endif>
-                <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
-            </label>
-        </div>
-    </div>
-</div>
-
-<!-- Grid Principal -->
+            <!-- Grid Principal -->
 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
     <!-- Calendário -->
     <div class="lg:col-span-3">
         <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-medium text-gray-900">Calendário de Publicações</h3>
-                <button onclick="refreshCalendar()" 
-                        class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                    </svg>
-                    Atualizar
-                </button>
+                <div class="flex space-x-2">
+                    <button onclick="createNewPost()" 
+                            class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        Novo Post
+                    </button>
+                    <button onclick="refreshCalendar()" 
+                            class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Atualizar
+                    </button>
+                </div>
             </div>
-            <div id="calendar"></div>
+            <div id="calendar" class="calendar-container"></div>
         </div>
     </div>
 
@@ -153,6 +156,7 @@
         <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <h3 class="text-lg font-medium text-gray-900 mb-4">Próximas Publicações</h3>
             <div id="upcoming-posts" class="space-y-4">
+                <!-- Loading State -->
                 <div class="animate-pulse">
                     <div class="h-4 bg-gray-200 rounded w-3/4"></div>
                     <div class="space-y-3 mt-4">
@@ -163,10 +167,19 @@
             </div>
         </div>
 
-        <!-- Sugestões de IA -->
+        <!-- Sugestões da IA -->
         <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Sugestões da IA</h3>
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Sugestões da IA</h3>
+                <button onclick="refreshSuggestions()" 
+                        class="text-gray-400 hover:text-gray-600">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                </button>
+            </div>
             <div id="ai-suggestions" class="space-y-4">
+                <!-- Loading State -->
                 <div class="animate-pulse">
                     <div class="h-4 bg-gray-200 rounded w-3/4"></div>
                     <div class="space-y-3 mt-4">
@@ -176,269 +189,323 @@
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-<!-- Modal de Evento -->
-<div id="eventModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full" aria-modal="true">
-    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-        <div class="mt-3">
-            <h3 class="text-lg font-medium text-gray-900 mb-4">Detalhes do Evento</h3>
-            <form id="eventForm" class="space-y-4">
-                <input type="hidden" id="eventId">
-                <div>
-                    <label for="eventTitle" class="block text-sm font-medium text-gray-700">Título</label>
-                    <input type="text" id="eventTitle" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+        <!-- Métricas Rápidas -->
+        <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Métricas</h3>
+            <div id="quick-metrics" class="space-y-4">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-gray-500">Posts este mês</span>
+                    <span class="font-medium" id="posts-count">--</span>
                 </div>
-                <div>
-                    <label for="eventStart" class="block text-sm font-medium text-gray-700">Início</label>
-                    <input type="datetime-local" id="eventStart" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-gray-500">Engajamento médio</span>
+                    <span class="font-medium" id="avg-engagement">--</span>
                 </div>
-                <div>
-                    <label for="eventEnd" class="block text-sm font-medium text-gray-700">Fim</label>
-                    <input type="datetime-local" id="eventEnd" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <div class="flex justify-between items-center">
+                    <span class="text-sm text-gray-500">Melhor horário</span>
+                    <span class="font-medium" id="best-time">--</span>
                 </div>
-                <div class="flex justify-end space-x-3">
-                    <button type="button" onclick="closeEventModal()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
-                        Cancelar
-                    </button>
-                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700">
-                        Salvar
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
+
 
 @push('scripts')
-<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.js'></script>
-<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.js'></script>
-<script src='https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@4.4.0/main.min.js'></script>
-<script src='https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.js'></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@4.4.0/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@4.4.0/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@4.4.0/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.0.19/dist/sweetalert2.min.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    initializeCalendar();
-    loadUpcomingPosts();
-    loadAISuggestions();
-    
-    // Event listener para o formulário de evento
-    document.getElementById('eventForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        const eventId = this.dataset.eventId;
+    // Inicialização do Calendário
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeCalendar();
+        loadUpcomingPosts();
+        loadAISuggestions();
+        updateMetrics();
         
-        fetch(`/api/automation/calendar-events${eventId ? `/${eventId}` : ''}`, {
-            method: eventId ? 'PUT' : 'POST',
+        // Inicializar listeners dos toggles
+        document.getElementById('autoPostToggle').addEventListener('change', function(e) {
+            toggleAutomation('posts', e.target.checked);
+        });
+        
+        document.getElementById('calendarToggle').addEventListener('change', function(e) {
+            toggleAutomation('calendar', e.target.checked);
+        });
+    });
+
+    function initializeCalendar() {
+        var calendarEl = document.getElementById('calendar');
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            plugins: ['dayGrid', 'timeGrid'],
+            header: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek'
+            },
+            locale: 'pt-br',
+            defaultView: 'dayGridMonth',
+            editable: true,
+            eventLimit: true,
+            events: '/automation/events',
+            selectable: true,
+            select: function(info) {
+                showEventModal(null, info);
+            },
+            eventClick: function(info) {
+                showEventModal(info.event);
+            },
+            eventDrop: function(info) {
+                updateEvent(info.event);
+            }
+        });
+        calendar.render();
+        window.calendar = calendar;
+    }
+
+    function toggleAutomation(type, enabled) {
+        fetch('/automation/toggle', {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
             },
-            body: JSON.stringify(Object.fromEntries(formData))
+            body: JSON.stringify({
+                type: type,
+                enabled: enabled
+            })
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                closeEventModal();
-                calendar.refetchEvents();
                 Swal.fire({
                     icon: 'success',
-                    title: `Evento ${eventId ? 'atualizado' : 'criado'} com sucesso!`,
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000
+                    title: 'Sucesso!',
+                    text: `Automação ${enabled ? 'ativada' : 'desativada'} com sucesso`,
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                updateStatus(type, enabled);
+            } else {
+                throw new Error(data.message);
+            }
+        })
+        .catch(error => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erro',
+                text: error.message || 'Ocorreu um erro ao alterar a automação'
+            });
+        });
+    }
+
+    function loadUpcomingPosts() {
+        fetch('/automation/upcoming-posts')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('upcoming-posts');
+                container.innerHTML = data.posts.map(post => `
+                    <div class="p-4 border rounded-lg mb-4 hover:bg-gray-50">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-medium">${post.title}</h4>
+                                <p class="text-sm text-gray-500">${post.scheduled_for}</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="editPost(${post.id})" class="text-blue-600 hover:text-blue-800">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                </button>
+                                <button onclick="deletePost(${post.id})" class="text-red-600 hover:text-red-800">
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            });
+    }
+    function loadAISuggestions() {
+        fetch('/automation/ai-suggestions')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('ai-suggestions');
+                container.innerHTML = data.suggestions.map(suggestion => `
+                    <div class="suggestion-card bg-white p-4 rounded-lg shadow-sm mb-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-medium text-gray-900">${suggestion.title}</h4>
+                                <p class="text-sm text-gray-500 mt-1">${suggestion.description}</p>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button onclick="applySuggestion(${suggestion.id})" 
+                                        class="text-blue-600 hover:text-blue-800">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                              d="M5 13l4 4L19 7"></path>
+                                    </svg>
+                                </button>
+                                <button onclick="dismissSuggestion(${suggestion.id})" 
+                                        class="text-gray-400 hover:text-gray-600">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                              d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            });
+    }
+
+    function updateMetrics() {
+        fetch('/automation/metrics')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('posts-count').textContent = data.posts_count;
+                document.getElementById('avg-engagement').textContent = data.avg_engagement;
+                document.getElementById('best-time').textContent = data.best_time;
+            });
+    }
+
+    function createNewPost() {
+        Swal.fire({
+            title: 'Novo Post',
+            html: `
+                <input id="post-title" class="swal2-input" placeholder="Título">
+                <textarea id="post-content" class="swal2-textarea" placeholder="Conteúdo"></textarea>
+                <input id="post-date" type="datetime-local" class="swal2-input">
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Criar',
+            cancelButtonText: 'Cancelar',
+            preConfirm: () => {
+                return {
+                    title: document.getElementById('post-title').value,
+                    content: document.getElementById('post-content').value,
+                    scheduled_for: document.getElementById('post-date').value
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch('/automation/posts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify(result.value)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire('Sucesso!', 'Post criado com sucesso', 'success');
+                        window.calendar.refetchEvents();
+                        loadUpcomingPosts();
+                    } else {
+                        throw new Error(data.message);
+                    }
+                })
+                .catch(error => {
+                    Swal.fire('Erro', error.message, 'error');
                 });
             }
         });
-    });
-});
-
-// Inicialização do Calendário
-function initializeCalendar() {
-    const calendarEl = document.getElementById('calendar');
-    const calendar = new FullCalendar.Calendar(calendarEl, {
-        plugins: ['dayGrid', 'timeGrid'],
-        header: {
-            left: 'prev,next today',
-            center: 'title',
-            right: 'dayGridMonth,timeGridWeek,timeGridDay'
-        },
-        defaultView: 'dayGridMonth',
-        events: `/api/automation/calendar-events/${businessId}`,
-        eventClick: function(info) {
-            showEventModal(info.event);
-        },
-        dateClick: function(info) {
-            showEventModal(null, info.date);
-        },
-        editable: true,
-        eventDrop: function(info) {
-            updateEvent(info.event);
-        },
-        eventResize: function(info) {
-            updateEvent(info.event);
-        }
-    });
-    calendar.render();
-    window.calendar = calendar;
-}
-
-// Toggle de Automação
-function toggleAutomation(type, enabled) {
-    fetch(`/api/business/{{ $business->id }}/automation/${type}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        },
-        body: JSON.stringify({ enabled: enabled })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const statusElement = document.getElementById(`${type}Status`);
-            statusElement.textContent = enabled ? 'Ativo' : 'Inativo';
-            statusElement.className = enabled ? 'text-green-500' : 'text-gray-500';
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'Sucesso!',
-                text: `Automação ${enabled ? 'ativada' : 'desativada'} com sucesso.`,
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000
-            });
-        }
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Erro',
-            text: 'Ocorreu um erro ao alterar a automação.',
-        });
-    });
-}
-
-// Funções do Modal de Evento
-function showEventModal(event = null, date = null) {
-    const modal = document.getElementById('eventModal');
-    const form = document.getElementById('eventForm');
-    const titleInput = document.getElementById('eventTitle');
-    const startInput = document.getElementById('eventStart');
-    const endInput = document.getElementById('eventEnd');
-    
-    if (event) {
-        titleInput.value = event.title;
-        startInput.value = event.start.toISOString().slice(0, 16);
-        endInput.value = event.end ? event.end.toISOString().slice(0, 16) : '';
-        form.dataset.eventId = event.id;
-    } else {
-        form.reset();
-        delete form.dataset.eventId;
-        if (date) {
-            startInput.value = date.toISOString().slice(0, 16);
-        }
     }
-    
-    modal.classList.remove('hidden');
-}
 
-function updateEvent(event) {
-    fetch(`/api/automation/calendar-events/${event.id}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        },
-        body: JSON.stringify({
-            title: event.title,
-            start: event.start,
-            end: event.end
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Evento atualizado com sucesso!',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 3000
+    function editPost(postId) {
+        fetch(`/automation/posts/${postId}`)
+            .then(response => response.json())
+            .then(post => {
+                Swal.fire({
+                    title: 'Editar Post',
+                    html: `
+                        <input id="post-title" class="swal2-input" value="${post.title}" placeholder="Título">
+                        <textarea id="post-content" class="swal2-textarea" placeholder="Conteúdo">${post.content}</textarea>
+                        <input id="post-date" type="datetime-local" class="swal2-input" value="${post.scheduled_for}">
+                    `,
+                    showCancelButton: true,
+                    confirmButtonText: 'Salvar',
+                    cancelButtonText: 'Cancelar',
+                    preConfirm: () => {
+                        return {
+                            title: document.getElementById('post-title').value,
+                            content: document.getElementById('post-content').value,
+                            scheduled_for: document.getElementById('post-date').value
+                        }
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        updatePost(postId, result.value);
+                    }
+                });
             });
-        }
-    })
-    .catch(error => {
-        console.error('Erro ao atualizar evento:', error);
-        calendar.refetchEvents();
-    });
-}
+    }
 
-function closeEventModal() {
-    document.getElementById('eventModal').classList.add('hidden');
-}
-
-// Atualização do Calendário
-function refreshCalendar() {
-    window.calendar.refetchEvents();
-    loadUpcomingPosts();
-    loadAISuggestions();
-}
-
-// Carregamento de Posts Futuros
-function loadUpcomingPosts() {
-    fetch(`/api/automation/upcoming-posts/${businessId}`)  // Adicionar businessId
+    function updatePost(postId, data) {
+        fetch(`/automation/posts/${postId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify(data)
+        })
         .then(response => response.json())
         .then(data => {
-            const container = document.getElementById('upcoming-posts');
-            if (data.posts && data.posts.length > 0) {
-                container.innerHTML = data.posts.map(post => `
-                    <div class="border-l-4 border-blue-500 pl-4 mb-4">
-                        <p class="font-medium">${post.title}</p>
-                        <p class="text-sm text-gray-500">${new Date(post.scheduled_for).toLocaleDateString()}</p>
-                        <p class="text-xs text-gray-400">${post.status}</p>
-                    </div>
-                `).join('');
+            if (data.success) {
+                Swal.fire('Sucesso!', 'Post atualizado com sucesso', 'success');
+                window.calendar.refetchEvents();
+                loadUpcomingPosts();
             } else {
-                container.innerHTML = '<p class="text-gray-500">Nenhuma publicação agendada</p>';
+                throw new Error(data.message);
             }
         })
         .catch(error => {
-            console.error('Erro ao carregar posts:', error);
+            Swal.fire('Erro', error.message, 'error');
         });
-}
+    }
 
-function loadAISuggestions() {
-    fetch(`/api/automation/ai-suggestions/${businessId}`)  // Adicionar businessId
-        .then(response => response.json())
-        .then(data => {
-            const container = document.getElementById('ai-suggestions');
-            if (data.insights && Object.keys(data.insights).length > 0) {
-                container.innerHTML = `
-                    <div class="space-y-4">
-                        ${Object.entries(data.insights).map(([type, content]) => `
-                            <div class="border-l-4 border-green-500 pl-4">
-                                <h4 class="font-medium mb-2">${type.charAt(0).toUpperCase() + type.slice(1)}</h4>
-                                <p class="text-sm text-gray-600">${content}</p>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
-            } else {
-                container.innerHTML = '<p class="text-gray-500">Nenhuma sugestão disponível no momento</p>';
+    function deletePost(postId) {
+        Swal.fire({
+            title: 'Confirmar exclusão',
+            text: "Esta ação não pode ser desfeita!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Sim, excluir!',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/automation/posts/${postId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire('Excluído!', 'Post excluído com sucesso.', 'success');
+                        window.calendar.refetchEvents();
+                        loadUpcomingPosts();
+                    } else {
+                        throw new Error(data.message);
+                    }
+                })
+                .catch(error => {
+                    Swal.fire('Erro', error.message, 'error');
+                });
             }
-        })
-        .catch(error => {
-            console.error('Erro ao carregar sugestões:', error);
         });
-}
+    }
 </script>
 @endpush
-
-</div>
 </x-app-layout>
