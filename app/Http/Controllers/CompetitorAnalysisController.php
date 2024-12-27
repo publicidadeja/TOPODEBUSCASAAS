@@ -324,62 +324,76 @@ private function isRelevantCompetitor($result, $business)
 public function analyzeSingle(Request $request)
 {
     try {
+        // Validate request data
         $name = $request->input('name');
         $address = $request->input('address');
-        $competitorData = $request->input('competitor_data');
 
-        // Verificar se competitorData é uma string JSON e converter para array
-        if (is_string($competitorData)) {
-            $competitorData = json_decode($competitorData, true);
+        if (empty($name) || empty($address)) {
+            throw new \Exception('Nome e endereço do concorrente são obrigatórios');
         }
 
-        // Definir valores padrão para os dados do competidor
-        $competitorData = array_merge([
+        // First, search competitor data using SerperService
+        $searchResults = $this->serper->searchSpecificCompetitor($name, $address);
+
+        if (empty($searchResults)) {
+            throw new \Exception('Não foi possível encontrar dados do concorrente');
+        }
+
+        // Format competitor data for analysis
+        $competitorData = [
             'name' => $name,
             'address' => $address,
-            'rating' => 0,
-            'reviews' => 0,
-            'website' => '',
-            'status' => 'OPERATIONAL'
-        ], $competitorData ?? []);
+            'rating' => $searchResults['rating'] ?? 0,
+            'reviews' => $searchResults['reviews'] ?? 0,
+            'website' => $searchResults['website'] ?? '',
+            'description' => $searchResults['description'] ?? '',
+            'social_media' => $searchResults['social_media'] ?? [],
+            'market_presence' => $searchResults['market_presence'] ?? 0
+        ];
 
-        // Construir a prompt para a análise
+        // Build prompt for Gemini analysis
         $prompt = "Analise o seguinte estabelecimento comercial:\n" .
                  "Nome: {$competitorData['name']}\n" .
                  "Endereço: {$competitorData['address']}\n" .
                  "Avaliação: {$competitorData['rating']}\n" .
                  "Total de Avaliações: {$competitorData['reviews']}\n" .
+                 "Presença Online: " . (!empty($competitorData['website']) ? "Sim" : "Não") . "\n" .
+                 "Descrição: {$competitorData['description']}\n\n" .
                  "Forneça uma análise detalhada incluindo:\n" .
                  "1. Visão geral do negócio\n" .
                  "2. Pontos fortes\n" .
                  "3. Oportunidades de melhoria\n" .
                  "4. Recomendações estratégicas";
 
-        // Usar o GeminiService para gerar a análise
+        // Get analysis from Gemini
         $analysis = $this->gemini->generateContent($prompt);
 
-        // Processar a resposta do Gemini
+        // Process Gemini response
         $processedAnalysis = $this->processGeminiResponse($analysis);
 
-        // Formatar a resposta
+        // Calculate metrics
+        $metrics = [
+            'rating' => floatval($competitorData['rating']),
+            'total_ratings' => intval($competitorData['reviews']),
+            'engagement_rate' => $this->calculateEngagementRate($competitorData)
+        ];
+
+        // Format final response
         $formattedAnalysis = [
             'overview' => $processedAnalysis['overview'] ?? 'Análise não disponível',
             'strengths' => $processedAnalysis['strengths'] ?? [],
             'opportunities' => $processedAnalysis['opportunities'] ?? [],
             'recommendations' => $processedAnalysis['recommendations'] ?? [],
-            'metrics' => [
-                'rating' => $competitorData['rating'] ?? 0,
-                'reviews' => $competitorData['reviews'] ?? 0,
-                'engagement_rate' => $this->calculateEngagementRate($competitorData)
-            ]
+            'metrics' => $metrics
         ];
 
         return response()->json([
             'success' => true,
             'analysis' => $formattedAnalysis
         ]);
+
     } catch (\Exception $e) {
-        Log::error('Erro na análise do concorrente: ' . $e->getMessage());
+        \Log::error('Erro na análise do concorrente: ' . $e->getMessage());
         return response()->json([
             'success' => false,
             'message' => 'Erro ao analisar concorrente: ' . $e->getMessage()
@@ -391,7 +405,7 @@ private function processGeminiResponse($analysis)
 {
     $content = is_array($analysis) ? ($analysis['content'] ?? '') : $analysis;
     
-    // Inicializar array de retorno
+    // Initialize return array
     $processed = [
         'overview' => '',
         'strengths' => [],
@@ -399,7 +413,7 @@ private function processGeminiResponse($analysis)
         'recommendations' => []
     ];
 
-    // Dividir o conteúdo em seções
+    // Split content into sections
     $sections = explode("\n", $content);
     $currentSection = null;
 
@@ -407,7 +421,7 @@ private function processGeminiResponse($analysis)
         $line = trim($line);
         if (empty($line)) continue;
 
-        // Identificar seções
+        // Identify sections
         if (strpos($line, "Visão geral") !== false || strpos($line, "1.") !== false) {
             $currentSection = 'overview';
             continue;
@@ -422,7 +436,7 @@ private function processGeminiResponse($analysis)
             continue;
         }
 
-        // Adicionar conteúdo à seção apropriada
+        // Add content to appropriate section
         if ($currentSection === 'overview') {
             $processed['overview'] .= $line . "\n";
         } elseif (in_array($currentSection, ['strengths', 'opportunities', 'recommendations'])) {
@@ -437,96 +451,178 @@ private function processGeminiResponse($analysis)
     return $processed;
 }
 
-private function calculateEngagementRate($competitorData)
+// Adicione este método se não existir
+private function generateOverview($competitorData, $metrics)
 {
-    $reviews = $competitorData['reviews'] ?? 0;
-    $rating = $competitorData['rating'] ?? 0;
+    $ratingAnalysis = $this->getRatingAnalysis($metrics['rating']);
     
-    if ($reviews > 0 && $rating > 0) {
-        return round(($reviews * $rating) / 100, 2);
-    }
-    
-    return 0;
+    return sprintf(
+        "O estabelecimento %s, localizado em %s, apresenta %s " .
+        "Com uma média de %.1f estrelas baseada em %d avaliações, " .
+        "demonstra uma taxa de engajamento de %.1f%%.",
+        $competitorData['name'],
+        $competitorData['address'],
+        $ratingAnalysis,
+        $metrics['rating'],
+        $metrics['total_ratings'],
+        $metrics['engagement_rate']
+    );
 }
 
-private function analyzeStrengths($competitorData)
+private function analyzeReviews($reviews)
+{
+    if (empty($reviews)) {
+        return null;
+    }
+
+    // Análise de sentimento e temas comuns
+    $sentiments = [
+        'positive' => 0,
+        'negative' => 0,
+        'neutral' => 0
+    ];
+
+    $commonThemes = [];
+
+    foreach ($reviews as $review) {
+        // Análise básica de sentimento baseada na avaliação
+        $rating = $review['rating'] ?? 0;
+        if ($rating >= 4) {
+            $sentiments['positive']++;
+        } elseif ($rating <= 2) {
+            $sentiments['negative']++;
+        } else {
+            $sentiments['neutral']++;
+        }
+
+        // Extrair texto do review para análise
+        $text = $review['text'] ?? '';
+        if (!empty($text)) {
+            // Aqui você pode implementar uma análise mais detalhada do texto
+            // Por exemplo, identificar palavras-chave comuns
+        }
+    }
+
+    return [
+        'sentiment_analysis' => $sentiments,
+        'common_themes' => $commonThemes,
+        'total_analyzed' => count($reviews)
+    ];
+}
+
+private function prepareReviewsText($reviews)
+{
+    $texts = array_map(function ($review) {
+        return $review['text'] ?? '';
+    }, $reviews);
+
+    return implode("\n", array_filter($texts));
+}
+
+
+private function analyzeReviewsSentiment($reviewsText)
+{
+    // Aqui você pode implementar uma análise de sentimento dos reviews
+    // Por exemplo, usando o serviço Gemini ou outro serviço de análise
+    return $reviewsText ? "Análise de sentimento dos comentários em desenvolvimento." : "";
+}
+
+
+
+private function calculateEngagementRate($data)
+{
+    $totalRatings = $data['total_ratings'] ?? 0;
+    $rating = $data['rating'] ?? 0;
+    
+    return $totalRatings > 0 ? round(($rating * $totalRatings) / 100, 2) : 0;
+}
+
+private function analyzeStrengths($data)
 {
     $strengths = [];
+    $rating = $data['rating'] ?? 0;
+    $totalRatings = $data['total_ratings'] ?? 0;
 
-    if (isset($competitorData['rating']) && $competitorData['rating'] >= 4.0) {
-        $strengths[] = "Excelente reputação com clientes (Rating {$competitorData['rating']}/5)";
+    if ($rating >= 4.5) {
+        $strengths[] = "Excelente avaliação dos clientes ({$rating}/5)";
     }
 
-    if (isset($competitorData['total_ratings']) && $competitorData['total_ratings'] > 100) {
-        $strengths[] = "Base sólida de avaliações ({$competitorData['total_ratings']} reviews)";
+    if ($totalRatings > 100) {
+        $strengths[] = "Grande volume de avaliações ({$totalRatings} avaliações)";
     }
 
-    if (!empty($competitorData['photos'])) {
-        $strengths[] = "Forte presença visual com " . count($competitorData['photos']) . " fotos";
+    if (!empty($data['photos'])) {
+        $strengths[] = "Boa presença visual com " . count($data['photos']) . " fotos do estabelecimento";
     }
 
-    if (!empty($competitorData['website'])) {
+    if (!empty($data['website'])) {
         $strengths[] = "Presença digital estabelecida com website próprio";
     }
 
     return $strengths;
 }
 
-private function analyzeOpportunities($competitorData)
+private function analyzeOpportunities($data)
 {
     $opportunities = [];
+    $rating = $data['rating'] ?? 0;
+    $totalRatings = $data['total_ratings'] ?? 0;
 
-    if (empty($competitorData['website'])) {
-        $opportunities[] = "Concorrente sem presença web - oportunidade para diferenciação digital";
+    if ($rating < 4.5) {
+        $opportunities[] = "Potencial para melhorar a avaliação geral (atual: {$rating}/5)";
     }
 
-    if (empty($competitorData['photos']) || count($competitorData['photos']) < 5) {
-        $opportunities[] = "Oportunidade para melhor apresentação visual do negócio";
+    if ($totalRatings < 100) {
+        $opportunities[] = "Oportunidade para aumentar o número de avaliações (atual: {$totalRatings})";
     }
 
-    if (!isset($competitorData['rating']) || $competitorData['rating'] < 4.5) {
-        $opportunities[] = "Potencial para melhorar a avaliação média dos clientes";
+    if (empty($data['website'])) {
+        $opportunities[] = "Criar presença online com website próprio";
+    }
+
+    if (empty($data['photos'])) {
+        $opportunities[] = "Adicionar fotos do estabelecimento para melhor visibilidade";
     }
 
     return $opportunities;
 }
 
-private function generateRecommendations($competitorData)
+private function generateRecommendations($data)
 {
     $recommendations = [];
+    $rating = $data['rating'] ?? 0;
 
-    // Recomendações baseadas na avaliação
-    if (isset($competitorData['rating'])) {
-        if ($competitorData['rating'] >= 4.5) {
-            $recommendations[] = "Focar em manter o alto padrão de qualidade e buscar diferenciais adicionais";
-        } else {
-            $recommendations[] = "Implementar programa de melhoria contínua para aumentar a satisfação dos clientes";
-        }
+    if ($rating < 4.0) {
+        $recommendations[] = "Implementar programa de melhoria de qualidade para aumentar avaliações";
     }
 
-    // Recomendações baseadas na presença digital
-    if (empty($competitorData['website'])) {
-        $recommendations[] = "Investir em presença digital forte para se destacar da concorrência";
+    if (empty($data['website'])) {
+        $recommendations[] = "Desenvolver website próprio para fortalecer presença digital";
     }
 
-    // Recomendações baseadas no conteúdo visual
-    if (empty($competitorData['photos']) || count($competitorData['photos']) < 5) {
-        $recommendations[] = "Desenvolver um portfólio visual mais robusto que o concorrente";
+    if (count($data['photos'] ?? []) < 5) {
+        $recommendations[] = "Adicionar mais fotos de qualidade do estabelecimento e serviços";
+    }
+
+    if (count($data['reviews'] ?? []) < 50) {
+        $recommendations[] = "Criar estratégia para incentivar mais avaliações dos clientes";
     }
 
     return $recommendations;
 }
 
+
+
 private function getRatingAnalysis($rating)
 {
     if ($rating >= 4.5) {
-        return "uma performance excepcional no mercado.";
+        return "A avaliação é excelente, indicando alta satisfação dos clientes.";
     } elseif ($rating >= 4.0) {
-        return "uma boa performance, com espaço para melhorias.";
+        return "A avaliação é muito boa, com boa aceitação dos clientes.";
     } elseif ($rating >= 3.5) {
-        return "uma performance mediana, indicando oportunidades significativas.";
+        return "A avaliação é regular, com espaço para melhorias.";
     } else {
-        return "desafios significativos na satisfação do cliente.";
+        return "A avaliação está abaixo da média, necessitando atenção especial.";
     }
 }
     

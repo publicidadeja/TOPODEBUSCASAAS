@@ -269,7 +269,7 @@ private function getPlaceDetails($placeId)
                     'url',
                     'rating',
                     'user_ratings_total',
-                    'reviews',
+                    'reviews',  // Mantemos o campo reviews
                     'photos',
                     'opening_hours',
                     'business_status',
@@ -289,18 +289,67 @@ private function getPlaceDetails($placeId)
                     'reservable'
                 ]),
                 'language' => 'pt-BR',
+                'reviews_sort' => 'most_relevant', // Adiciona ordenação dos reviews
+                'reviews_no_translations' => true,  // Mantém reviews no idioma original
                 'key' => $this->apiKey
             ]);
 
             if ($response->successful()) {
                 $data = $response->json();
-                return $data['result'] ?? [];
+                $result = $data['result'] ?? [];
+                
+                // Processa os reviews se existirem
+                if (isset($result['reviews'])) {
+                    $result['reviews'] = array_map(function($review) {
+                        return [
+                            'author_name' => $review['author_name'] ?? '',
+                            'rating' => $review['rating'] ?? 0,
+                            'text' => $review['text'] ?? '',
+                            'time' => $review['time'] ?? '',
+                            'relative_time' => $review['relative_time_description'] ?? '',
+                            'profile_photo_url' => $review['profile_photo_url'] ?? null,
+                            'language' => $review['language'] ?? 'pt-BR'
+                        ];
+                    }, $result['reviews']);
+                }
+
+                // Estrutura o retorno dos dados
+                return [
+                    'place_id' => $placeId,
+                    'name' => $result['name'] ?? null,
+                    'address' => $result['formatted_address'] ?? null,
+                    'phone' => $result['formatted_phone_number'] ?? null,
+                    'international_phone' => $result['international_phone_number'] ?? null,
+                    'website' => $result['website'] ?? null,
+                    'url' => $result['url'] ?? null,
+                    'rating' => $result['rating'] ?? null,
+                    'total_ratings' => $result['user_ratings_total'] ?? 0,
+                    'reviews' => $result['reviews'] ?? [],
+                    'photos' => isset($result['photos']) ? array_map(function($photo) {
+                        return $this->getPlacePhotoUrl($photo['photo_reference']);
+                    }, array_slice($result['photos'], 0, 5)) : [],
+                    'status' => $result['business_status'] ?? null,
+                    'open_now' => $result['opening_hours']['open_now'] ?? null,
+                    'hours' => $result['opening_hours']['periods'] ?? null,
+                    'price_level' => $result['price_level'] ?? null,
+                    'location' => $result['geometry']['location'] ?? null,
+                    'types' => $result['types'] ?? [],
+                    'delivery' => $result['delivery'] ?? false,
+                    'dine_in' => $result['dine_in'] ?? false,
+                    'takeout' => $result['takeout'] ?? false,
+                    'outdoor_seating' => $result['outdoor_seating'] ?? false,
+                    'reservable' => $result['reservable'] ?? false
+                ];
             }
 
             return [];
         });
     } catch (\Exception $e) {
-        Log::error('Erro ao buscar detalhes do lugar: ' . $e->getMessage());
+        Log::error('Erro ao buscar detalhes do lugar:', [
+            'place_id' => $placeId,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
         return [];
     }
 }

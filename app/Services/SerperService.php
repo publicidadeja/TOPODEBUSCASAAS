@@ -267,29 +267,40 @@ public function searchKeywords($business)
     }
 }
 
-public function extractKeywords($query)
-    {
-        try {
-            $response = Http::withHeaders([
-                'X-API-KEY' => $this->apiKey,
-                'Content-Type' => 'application/json'
-            ])->post($this->apiEndpoint, [
-                'q' => $query,
-                'gl' => 'br',
-                'num' => 100
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return $this->processKeywords($data);
+private function extractKeywords($data)
+{
+    $keywords = [];
+    
+    if (isset($data['organic'])) {
+        foreach ($data['organic'] as $result) {
+            // Extrai palavras-chave do título
+            if (isset($result['title'])) {
+                $words = explode(' ', strtolower($result['title']));
+                foreach ($words as $word) {
+                    $word = trim($word);
+                    if (strlen($word) > 3) {
+                        $keywords[$word] = isset($keywords[$word]) ? $keywords[$word] + 1 : 1;
+                    }
+                }
             }
-
-            return [];
-        } catch (\Exception $e) {
-            Log::error('Erro ao extrair palavras-chave: ' . $e->getMessage());
-            return [];
+            
+            // Extrai palavras-chave da descrição
+            if (isset($result['snippet'])) {
+                $words = explode(' ', strtolower($result['snippet']));
+                foreach ($words as $word) {
+                    $word = trim($word);
+                    if (strlen($word) > 3) {
+                        $keywords[$word] = isset($keywords[$word]) ? $keywords[$word] + 1 : 1;
+                    }
+                }
+            }
         }
     }
+    
+    // Ordena por frequência e pega os 20 mais relevantes
+    arsort($keywords);
+    return array_slice($keywords, 0, 20, true);
+}
 
 public function searchCompetitors($businessName, $city, $coordinates = null)
 {
@@ -547,272 +558,31 @@ private function isValidImageUrl($url)
 public function searchSpecificCompetitor($name, $address)
 {
     try {
-        $query = "{$name} {$address}";
+        $query = sprintf('"%s" "%s"', $name, $address);
         
-        $response = Http::post($this->apiEndpoint, [
+        $response = Http::withHeaders([
+            'X-API-KEY' => $this->apiKey,
+            'Content-Type' => 'application/json'
+        ])->post($this->apiEndpoint, [
             'q' => $query,
             'gl' => 'br',
-            'api_key' => $this->apiKey
+            'hl' => 'pt-br',
+            'type' => 'places'
         ]);
 
-        if (!$response->successful()) {
-            throw new \Exception('Erro na requisição ao Serper API');
+        if ($response->successful()) {
+            $data = $response->json();
+            $places = $data['places'] ?? [];
+            
+            // Retorna apenas o primeiro resultado mais relevante
+            return !empty($places) ? $places[0] : [];
         }
 
-        $data = $response->json();
-        
-        // Extrai informações relevantes
-        return [
-            'website' => $data['organic'][0]['link'] ?? null,
-            'description' => $data['organic'][0]['snippet'] ?? null,
-            'social_media' => $this->extractSocialMedia($data['organic']),
-            'keywords' => $this->extractKeywords($data),
-            'market_presence' => $this->calculateMarketPresence($data['organic'])
-        ];
-    } catch (\Exception $e) {
-        Log::error('Erro ao buscar informações do concorrente: ' . $e->getMessage());
         return [];
+    } catch (\Exception $e) {
+        \Log::error('Erro na busca específica do Serper: ' . $e->getMessage());
+        throw $e;
     }
-}
-
-private function extractSocialMedia($organicResults)
-{
-    $socialMedia = [];
-    $platforms = ['facebook', 'instagram', 'linkedin', 'twitter'];
-    
-    foreach ($organicResults as $result) {
-        $link = $result['link'] ?? '';
-        foreach ($platforms as $platform) {
-            if (strpos($link, $platform) !== false) {
-                $socialMedia[$platform] = $link;
-            }
-        }
-    }
-    
-    return $socialMedia;
-}
-
-private function calculateMarketPresence($organicResults)
-{
-    $presence = 0;
-    $totalResults = count($organicResults);
-    
-    if ($totalResults > 5) $presence += 3;
-    elseif ($totalResults > 2) $presence += 2;
-    else $presence += 1;
-    
-    return $presence;
-}
-
-
-
-    public function getSocialMediaPresence($competitor)
-    {
-        try {
-            $socialProfiles = [];
-            $platforms = ['facebook', 'instagram', 'linkedin', 'twitter'];
-            
-            foreach ($platforms as $platform) {
-                $response = Http::withHeaders([
-                    'X-API-KEY' => $this->apiKey,
-                ])->post($this->apiEndpoint, [
-                    'q' => "{$competitor['name']} {$platform} profile",
-                    'gl' => 'br'
-                ]);
-
-                if ($response->successful()) {
-                    $data = $response->json();
-                    $socialProfiles[$platform] = $this->extractSocialProfile($data, $platform);
-                }
-            }
-
-            return $socialProfiles;
-        } catch (\Exception $e) {
-            Log::error('Erro ao buscar presença em redes sociais: ' . $e->getMessage());
-            return [];
-        }
-    }
-
-    public function getSearchVolume($query)
-    {
-        // Implementar integração com Google Trends API ou similar
-        // Por enquanto, retornaremos dados simulados
-        return [
-            'monthly_searches' => rand(1000, 10000),
-            'trend' => rand(-10, 10)
-        ];
-    }
-
-    private function processKeywords($data)
-    {
-        $keywords = [];
-        
-        if (isset($data['organic'])) {
-            foreach ($data['organic'] as $result) {
-                // Extrair palavras-chave do título e descrição
-                $words = $this->extractWordsFromText($result['title'] . ' ' . ($result['snippet'] ?? ''));
-                foreach ($words as $word) {
-                    if (!isset($keywords[$word])) {
-                        $keywords[$word] = 0;
-                    }
-                    $keywords[$word]++;
-                }
-            }
-        }
-
-        arsort($keywords);
-        return array_slice($keywords, 0, 20, true);
-    }
-
-    private function extractWordsFromText($text)
-    {
-        $text = strtolower($text);
-        $text = preg_replace('/[^\p{L}\p{N}\s]/u', '', $text);
-        $words = explode(' ', $text);
-        return array_filter($words, function($word) {
-            return strlen($word) > 3;
-        });
-    }
-
-    private function extractSocialProfile($data, $platform)
-    {
-        // Processar dados específicos de cada plataforma
-        if (!isset($data['organic']) || empty($data['organic'])) {
-            return null;
-        }
-
-        foreach ($data['organic'] as $result) {
-            if (strpos($result['link'], $platform) !== false) {
-                return [
-                    'url' => $result['link'],
-                    'title' => $result['title'],
-                    'description' => $result['snippet'] ?? ''
-                ];
-            }
-        }
-
-        return null;
-    }
-
-    public function getRankingKeywords($competitor)
-    {
-        Log::info('Dados do concorrente recebidos:', ['competitor' => $competitor]);
-        try {
-            // Verifica se competitor é um array e se tem a chave 'name'
-            $searchQuery = is_array($competitor) ? 
-                ($competitor['name'] ?? $competitor['title'] ?? '') : 
-                (string) $competitor;
-    
-            if (empty($searchQuery)) {
-                throw new \Exception('Nome do concorrente não fornecido');
-            }
-    
-            $response = Http::withHeaders([
-                'X-API-KEY' => $this->apiKey,
-                'Content-Type' => 'application/json'
-            ])->post($this->apiEndpoint, [
-                'q' => $searchQuery . ' ' . ($competitor['address'] ?? '') . ' keywords',
-                'gl' => 'br',
-                'num' => 100
-            ]);
-    
-            if ($response->successful()) {
-                $data = $response->json();
-                return $this->processRankingKeywords($data);
-            }
-    
-            return [];
-        } catch (\Exception $e) {
-            Log::error('Erro ao obter palavras-chave de ranking: ' . $e->getMessage());
-            return [];
-        }
-    }
-
-private function processRankingKeywords($data)
-{
-    $keywords = [];
-    
-    if (isset($data['organic'])) {
-        foreach ($data['organic'] as $result) {
-            // Extrair palavras-chave do título e descrição
-            $title = $result['title'] ?? '';
-            $snippet = $result['snippet'] ?? '';
-            
-            // Processar título
-            $titleWords = $this->extractRelevantKeywords($title);
-            foreach ($titleWords as $word) {
-                if (!isset($keywords[$word])) {
-                    $keywords[$word] = [
-                        'count' => 0,
-                        'relevance' => 0,
-                        'position' => []
-                    ];
-                }
-                $keywords[$word]['count']++;
-                $keywords[$word]['relevance'] += 2; // Palavras no título têm peso maior
-                $keywords[$word]['position'][] = array_search($result, $data['organic']);
-            }
-            
-            // Processar snippet
-            $snippetWords = $this->extractRelevantKeywords($snippet);
-            foreach ($snippetWords as $word) {
-                if (!isset($keywords[$word])) {
-                    $keywords[$word] = [
-                        'count' => 0,
-                        'relevance' => 0,
-                        'position' => []
-                    ];
-                }
-                $keywords[$word]['count']++;
-                $keywords[$word]['relevance'] += 1; // Palavras na descrição têm peso menor
-                $keywords[$word]['position'][] = array_search($result, $data['organic']);
-            }
-        }
-    }
-
-    // Calcular pontuação final e ordenar
-    foreach ($keywords as &$keyword) {
-        $keyword['score'] = ($keyword['count'] * $keyword['relevance']) / 
-                           (1 + array_sum($keyword['position']) / count($keyword['position']));
-    }
-
-    // Ordenar por pontuação
-    uasort($keywords, function($a, $b) {
-        return $b['score'] <=> $a['score'];
-    });
-
-    // Retornar top 20 palavras-chave mais relevantes
-    return array_slice($keywords, 0, 20, true);
-}
-
-private function extractRelevantKeywords($text)
-{
-    // Remover caracteres especiais e converter para minúsculas
-    $text = mb_strtolower($text);
-    $text = preg_replace('/[^\p{L}\p{N}\s]/u', ' ', $text);
-    
-    // Dividir em palavras
-    $words = explode(' ', $text);
-    
-    // Filtrar palavras irrelevantes
-    $stopWords = $this->getStopWords();
-    $words = array_filter($words, function($word) use ($stopWords) {
-        return strlen($word) > 3 && !in_array($word, $stopWords);
-    });
-    
-    return array_values(array_unique($words));
-}
-
-private function getStopWords()
-{
-    // Lista de palavras comuns a serem ignoradas
-    return [
-        'para', 'com', 'por', 'que', 'dos', 'das', 'são', 'mas', 'foi',
-        'seu', 'sua', 'seus', 'suas', 'aos', 'isto', 'isso', 'esta', 'este',
-        'como', 'mas', 'sem', 'sobre', 'entre', 'depois', 'antes', 'quando',
-        'onde', 'muito', 'muita', 'muitos', 'muitas', 'quanto', 'quanta',
-        'quantos', 'quantas', 'while', 'onde'
-    ];
 }
 
 }
